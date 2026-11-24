@@ -52,6 +52,15 @@ work while you type. On macOS, Alt is ⌥ (Option).
 | Alt+J / Alt+L | Back / forward 5 seconds |
 | Alt+, / Alt+. | Slower / faster (0.5× to 3×) |
 
+## PDFs
+
+| Keys | Action |
+|---|---|
+| Alt+Q | Quote the text selected in a PDF into the note, with a link to its page (`> … ([[Smith v Jones.pdf#page=12\|p 112]])`) |
+
+Right-click a PDF page for *Quote in note*, *Copy* and *Copy link to this page*. The toolbar has the page (type a printed
+page label such as `iv` or `112`, or a page number), zoom and *Fit the width*.
+
 ## Locking
 
 | Keys | Action |

@@ -61,6 +61,14 @@ const ALLOWED = [
 	['packages/app/dist/main.cjs', 'fetch()', 'built from main.ts (see above)'],
 	['packages/app/dist/renderer/renderer.js', 'fetch()', 'built from smoke.ts (see above)'],
 	['packages/app/dist/renderer/renderer.js', 'dynamic import()', 'built from app.ts (see above)'],
+	// The PDF viewer (pdf.js), in a module of its own. The document is handed over as bytes and fonts and
+	// character maps come through pdf:asset (an IPC that reads only files shipped with the app), so pdf.js's
+	// URL loaders are never called; if they were, connect-src 'none' and the main process's block stop them.
+	['packages/app/src/renderer/pdf/engine.ts', 'fetch()', 'the asset factory pdf.js calls is a method named fetch: it reads app files through pdf:asset'],
+	['packages/app/src/renderer/pdf/view.ts', 'dynamic import()', 'loads the app\'s own PDF engine from quire://app/pdf/engine.js (the CSP allows scripts only from quire:)'],
+	['packages/app/dist/renderer/pdf/engine.js', 'fetch()', 'pdf.js: URL loaders it is never given a URL for, and xref.fetch (an object lookup inside the PDF)'],
+	['packages/app/dist/renderer/pdf/engine.js', 'XMLHttpRequest', 'pdf.js: URL loaders it is never given a URL for (see above)'],
+	['packages/app/dist/renderer/pdf/engine.js', 'dynamic import()', 'pdf.js: imports its JPEG 2000 and JBIG2 decoders from quire://app/pdf/wasm/; its worker loaders are unused (it runs without a worker)'],
 ];
 
 function stripComments(code) {
@@ -132,6 +140,16 @@ if (built) {
 		if (!csp.includes(must)) problems.push(`packages/app/dist/renderer/csp.txt: missing ${must}`);
 	}
 	if (/unsafe-eval/.test(csp)) problems.push('packages/app/dist/renderer/csp.txt: allows unsafe-eval');
+}
+
+// The PDF engine's allowances above hold only while pdf.js is set up this way.
+const engineFile = join(ROOT, 'packages/app/src/renderer/pdf/engine.ts');
+if (existsSync(engineFile)) {
+	const engine = stripComments(readFileSync(engineFile, 'utf8'));
+	for (const must of ['BinaryDataFactory: AppBinaryData', 'useWasm: false', 'useWorkerFetch: false', 'enableXfa: false', 'globalThis as { pdfjsWorker']) {
+		if (!engine.includes(must)) problems.push(`packages/app/src/renderer/pdf/engine.ts: pdf.js must be set up with ${must}`);
+	}
+	if (/getDocument\(\{[^}]*\burl\s*:/s.test(engine)) problems.push('packages/app/src/renderer/pdf/engine.ts: pdf.js must be given bytes, never a URL');
 }
 
 // Plugins: their own audit if they have one, otherwise these rules.

@@ -11,6 +11,11 @@ import { Menu, Notice } from './ui';
 import { debounce } from './util';
 import { EmptyView, FileInfoView, FileView, ItemView, View } from './view';
 
+/** Sources that open beside the note linking to them: recordings and PDFs. */
+function opensBeside(path: string): boolean {
+	return mediaKind(path) !== null || /\.pdf$/i.test(path);
+}
+
 export type ViewCreator = (leaf: WorkspaceLeaf) => View;
 export type SplitDirection = 'vertical' | 'horizontal';
 export type PaneType = 'tab' | 'split' | 'window';
@@ -998,8 +1003,8 @@ export class Workspace extends Events {
 	async openLinkText(linktext: string, sourcePath: string, newLeaf?: boolean | PaneType, openViewState?: OpenViewState): Promise<void> {
 		const { path, subpath } = parseLinktext(linktext);
 		let file = this.app.metadataCache.getFirstLinkpathDest(path, sourcePath);
-		if (mediaKind(path)) {
-			if (file) await this.openMedia(file, subpath, newLeaf);
+		if (opensBeside(path)) {
+			if (file) await this.openBeside(file, subpath, newLeaf);
 			else new Notice(`“${path}” is not in this homebase.`);
 			return;
 		}
@@ -1014,12 +1019,12 @@ export class Workspace extends Events {
 	}
 
 	/**
-	 * Open a recording from a link. A timestamp (`#t=12:34`) seeks a player already showing it (embedded
-	 * in a note or in a tab); otherwise the recording opens in a tab beside the note, so the note stays
-	 * in view, and plays from there.
+	 * Open a source (a recording or a PDF) from a link, beside the note so the note stays in view. A tab
+	 * already showing it is reused, and the link's subpath (`#t=12:34`, `#page=12`) is passed to it. For a
+	 * recording, a timestamp first seeks a player already on screen, embedded in a note or in a tab.
 	 */
-	async openMedia(file: TFile, subpath = '', newLeaf?: boolean | PaneType): Promise<void> {
-		const t = timeFromSubpath(subpath);
+	async openBeside(file: TFile, subpath = '', newLeaf?: boolean | PaneType): Promise<void> {
+		const t = mediaKind(file.name) ? timeFromSubpath(subpath) : null;
 		if (t !== null && !newLeaf) {
 			const el = this.app.media.seek(file, t);
 			if (el) {
@@ -1028,12 +1033,14 @@ export class Workspace extends Events {
 				return;
 			}
 		}
-		let leaf = newLeaf ? null : this.getLeavesOfType('media').find((l) => (l.view as MediaView).file === file) ?? null;
-		if (!leaf) {
-			const fromNote = this.activeLeaf?.view instanceof MarkdownView;
-			leaf = this.getLeaf(newLeaf || (fromNote ? 'split' : false));
+		let open: WorkspaceLeaf | null = null;
+		if (!newLeaf) this.iterateAllLeaves((l) => { if (!open && l.view instanceof FileView && l.view.file === file && l.view.getViewType() !== 'markdown') open = l; });
+		const leaf: WorkspaceLeaf = open ?? this.getLeaf(newLeaf || (this.activeLeaf?.view instanceof MarkdownView ? 'split' : false));
+		if (open) {
+			if (subpath) leaf.view.setEphemeralState({ subpath });
+		} else {
+			await leaf.openFile(file, subpath ? { eState: { subpath } } : {});
 		}
-		await leaf.openFile(file, t !== null ? { eState: { subpath } } : {});
 		leaf.parent?.selectTab(leaf);
 	}
 

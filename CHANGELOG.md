@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **PDFs open in Quire.** Judgments, readings and slides open in a tab: pages appear as you scroll, with text you
+  can select and copy, zoom and *Fit the width*, and a page box that takes the printed page (`iv`, `112`) as well
+  as the page number. The tab remembers the page and zoom.
+  - **Page links**: `[[Smith v Jones.pdf#page=12]]` opens the PDF beside the note at that page, or turns an open
+    one to it.
+  - **Quote with the page**: select text in a PDF and press Alt+Q (or right-click → *Quote in note*). It goes into
+    the note you were writing as a quotation with a link back to its page, named by the printed page, for
+    example `> The duty of care is owed … ([[Smith v Jones.pdf#page=12|p 112]])`. Words broken across lines
+    are joined.
+  - **Offline like the rest**: the PDF is read from the homebase and handed to the viewer as bytes; fonts come
+    with the app; PDF scripts and forms do not run, and links inside a PDF are not followed. The viewer loads
+    only when a PDF is first opened. The offline audit checks that it stays set up this way.
+  - Not yet: PDFs protected by a password, search inside a PDF, and following links inside a PDF.
 - **Lecture recordings in your notes.** Embed a recording with `![[Week 3.mp4]]` (or drop the file in) and it
   plays below the line, in the editor and in reading view, and keeps playing while you type. Video, and audio
   such as M4A, MP3 and WAV, are supported. Add `#t=12:34` to start there, or `|480` for a width.

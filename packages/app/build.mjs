@@ -4,6 +4,8 @@
  *   renderer/renderer.js         the UI (ES module) with the single copy of @quire/api and CodeMirror
  *   renderer/modules/*.js        shims plugins import through the import map; they re-export the renderer's instances
  *   renderer/index.html          with the import map inline, and csp.txt with its hash
+ *   renderer/pdf/engine.js       pdf.js (loaded when a PDF is first opened) and its JavaScript image decoders
+ *   pdfjs/                       fonts and character maps for PDFs, read by the main process on demand
  *   plugins/<id>/                built-in plugins, copied from ../../plugins/*
  */
 import esbuild from 'esbuild';
@@ -70,6 +72,15 @@ const phosphorIcons = {
 };
 
 await esbuild.build({ ...common, entryPoints: [join(here, 'src/renderer/main.ts')], outfile: join(rendererOut, 'renderer.js'), platform: 'browser', format: 'esm', target: 'chrome130', plugins: [phosphorIcons] });
+
+// The PDF engine: pdf.js in a module of its own, loaded the first time a PDF opens (pdf/view.ts).
+await esbuild.build({ ...common, entryPoints: [join(here, 'src/renderer/pdf/engine.ts')], outfile: join(rendererOut, 'pdf', 'engine.js'), platform: 'browser', format: 'esm', target: 'chrome130' });
+const pdfjsRoot = join(here, '..', '..', 'node_modules', 'pdfjs-dist');
+// Its JavaScript decoders for JPEG 2000 and JBIG2 images (no WebAssembly: the CSP does not allow it).
+await mkdir(join(rendererOut, 'pdf', 'wasm'), { recursive: true });
+for (const f of ['openjpeg_nowasm_fallback.js', 'jbig2_nowasm_fallback.js']) await cp(join(pdfjsRoot, 'wasm', f), join(rendererOut, 'pdf', 'wasm', f));
+// Standard fonts and character maps, read through the main process (pdf:asset), never fetched.
+for (const d of ['standard_fonts', 'cmaps']) await cp(join(pdfjsRoot, d), join(dist, 'pdfjs', d), { recursive: true });
 
 // Shims: the export names of each shared module, read from esbuild's metafile.
 const imports = {};
@@ -139,7 +150,7 @@ const NOTICE_PACKAGES = [
 	'@lezer/lr', '@lezer/markdown', 'style-mod', 'w3c-keyname', 'crelt', '@marijn/find-cluster-break',
 	'@replit/codemirror-vim', '@replit/codemirror-vim-core', 'markdown-it', 'markdown-it-footnote', 'entities', 'linkify-it',
 	'mdurl', 'uc.micro', 'punycode.js', 'argparse', 'yaml', 'lucide', '@phosphor-icons/core', 'nspell', 'is-buffer',
-	'dictionary-en-au', 'dictionary-en-gb', 'dictionary-en', 'docx', 'fflate', 'jszip',
+	'dictionary-en-au', 'dictionary-en-gb', 'dictionary-en', 'docx', 'fflate', 'jszip', 'pdfjs-dist',
 ];
 let notices = 'Quire includes the following software and data. Their licences follow.\n';
 const root = join(here, '..', '..', 'node_modules');
@@ -150,6 +161,14 @@ for (const name of NOTICE_PACKAGES) {
 	const file = (await readdir(dir)).find((f) => /^(licen[cs]e|copying)(\.(md|txt))?$/i.test(f));
 	notices += `\n${'='.repeat(78)}\n${name} ${pkgJson.version ?? ''} (${pkgJson.license ?? 'see below'})\n${'='.repeat(78)}\n\n`;
 	notices += file ? (await readFile(join(dir, file), 'utf8')).trim() + '\n' : `Licence: ${pkgJson.license ?? 'unknown'}\n`;
+}
+// pdf.js ships fonts and decoders under their own licences.
+for (const [what, file] of [
+	['pdf.js standard fonts (Foxit)', 'standard_fonts/LICENSE_FOXIT'], ['pdf.js standard fonts (Liberation)', 'standard_fonts/LICENSE_LIBERATION'],
+	['OpenJPEG (JPEG 2000 decoder)', 'wasm/LICENSE_OPENJPEG'], ['pdf.js OpenJPEG build', 'wasm/LICENSE_PDFJS_OPENJPEG'],
+	['JBIG2 decoder', 'wasm/LICENSE_JBIG2'], ['pdf.js JBIG2 build', 'wasm/LICENSE_PDFJS_JBIG2'],
+]) {
+	notices += `\n${'='.repeat(78)}\n${what}\n${'='.repeat(78)}\n\n${(await readFile(join(root, 'pdfjs-dist', file), 'utf8')).trim()}\n`;
 }
 await writeFile(join(dist, 'THIRD_PARTY_NOTICES.txt'), notices);
 

@@ -11,6 +11,7 @@ import {
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
 import { registerMedia } from './media';
+import { registerPdf } from './pdf/view';
 import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
 import { LinkSuggest } from './link-suggest';
@@ -583,6 +584,7 @@ export function registerCore(app: App): { reveal(): void } {
 	registerLocking(app);
 	const tiling = registerTiling(app);
 	registerMedia(app);
+	registerPdf(app);
 	(app as unknown as { tiling: typeof tiling }).tiling = tiling;
 	const docket = registerDocket(app);
 	return {

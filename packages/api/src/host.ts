@@ -84,6 +84,8 @@ export interface HostBridge {
 		capture?(name: string): Promise<string | null>;
 		/** A spelling dictionary shipped with the app (Hunspell .aff and .dic), or null. */
 		dictionary(lang: string): Promise<{ aff: string; dic: string } | null>;
+		/** A font or character map shipped for the PDF viewer, by name. */
+		pdfAsset?(kind: 'standard_fonts' | 'cmaps', name: string): Promise<Uint8Array>;
 		/** Licences of the libraries and dictionaries the app ships. */
 		notices(): Promise<string>;
 		/** The computer is going to sleep or its screen locked (for locking the homebase). */

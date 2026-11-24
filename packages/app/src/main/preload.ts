@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld('quire', {
 		smokeReport: (report: unknown) => ipcRenderer.send('smoke:report', report),
 		dictionary: (lang: string) => call('spell:dictionary', lang),
 		notices: () => call('app:notices'),
+		pdfAsset: (kind: 'standard_fonts' | 'cmaps', name: string) => call<Uint8Array>('pdf:asset', kind, name),
 		onSystemLock: (cb: () => void) => { ipcRenderer.on('app:system-lock', () => cb()); },
 		smokeSystemLock: () => { if (info.isSmoke) ipcRenderer.send('smoke:system-lock'); },
 	},

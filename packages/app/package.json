@@ -21,6 +21,7 @@
     "@phosphor-icons/core": "^2.1.1",
     "dictionary-en": "^4.0.0",
     "dictionary-en-au": "^3.0.0",
-    "dictionary-en-gb": "^3.0.0"
+    "dictionary-en-gb": "^3.0.0",
+    "pdfjs-dist": "^6.5.438"
   }
 }

@@ -271,6 +271,11 @@ function registerIpc() {
 	handle('app:showItemInFolder', async (rel: string) => { shell.showItemInFolder(await resolvePath(rel)); });
 	handle('clipboard:writeText', (text: string) => { clipboard.writeText(String(text)); });
 	handle('clipboard:readText', () => clipboard.readText());
+	// Fonts and character maps the PDF viewer ships (pdf.js asks for them by name; nothing else is read).
+	handle('pdf:asset', async (kind: string, name: string) => {
+		if (!['standard_fonts', 'cmaps'].includes(kind) || typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) throw new Error('Not a PDF asset');
+		return new Uint8Array(await fsp.readFile(path.join(APP_DIR, 'pdfjs', kind, name)));
+	});
 	// Spelling dictionaries shipped with the app (read on demand; only these languages).
 	handle('spell:dictionary', async (lang: string) => {
 		if (!['en-AU', 'en-GB', 'en-US'].includes(lang)) return null;

@@ -739,6 +739,29 @@ pre.notices-text { margin: 0; max-height: 65vh; overflow: auto; white-space: pre
 /* ------------------------------------------------------------------ embeds */
 .cm-image-embed { padding: var(--space-2) 0; }
 .cm-image-embed img, .markdown-rendered img.image-embed { display: block; max-width: 100%; max-height: 70vh; border-radius: var(--radius-s); }
+/* PDFs in a tab (pdf/view.ts): a toolbar, then pages on a scrolling backdrop. */
+.pdf-view { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.pdf-toolbar { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--background-modifier-border); font-family: var(--font-chrome); font-size: var(--text-sm); color: var(--text-muted); }
+.pdf-toolbar-spacer { flex: 1; }
+.pdf-page-input { width: 4.5em; text-align: center; }
+.pdf-zoom { min-width: 3.5em; text-align: center; }
+.pdf-body { flex: 1; position: relative; overflow: auto; scrollbar-gutter: stable; background: var(--doom-bg-alt); outline: none; }
+.pdf-pages { display: flex; flex-direction: column; align-items: center; gap: var(--pdf-gap); padding: var(--space-3) 0; }
+.pdf-page { position: relative; flex: none; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.3); --user-unit: 1; --scale-round-x: 1px; --scale-round-y: 1px; }
+.pdf-page canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.pdf-message { padding: var(--space-6); text-align: center; color: var(--text-muted); }
+
+/* pdf.js's text layer (from pdfjs-dist/web/pdf_viewer.css): transparent text over the page, for selecting. */
+.pdf-page .textLayer { position: absolute; inset: 0; overflow: clip; opacity: 1; line-height: 1; text-align: initial; letter-spacing: normal; word-spacing: normal; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; caret-color: CanvasText; z-index: 0; color-scheme: only light; --min-font-size: 1; --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv: calc(1 / var(--min-font-size)); }
+.pdf-page .textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; user-select: text; }
+.pdf-page .textLayer > :not(.markedContent), .pdf-page .textLayer .markedContent span:not(.markedContent) { z-index: 1; --font-height: 0; font-size: calc(var(--text-scale-factor) * var(--font-height)); --scale-x: 1; --rotate: 0deg; transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.pdf-page .textLayer .markedContent { display: contents; }
+.pdf-page .textLayer span[role="img"] { user-select: none; cursor: default; }
+.pdf-page .textLayer ::selection { background: color-mix(in srgb, var(--interactive-accent), transparent 60%); color: transparent; }
+.pdf-page .textLayer br::selection { background: transparent; }
+.pdf-page .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
+.pdf-page .textLayer.selecting .endOfContent { top: 0; }
+
 /* Audio and video: embedded in notes and in their own tab (media.ts). */
 .cm-media-embed { padding: var(--space-2) 0; }
 .media-embed { display: block; max-width: 100%; border-radius: var(--radius-s); }

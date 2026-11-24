@@ -31,6 +31,27 @@ function silentWav(seconds: number): ArrayBuffer {
 	return wav.buffer;
 }
 
+/** A small PDF: one line of Helvetica on each page; printed page labels start at `firstLabel`. */
+function tinyPdf(pages: string[], firstLabel: number): ArrayBuffer {
+	const objs: string[] = [];
+	const ids = pages.map((_, i) => 4 + i * 2);
+	objs[1] = `<< /Type /Catalog /Pages 2 0 R /PageLabels << /Nums [0 << /S /D /St ${firstLabel} >>] >> >>`;
+	objs[2] = `<< /Type /Pages /Kids [${ids.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+	objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+	pages.forEach((text, i) => {
+		const stream = `BT /F1 18 Tf 72 720 Td (${text}) Tj ET`;
+		objs[4 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`;
+		objs[5 + i * 2] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+	});
+	let out = '%PDF-1.4\n';
+	const offsets: number[] = [];
+	for (let id = 1; id < objs.length; id++) { offsets[id] = out.length; out += `${id} 0 obj\n${objs[id]}\nendobj\n`; }
+	const xref = out.length;
+	out += `xref\n0 ${objs.length}\n0000000000 65535 f \n${offsets.slice(1).map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
+	out += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+	return new TextEncoder().encode(out).buffer as ArrayBuffer;
+}
+
 export async function runSmoke(app: App): Promise<void> {
 	const checks: Check[] = [];
 	const notices: string[] = [];
@@ -234,6 +255,63 @@ export async function runSmoke(app: App): Promise<void> {
 		await view.save();
 		await vault.delete(note);
 		await vault.delete(rec);
+		return problems.length === 0 || problems.join('; ');
+	});
+	await check('PDFs: a page link opens it beside the note; text renders and selects; quotes carry the printed page', async () => {
+		const problems: string[] = [];
+		// Fonts come from the app through pdf:asset, which reads nothing but its own files.
+		const font = await app.host.app.pdfAsset!('standard_fonts', 'FoxitSerif.pfb').catch(() => null);
+		if (!font || font.byteLength < 1000) problems.push('pdf:asset did not read a font');
+		if (await app.host.app.pdfAsset!('standard_fonts', '../../main.cjs').then(() => true, () => false)) problems.push('pdf:asset read outside its folder');
+		const pdf = await vault.createBinary('Smoke v Case.pdf', tinyPdf(['Page one of the judgment', 'The duty of care is owed to the neighbour', 'Page three'], 11));
+		const note = await vault.create('Torts smoke.md', 'Duty: [[Smoke v Case.pdf#page=2]]\n\n');
+		const noteLeaf = workspace.getLeaf(false);
+		await noteLeaf.openFile(note);
+		const noteView = noteLeaf.view as MarkdownView;
+		noteView.editor.setCursor({ line: 2, ch: 0 });
+		await workspace.openLinkText('Smoke v Case.pdf#page=2', note.path, false);
+		const leaf = workspace.getLeavesOfType('pdf')[0];
+		type PdfLike = { pdf: { page: number; pageCount: number; label(n: number): string; scale: number } | null; zoom(d: number): void; contentEl: HTMLElement; getState(): Record<string, unknown> };
+		const view = leaf?.view as unknown as PdfLike | undefined;
+		if (!leaf || !view) return 'no PDF tab';
+		if (!(await until(() => !!view.pdf, 8000))) return `the PDF did not open: ${view.contentEl.textContent}`;
+		const doc = view.pdf!;
+		if (doc.pageCount !== 3) problems.push(`${doc.pageCount} pages`);
+		if (doc.page !== 2) problems.push(`opened at page ${doc.page}`);
+		if (doc.label(2) !== '12') problems.push(`page 2 is labelled ${doc.label(2)}`);
+		if (leaf.parent === noteLeaf.parent || (noteLeaf.view as MarkdownView).file !== note) problems.push('the PDF did not open beside the note');
+		const textLayer = () => view.contentEl.querySelector<HTMLElement>('.pdf-page[data-page="2"] .textLayer');
+		if (!(await until(() => (textLayer()?.textContent ?? '').includes('duty of care'), 8000))) problems.push(`no text layer: ${textLayer()?.textContent}`);
+		// The page is drawn: some pixels of its canvas are dark (the text).
+		const canvas = view.contentEl.querySelector<HTMLCanvasElement>('.pdf-page[data-page="2"] canvas');
+		await until(() => { const c = canvas?.getContext('2d'); if (!c || !canvas) return false; const d = c.getImageData(0, 0, canvas.width, Math.min(canvas.height, Math.ceil(canvas.height * 0.15))).data; for (let i = 0; i < d.length; i += 4) if (d[i]! < 100 && d[i + 3]! > 0) return true; return false; }, 5000)
+			|| problems.push('page 2 was not drawn');
+		// Select the line and quote it into the note.
+		const range = document.createRange();
+		range.selectNodeContents(textLayer()!);
+		const sel = window.getSelection()!;
+		sel.removeAllRanges();
+		sel.addRange(range);
+		commands.executeCommandById('pdf:quote-selection');
+		sel.removeAllRanges();
+		const quoted = noteView.editor.getValue();
+		if (!quoted.includes('> The duty of care is owed to the neighbour ([[Smoke v Case.pdf#page=2|p 12]])')) problems.push(`quote: ${JSON.stringify(quoted)}`);
+		// Another page link reuses the tab and goes to that page.
+		await workspace.openLinkText('Smoke v Case.pdf#page=3', note.path, false);
+		if (workspace.getLeavesOfType('pdf').length !== 1) problems.push('a second link opened another tab');
+		await until(() => view.pdf?.page === 3, 2000) || problems.push(`at page ${view.pdf?.page}, not 3`);
+		const before = doc.scale;
+		view.zoom(1);
+		if (!(doc.scale > before)) problems.push('zoom in did nothing');
+		const state = view.getState();
+		if (state.page !== 3 || typeof state.scale !== 'number') problems.push(`state ${JSON.stringify(state)}`);
+		// A link to a PDF that is not there does not make a note called "….pdf.md".
+		await workspace.openLinkText('Missing case.pdf#page=1', note.path, false);
+		if (vault.getFileByPath('Missing case.pdf.md')) problems.push('a missing PDF link made a note');
+		leaf.detach();
+		await noteView.save();
+		await vault.delete(note);
+		await vault.delete(pdf);
 		return problems.length === 0 || problems.join('; ');
 	});
 	await check('reading view embeds notes, sections and pictures', async () => {
