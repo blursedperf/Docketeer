@@ -28,3 +28,15 @@ Screenshots from the test tour are in [`phase2/`](phase2/).
 
 Screen readers: the tray is a dialog; the input is a combobox over a listbox of results, with the number of
 results announced; panels are tabs. With "reduce motion" on, it appears without animation.
+
+## Tiling (Phase 5)
+
+1. In a note, **Mod+\** splits it to the right; **Mod+Shift+\** splits down.
+2. **Mod+Alt+arrows** move the keyboard between panes; **Mod+Alt+Shift+arrows** carry the current tab
+   along (into a new pane if there is none that way).
+3. Resize the pane: **⌘⌃arrows** on macOS, **Mod+Alt+[ ] = -** elsewhere. **Mod+Shift+=** evens them out.
+4. **Mod+Shift+Enter** zooms the pane to fill the window, and back.
+5. **Mod+W** closes a tab (an empty pane closes too); **Mod+Shift+T** brings it back.
+6. The same note in two panes stays in step as you type, each with its own cursor.
+7. **Mod+6** (Layout): presets (Single, Brief + Source, Revision, Exam), your saved layouts, the open panes,
+   and the tiling commands with their keys. The layout is saved with the homebase and comes back on launch.

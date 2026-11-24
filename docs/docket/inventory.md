@@ -201,7 +201,7 @@ Every row of the parity table (§6), and where it is now reachable from the Dock
 | Settings search | ✓ | "Settings" group in the Docket (Phase 3) |
 | Ribbon buttons | ✓ | Every ribbon button is a command (`>`); the ribbon goes in Phase 6 |
 | Toggle sidebars | → Phase 6 | Retired with the sidebars (no Classic sidebars setting: decision 49) |
-| Splits, tabs | ◐ | Layout (Mod+6): open panes, Enter moves between them, → split or close. Keyboard focus/move/resize, presets, reopen closed tab: Phase 5 |
+| Splits, tabs | ✓ | Tiling commands (Mod+\, Mod+Alt+arrows, move, resize, equalise, zoom, reopen closed tab: Phase 5); Layout (Mod+6): presets, saved layouts, open panes |
 | Open another homebase | ✓ | Homebase panel; command |
 | Status bar | ✓ | Unchanged (not a sidebar) |
 | Authorities (new) | ✓ | Authorities (Mod+1): cases, legislation (with sections), secondary sources; counts; Enter → next place; → every note citing it, cite it, confirm, merge; jurisdiction filter; `@` prefix |

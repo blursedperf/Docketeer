@@ -16,14 +16,23 @@ export function hotkeyString(h: Hotkey, p: Platformish): string {
 	return [...mods, h.key.length === 1 ? h.key.toUpperCase() : h.key].join('+');
 }
 
+/** Physical keys whose character changes with Shift ("\\" becomes "|"): matched by the unshifted one. */
+const CODE_KEYS: Record<string, string> = {
+	Backslash: '\\', Equal: '=', Minus: '-', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'",
+	Comma: ',', Period: '.', Slash: '/', Backquote: '`',
+	Digit0: '0', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9',
+};
+
 /** The same form for a key press. */
-export function eventString(e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; key: string }): string {
+export function eventString(e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; key: string; code?: string }): string {
 	const mods: string[] = [];
 	if (e.altKey) mods.push('Alt');
 	if (e.ctrlKey) mods.push('Ctrl');
 	if (e.metaKey) mods.push('Meta');
 	if (e.shiftKey) mods.push('Shift');
-	const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+	// With Shift (or Alt on macOS) held, punctuation and digits type another character: use the key itself.
+	const raw = (e.shiftKey || e.altKey) && e.code && CODE_KEYS[e.code] && !/^[a-z0-9]$/i.test(e.key) ? CODE_KEYS[e.code]! : e.key;
+	const key = raw.length === 1 ? raw.toUpperCase() : raw;
 	return [...mods.sort(), key].join('+');
 }
 

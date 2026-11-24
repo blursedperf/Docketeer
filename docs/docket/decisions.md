@@ -170,3 +170,30 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     sidebar removal.
 50. **The AGLC4 fixture formats are confirmed** by the user (the `// VERIFY against AGLC` expectations in
     `test/cite.test.ts` and `test/authorities.test.ts`); the markers stay so later editions get the same check.
+
+## Phase 5
+
+51. **Layout geometry is pure** (`packages/api/src/layout-tree.ts`): the main area as a tree of row/column
+    splits with weights and panes; neighbours by rectangle (nearest edge, most overlap, nearest centre),
+    resize within the nearest split of the right orientation, equalise, zoom chain, presets. The workspace
+    builds the tree from its real splits and applies the results (`Workspace.layoutTree`, `focusPane`,
+    `moveLeafToPane`, `resizeActivePane`, `equalisePanes`, `toggleZoom`, `reopenClosed`, `mergeAllPanes`,
+    `getMainLayout`/`setMainLayout`).
+52. **Resize keys differ off macOS.** The plan's Mod+Ctrl+arrows is ⌘⌃arrows on macOS, but elsewhere Mod is
+    Ctrl, so it would be plain Ctrl+arrows (move by word in the editor). Off macOS: **Mod+Alt+[ / ]**
+    narrower / wider and **Mod+Alt+- / =** shorter / taller. All remappable.
+53. **Keys with Shift match by the physical key** (Shift+\ types "|"; Shift+= types "+"), so Mod+Shift+\ and
+    Mod+Shift+= work as written.
+54. **A command for one place wins over a global one on the same keys, and is not reported as a clash**:
+    Mod+Alt+↑/↓ resizes the Docket while it has the keyboard and moves between panes elsewhere.
+55. **Same note, two panes**: an edit in one is applied to the other at once (each keeps its own cursor,
+    mapped through the change); the pane typed in saves, the other follows.
+56. **Presets** are columns over the current note: Single (every tab in one pane), Brief + Source (current
+    and the previously used note), Revision (the same, with the Docket pinned on Authorities: outline and
+    authorities are Docket panels, not panes), Exam (current note wider, an empty pane for scratch notes).
+    Saved layouts are kept by name in app.json (`savedLayouts`).
+57. **Reopen closed tab** remembers the last 30 notes closed in the main area (in memory).
+58. **Fixed on the way**: a style rule gave the 1px divider between side-by-side panes a 120px minimum width,
+    so every side-by-side split showed an empty band.
+59. **Dragging tabs to dock them is not added** (optional in the plan, keyboard first): tabs can already be
+    moved with Mod+Alt+Shift+arrows and from the Layout panel.

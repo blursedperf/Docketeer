@@ -75,16 +75,17 @@ export class Commands {
 	}
 
 	/**
-	 * Commands (other than `except`) that a hotkey would also run. Two commands only clash when their
-	 * shortcuts can work in the same place (a global command clashes with everything).
+	 * Commands (other than `except`) that a hotkey would also run. Two commands clash when they work in
+	 * the same place. A command for one place (the Docket, the editor) is not a clash with a global one:
+	 * there it wins on purpose (Mod+Alt+↑ resizes the Docket while it has the keyboard, moves between
+	 * panes elsewhere).
 	 */
 	conflicts(h: Hotkey, except?: string): Command[] {
 		const key = hotkeyString(h, platform());
 		const ctx = except ? this.commands[except]?.context ?? 'global' : 'global';
 		return this.listCommands().filter((c) => {
 			if (c.id === except || !this.hotkeysFor(c).some((k) => hotkeyString(k, platform()) === key)) return false;
-			const other = c.context ?? 'global';
-			return ctx === 'global' || other === 'global' || ctx === other;
+			return (c.context ?? 'global') === ctx;
 		});
 	}
 
@@ -180,7 +181,9 @@ export class Commands {
 		if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
 		const pressed = eventString(e);
 		const where = this.keyContexts();
-		for (const cmd of Object.values(this.commands)) {
+		// Commands for where the keyboard is (the Docket, the editor) before global ones with the same keys.
+		const ordered = Object.values(this.commands).sort((a, b) => ((a.context ?? 'global') === 'global' ? 1 : 0) - ((b.context ?? 'global') === 'global' ? 1 : 0));
+		for (const cmd of ordered) {
 			if (!where.has(cmd.context ?? 'global')) continue;
 			if (!this.hotkeysFor(cmd).some((h) => hotkeyString(h, platform()) === pressed)) continue;
 			if (this.executeCommand(cmd)) {
@@ -366,6 +369,8 @@ export interface AppConfig {
 	archiveFolder: string;
 	/** Citation style for the Cite panel. */
 	citationStyle: string;
+	/** Layouts saved by name (the main area's panes and tabs). */
+	savedLayouts: Record<string, unknown>;
 	[key: string]: unknown;
 }
 
@@ -402,6 +407,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 	pinnedNotes: [],
 	archiveFolder: 'Archive',
 	citationStyle: 'aglc4',
+	savedLayouts: {},
 };
 
 /** The running app: everything a plugin reaches through `this.app`. */

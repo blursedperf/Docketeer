@@ -1,4 +1,7 @@
-import { Compartment, EditorState, type Extension, Prec } from '@codemirror/state';
+import { Annotation, type ChangeSet, Compartment, EditorState, type Extension, Prec, type Text } from '@codemirror/state';
+
+/** Marks an edit copied from another pane showing the same note. */
+const paneSync = Annotation.define<boolean>();
 import { EditorView, keymap } from '@codemirror/view';
 import { getCM, vim } from '@replit/codemirror-vim';
 import { baseExtensions, bracketExtensions } from './cm-setup';
@@ -98,10 +101,12 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			this.pluginCompartment.of(app.getEditorExtensions()),
 			EditorView.updateListener.of((u) => {
 				if (this.loading) return;
-				if (u.docChanged) {
+				const synced = u.transactions.some((tr) => tr.annotation(paneSync) === true);
+				if (u.docChanged && !synced) {
 					this.dirty = true;
 					this.saveSoon();
 					app.workspace.trigger('editor-change', this.editor, this);
+					this.syncOtherPanes(u.startState.doc, u.changes);
 				}
 				// Suggestions open on typing (input or delete events), not on changes made by code.
 				const typed = u.transactions.some((tr) => tr.isUserEvent('input') || tr.isUserEvent('delete'));
@@ -262,6 +267,23 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	requestSave(): void { this.saveSoon(); }
 
 	/** The file changed on disk (another app, or a plugin writing to it): show the new text. */
+	/**
+	 * The same note open in other panes gets the same edit at once (each keeps its own cursor, mapped
+	 * through the change). This pane saves; the others only follow.
+	 */
+	private syncOtherPanes(before: Text, changes: ChangeSet): void {
+		const file = this.file;
+		if (!file) return;
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const other = leaf.view;
+			if (other === this || !(other instanceof MarkdownView) || other.file !== file) return;
+			const cm = other.editor.cm;
+			if (cm.state.doc.eq(before)) cm.dispatch({ changes, annotations: paneSync.of(true) });
+			else cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: this.editor.cm.state.doc }, annotations: paneSync.of(true) });
+			other.lastSaved = this.lastSaved;
+		});
+	}
+
 	private async onExternalModify() {
 		const file = this.file;
 		if (!file) return;

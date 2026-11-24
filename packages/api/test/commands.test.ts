@@ -3,7 +3,7 @@ vi.mock('../src/ui', async (orig) => ({ ...(await orig<object>()), Notice: class
 
 import { Commands } from '../src/app';
 import { DocketRegistry } from '../src/docket-registry';
-import { formatHotkey, hotkeyString, parseHotkey, reservedFor } from '../src/keymap';
+import { eventString, formatHotkey, hotkeyString, parseHotkey, reservedFor } from '../src/keymap';
 import { Plugin } from '../src/plugin';
 
 const linux = { isMacOS: false };
@@ -96,8 +96,12 @@ describe('conflicts and remapping', () => {
 		cmds.addCommand({ id: 'a:global', name: 'G', hotkeys: [k], callback: () => 0 });
 		cmds.addCommand({ id: 'a:editor', name: 'E', hotkeys: [k], context: 'editor', callback: () => 0 });
 		cmds.addCommand({ id: 'a:docket', name: 'D', hotkeys: [k], context: 'docket', callback: () => 0 });
-		expect(cmds.conflicts(k, 'a:editor').map((c) => c.id)).toEqual(['a:global']);
-		expect(cmds.conflicts(k, 'a:global').map((c) => c.id).sort()).toEqual(['a:docket', 'a:editor']);
+		// A command for one place wins over a global one there: not a clash.
+		expect(cmds.conflicts(k, 'a:editor')).toEqual([]);
+		cmds.addCommand({ id: 'a:global2', name: 'G2', hotkeys: [k], callback: () => 0 });
+		expect(cmds.conflicts(k, 'a:global').map((c) => c.id)).toEqual(['a:global2']);
+		cmds.addCommand({ id: 'a:docket2', name: 'D2', hotkeys: [k], context: 'docket', callback: () => 0 });
+		expect(cmds.conflicts(k, 'a:docket').map((c) => c.id)).toEqual(['a:docket2']);
 	});
 	it('stores remapped keys and goes back to the default', async () => {
 		const { cmds, files } = fakeApp();
@@ -188,5 +192,24 @@ describe('docket logic', () => {
 		expect(clampHeight(0.9)).toBe(0.6);
 		expect(clampHeight(0.1)).toBe(0.2);
 		expect(clampHeight(0.351)).toBe(0.35);
+	});
+});
+
+describe('shifted keys', () => {
+	it('match by the physical key when Shift changes the character', () => {
+		const ev = (key: string, code: string) => ({ altKey: false, ctrlKey: true, metaKey: false, shiftKey: true, key, code });
+		expect(eventString(ev('|', 'Backslash'))).toBe(hotkeyString({ modifiers: ['Mod', 'Shift'], key: '\\' }, linux));
+		expect(eventString(ev('+', 'Equal'))).toBe(hotkeyString({ modifiers: ['Mod', 'Shift'], key: '=' }, linux));
+		expect(eventString(ev('T', 'KeyT'))).toBe('Ctrl+Shift+T');
+	});
+	it('runs the Docket-only command before a global one on the same keys', () => {
+		const { app, cmds } = fakeApp();
+		app.docketOpen = true;
+		const order: string[] = [];
+		const k = { modifiers: ['Mod' as const, 'Alt' as const], key: 'ArrowUp' };
+		cmds.addCommand({ id: 'a:global', name: 'G', hotkeys: [k], run: () => order.push('global') });
+		cmds.addCommand({ id: 'a:docket', name: 'D', hotkeys: [k], context: 'docket', run: () => order.push('docket') });
+		(cmds as unknown as { onKeyDown(e: KeyboardEvent): void }).onKeyDown({ key: 'ArrowUp', code: 'ArrowUp', ctrlKey: true, altKey: true, shiftKey: false, metaKey: false, isComposing: false, preventDefault() {}, stopPropagation() {} } as unknown as KeyboardEvent);
+		expect(order).toEqual(['docket']);
 	});
 });

@@ -5,7 +5,7 @@
  */
 import { EditorView } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
-import { type App, MarkdownView, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
+import { type App, MarkdownView, Platform, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 
 interface Check { name: string; ok: boolean; detail?: string; }
 
@@ -574,6 +574,7 @@ export async function runSmoke(app: App): Promise<void> {
 	});
 
 	await docketChecks(app, check);
+	await tilingChecks(app, check);
 
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
@@ -759,6 +760,19 @@ export async function runShots(app: App): Promise<void> {
 	await sleep(150);
 	await shot('32-docket-homebase');
 	docket.close(true);
+	// Tiling: three panes, then the Layout panel over them.
+	const first = workspace.activeLeaf!;
+	const right = await workspace.duplicateLeaf(first, 'vertical');
+	const below = workspace.createLeafBySplit(right, 'horizontal');
+	await below.openFile(app.vault.getFileByPath('Welcome.md')!);
+	workspace.setActiveLeaf(first, { focus: true });
+	await sleep(300);
+	await shot('33-tiling-three-panes');
+	docket.open({ panel: 'core:layout' });
+	await sleep(150);
+	await shot('34-docket-layout');
+	docket.close(true);
+	workspace.mergeAllPanes();
 	await app.setConfig('docket', false);
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }
@@ -1163,8 +1177,8 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('6', { ctrl: true });
 		await sleep(80);
 		const panes = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent).filter((t) => t?.startsWith('Pane')).length;
-		const rows = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')];
-		const other = rows.find((r) => !r.classList.contains('is-focus') && r.querySelector('.docket-badge') === null);
+		const rows = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-section[aria-label^="Pane"] .docket-item')];
+		const other = rows.find((r) => !r.classList.contains('is-focus'));
 		other?.focus();
 		press('Enter');
 		await sleep(50);
@@ -1294,4 +1308,110 @@ export async function runBench(app: App): Promise<void> {
 	checks.push({ name: `Index of ${app.search.index.size} notes ready ${Math.round(indexMs)} ms after the window`, ok: app.search.index.size === vault.getMarkdownFiles().length });
 	await app.setConfig('docket', false);
 	app.host.app.smokeReport?.({ ok: checks.every((c) => c.ok), checks, notices: [] });
+}
+
+/** Tiling, from the keyboard only (Phase 5). */
+async function tilingChecks(app: App, check: CheckFn): Promise<void> {
+	const { workspace, vault } = app;
+	const panes = () => workspace.rootTabs().length;
+	const essay = vault.getFileByPath('AGLC4 example essay.md') ?? vault.getMarkdownFiles()[0]!;
+	const single = async () => { workspace.mergeAllPanes(); for (const t of workspace.rootTabs()) for (const l of [...t.children].slice(1)) l.detach(); await sleep(80); };
+	await single();
+	await workspace.getLeaf(false).openFile(essay);
+	await sleep(150);
+	const focusEditor = () => workspace.getActiveViewOfType(MarkdownView)?.editor.cm.focus();
+
+	await check('tiling: Mod+\\ splits right, Mod+Shift+\\ splits down; arrows move between panes', async () => {
+		focusEditor();
+		press('\\', { ctrl: true });
+		await sleep(150);
+		const two = panes() === 2;
+		press('\\', { ctrl: true, shift: true });
+		await sleep(150);
+		const three = panes() === 3;
+		const bottomRight = workspace.activeLeaf!;
+		press('ArrowUp', { ctrl: true, alt: true });
+		const up = workspace.activeLeaf !== bottomRight;
+		press('ArrowLeft', { ctrl: true, alt: true });
+		const left = workspace.activeLeaf;
+		press('ArrowRight', { ctrl: true, alt: true });
+		const right = workspace.activeLeaf !== left;
+		return (two && three && up && right) || `two=${two} three=${three} up=${up} right=${right} panes=${panes()}`;
+	});
+
+	await check('tiling: resize, equalise and zoom from the keyboard; sizes are saved', async () => {
+		const leaf = workspace.activeLeaf!;
+		const share = () => { const { tree, panes: ids } = workspace.layoutTree(); const id = [...ids].find(([, t]) => t === leaf.parent)![0]; return paneRects(tree).get(id)!.w; };
+		const before = share();
+		press(Platform.isMacOS ? 'ArrowRight' : ']', Platform.isMacOS ? { ctrl: true } : { ctrl: true, alt: true });
+		const wider = share() > before + 0.01;
+		const saved = JSON.stringify(workspace.getLayout()).includes(String(leaf.parent!.parent!.children[0]!.weight).slice(0, 4));
+		press('=', { ctrl: true, shift: true });
+		const equal = workspace.rootSplit.children.every((c) => c.weight === 1);
+		press('Enter', { ctrl: true, shift: true });
+		await sleep(50);
+		const hidden = workspace.rootTabs().filter((t) => t.containerEl.offsetParent === null).length;
+		const zoomed = workspace.zoomed && hidden === panes() - 1;
+		press('Enter', { ctrl: true, shift: true });
+		await sleep(50);
+		const back = !workspace.zoomed && workspace.rootTabs().every((t) => t.containerEl.offsetParent !== null);
+		return (wider && saved && equal && zoomed && back) || `wider=${wider} saved=${saved} equal=${equal} zoomed=${zoomed} back=${back}`;
+	});
+
+	await check('tiling: move a tab to the next pane; close it; Mod+Shift+T reopens it', async () => {
+		const leaf = workspace.getLeaf('tab');
+		await leaf.openFile(vault.getFileByPath('Welcome.md')!);
+		workspace.setActiveLeaf(leaf, { focus: true });
+		const from = leaf.parent;
+		press('ArrowLeft', { ctrl: true, alt: true, shift: true });
+		await sleep(50);
+		const moved = leaf.parent !== from && workspace.activeLeaf === leaf;
+		const before = panes();
+		press('w', { ctrl: true });
+		await sleep(150);
+		const closed = !workspace.getLeavesOfType('markdown').some((l) => l === leaf);
+		press('t', { ctrl: true, shift: true });
+		await sleep(200);
+		const reopened = workspace.getActiveFile()?.path === 'Welcome.md';
+		return (moved && closed && reopened && panes() <= before) || `moved=${moved} closed=${closed} reopened=${reopened}`;
+	});
+
+	await check('tiling: the same note in two panes stays in sync, each with its own cursor', async () => {
+		await single();
+		const note = await vault.create('Sync test.md', 'Hello world\n');
+		const a = workspace.getLeaf(false);
+		await a.openFile(note);
+		const b = await workspace.duplicateLeaf(a, 'vertical');
+		await sleep(150);
+		const ca = (a.view as MarkdownView).editor.cm;
+		const cb = (b.view as MarkdownView).editor.cm;
+		cb.dispatch({ selection: { anchor: 0 } });
+		ca.dispatch({ changes: { from: 5, insert: ',' }, selection: { anchor: 6 }, userEvent: 'input' });
+		const same = ca.state.doc.toString() === cb.state.doc.toString() && cb.state.doc.toString() === 'Hello, world\n';
+		const own = cb.state.selection.main.head === 0 && ca.state.selection.main.head === 6;
+		b.detach();
+		await sleep(50);
+		return (same && own) || `a=${JSON.stringify(ca.state.doc.toString())} b=${JSON.stringify(cb.state.doc.toString())} own=${own}`;
+	});
+
+	await check('tiling: presets and saved layouts', async () => {
+		await workspace.getLeaf(false).openFile(essay);
+		await sleep(80);
+		app.commands.executeCommandById('app:layout-brief-source');
+		await sleep(250);
+		const two = panes() === 2;
+		const files = workspace.rootTabs().map((t) => (t.activeLeaf?.view as MarkdownView | undefined)?.file?.basename);
+		const saved = workspace.getMainLayout();
+		await app.setConfig('savedLayouts', { Test: saved });
+		app.commands.executeCommandById('app:layout-single');
+		await sleep(150);
+		const one = panes() === 1;
+		await (app as unknown as { tiling: { applySaved(n: string): Promise<void> } }).tiling.applySaved('Test');
+		await sleep(150);
+		const restored = panes() === 2;
+		await app.setConfig('savedLayouts', {});
+		app.commands.executeCommandById('app:layout-single');
+		await sleep(100);
+		return (two && files[0] === essay.basename && !!files[1] && one && restored) || `two=${two} files=${files.join('|')} one=${one} restored=${restored}`;
+	});
 }

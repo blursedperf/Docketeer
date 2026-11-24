@@ -1,4 +1,5 @@
 import type { App } from './app';
+import { type Direction, type LayoutNode, neighbour, resizePane } from './layout-tree';
 import { Events, type EventRef } from './events';
 import { TFile, type TAbstractFile } from './files';
 import { setIcon } from './icons';
@@ -452,7 +453,8 @@ export class Workspace extends Events {
 		return leaf;
 	}
 
-	private rootTabs(): WorkspaceTabs[] {
+	/** The tab groups of the main area. */
+	rootTabs(): WorkspaceTabs[] {
 		const out: WorkspaceTabs[] = [];
 		const visit = (x: WorkspaceSplit | WorkspaceTabs) => {
 			if (x instanceof WorkspaceTabs) out.push(x);
@@ -557,9 +559,32 @@ export class Workspace extends Events {
 	removeLeaf(leaf: WorkspaceLeaf): void {
 		const tabs = leaf.parent;
 		if (!tabs) return;
+		// Remember closed notes (main area) for "Reopen closed tab".
+		if (!tabs.sidebar) {
+			const st = leaf.getViewState();
+			if (st.type !== 'empty' && typeof st.state?.file === 'string') {
+				this.closedTabs.push(st);
+				if (this.closedTabs.length > 30) this.closedTabs.shift();
+			}
+		}
 		tabs.removeChild(leaf);
 		if (this.activeLeaf === leaf) this.activeLeaf = null;
 		if (this.lastFileLeaf === leaf) this.lastFileLeaf = null;
+		this.tidyEmpty(tabs);
+		if (!this.activeLeaf) {
+			const next = this.getMostRecentLeaf() ?? this.rootTabs()[0]?.activeLeaf ?? null;
+			if (next) this.setActiveLeaf(next, { focus: true });
+			else this.trigger('active-leaf-change', null);
+		}
+		this.trigger('layout-change');
+		this.requestSaveLayout();
+	}
+
+	/** Notes closed in the main area, newest last (for reopening). */
+	closedTabs: ViewState[] = [];
+
+	/** Remove a tab group left empty, and splits left with one child. */
+	private tidyEmpty(tabs: WorkspaceTabs): void {
 		if (tabs.children.length === 0 && !tabs.sidebar) {
 			let node: WorkspaceSplit | WorkspaceTabs = tabs;
 			let parent = node.parent;
@@ -584,11 +609,167 @@ export class Workspace extends Events {
 				this.createLeafInTabs(fresh);
 			}
 		}
-		if (!this.activeLeaf) {
-			const next = this.getMostRecentLeaf() ?? this.rootTabs()[0]?.activeLeaf ?? null;
-			if (next) this.setActiveLeaf(next, { focus: true });
-			else this.trigger('active-leaf-change', null);
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Tiling: the main area as a plain tree (layout-tree.ts does the geometry)
+
+	private paneIds = new WeakMap<WorkspaceTabs, string>();
+	private nextPaneId = 0;
+
+	/** The main area as a tree, with the tab groups and splits behind its ids and paths. */
+	layoutTree(): { tree: LayoutNode; panes: Map<string, WorkspaceTabs>; splitAt(path: number[]): WorkspaceSplit } {
+		const panes = new Map<string, WorkspaceTabs>();
+		const build = (x: WorkspaceSplit | WorkspaceTabs): LayoutNode => {
+			if (x instanceof WorkspaceTabs) {
+				let id = this.paneIds.get(x);
+				if (!id) { id = `p${++this.nextPaneId}`; this.paneIds.set(x, id); }
+				panes.set(id, x);
+				return { kind: 'pane', id };
+			}
+			return { kind: 'split', dir: x.direction === 'vertical' ? 'row' : 'column', weights: x.children.map((c) => c.weight), children: x.children.map(build) };
+		};
+		const tree = build(this.rootSplit);
+		const splitAt = (path: number[]) => {
+			let n: WorkspaceSplit | WorkspaceTabs = this.rootSplit;
+			for (const i of path) n = (n as WorkspaceSplit).children[i]!;
+			return n as WorkspaceSplit;
+		};
+		return { tree, panes, splitAt };
+	}
+
+	private activeRootLeaf(): WorkspaceLeaf | null {
+		const l = this.activeLeaf;
+		return l && !l.isSidebar() ? l : this.getMostRecentLeaf();
+	}
+
+	/** Give the keyboard to the pane next to the active one. */
+	focusPane(dir: Direction): boolean {
+		const leaf = this.activeRootLeaf();
+		if (!leaf?.parent) return false;
+		const { tree, panes } = this.layoutTree();
+		const id = [...panes].find(([, t]) => t === leaf.parent)?.[0];
+		const next = id ? neighbour(tree, id, dir) : null;
+		const target = next ? panes.get(next)?.activeLeaf : null;
+		if (!target) return false;
+		this.setActiveLeaf(target, { focus: true });
+		return true;
+	}
+
+	/** Move a tab into the pane next to it, making a new pane there when there is none. */
+	moveLeafToPane(leaf: WorkspaceLeaf, dir: Direction): boolean {
+		const from = leaf.parent;
+		if (!from || from.sidebar) return false;
+		const { tree, panes } = this.layoutTree();
+		const id = [...panes].find(([, t]) => t === from)?.[0];
+		const next = id ? neighbour(tree, id, dir) : null;
+		let target = next ? panes.get(next)! : null;
+		if (!target) {
+			if (from.children.length < 2) return false; // alone in its pane: nothing to move away from
+			target = new WorkspaceTabs(this);
+			const split = from.parent!;
+			const direction: SplitDirection = dir === 'left' || dir === 'right' ? 'vertical' : 'horizontal';
+			const before = dir === 'left' || dir === 'up';
+			if (split.direction === direction) {
+				split.insertChild(split.children.indexOf(from) + (before ? 0 : 1), target);
+			} else {
+				const sub = new WorkspaceSplit(this, direction);
+				split.replaceChild(from, sub);
+				sub.insertChild(0, before ? target : from);
+				sub.insertChild(1, before ? from : target);
+				from.weight = 1;
+				target.weight = 1;
+			}
 		}
+		from.removeChild(leaf);
+		target.insertChild(target.children.length, leaf);
+		this.tidyEmpty(from);
+		this.setActiveLeaf(leaf, { focus: true });
+		this.onResized();
+		this.trigger('layout-change');
+		this.requestSaveLayout();
+		return true;
+	}
+
+	/** Make the active pane wider or narrower, taller or shorter, by `amount` of its split. */
+	resizeActivePane(axis: 'width' | 'height', amount: number): boolean {
+		const leaf = this.activeRootLeaf();
+		if (!leaf?.parent) return false;
+		const { tree, panes, splitAt } = this.layoutTree();
+		const id = [...panes].find(([, t]) => t === leaf.parent)?.[0];
+		const r = id ? resizePane(tree, id, axis, amount) : null;
+		if (!r) return false;
+		const split = splitAt(r.path);
+		split.children.forEach((c, i) => { c.weight = r.weights[i]!; });
+		split.render();
+		this.onResized();
+		return true;
+	}
+
+	/** Every pane the same size within its split. */
+	equalisePanes(): void {
+		const visit = (s: WorkspaceSplit) => {
+			for (const c of s.children) { c.weight = 1; if (c instanceof WorkspaceSplit) visit(c); }
+			s.render();
+		};
+		visit(this.rootSplit);
+		this.onResized();
+	}
+
+	/** Whether the active pane fills the main area (zoom). */
+	get zoomed(): boolean { return this.rootSplit.containerEl.hasClass('is-zoomed'); }
+
+	/** Show only the active pane, or everything again. */
+	toggleZoom(): boolean {
+		const root = this.rootSplit.containerEl;
+		for (const el of Array.from(root.querySelectorAll('.is-zoom-keep'))) el.removeClass('is-zoom-keep');
+		if (this.zoomed) { root.removeClass('is-zoomed'); this.onResized(); return false; }
+		const leaf = this.activeRootLeaf();
+		if (!leaf?.parent) return false;
+		for (let x: WorkspaceItem | null = leaf.parent; x && x !== this.rootSplit; x = x.parent) x.containerEl.addClass('is-zoom-keep');
+		root.addClass('is-zoomed');
+		this.onResized();
+		return true;
+	}
+
+	/** Open the most recently closed note again, as a tab in the active pane. */
+	async reopenClosed(): Promise<WorkspaceLeaf | null> {
+		while (this.closedTabs.length) {
+			const st = this.closedTabs.pop()!;
+			const file = typeof st.state?.file === 'string' ? st.state.file : null;
+			if (file && !this.app.vault.getAbstractFileByPath(file)) continue;
+			const leaf = this.getLeaf('tab');
+			await leaf.setViewState({ ...st, active: true });
+			this.setActiveLeaf(leaf, { focus: true });
+			return leaf;
+		}
+		return null;
+	}
+
+	/** Every main-area tab moved into one pane (the active one's). */
+	mergeAllPanes(): void {
+		const keep = this.activeRootLeaf()?.parent ?? this.rootTabs()[0];
+		if (!keep) return;
+		for (const tabs of this.rootTabs()) {
+			if (tabs === keep) continue;
+			for (const leaf of [...tabs.children]) { tabs.removeChild(leaf); keep.insertChild(keep.children.length, leaf); }
+			this.tidyEmpty(tabs);
+		}
+		if (this.zoomed) this.toggleZoom();
+		this.onResized();
+		this.trigger('layout-change');
+		this.requestSaveLayout();
+	}
+
+	/** The main area's layout, to save under a name. */
+	getMainLayout(): unknown { return this.serialize(this.rootSplit); }
+
+	/** Replace the main area with a saved layout (open notes that no longer exist are skipped). */
+	async setMainLayout(main: unknown): Promise<void> {
+		for (const tabs of this.rootTabs()) for (const leaf of [...tabs.children]) { await leaf.view.onClose(); leaf.view.unload(); tabs.removeChild(leaf); }
+		for (const c of [...this.rootSplit.children]) this.rootSplit.removeChild(c);
+		this.activeLeaf = null;
+		await this.loadLayout({ main });
 		this.trigger('layout-change');
 		this.requestSaveLayout();
 	}

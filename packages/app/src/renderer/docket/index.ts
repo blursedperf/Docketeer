@@ -53,6 +53,11 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 			if (palette) palette.hotkeys = [MOD_P];
 		}
 	};
-	app.on('config-changed', (key: string) => { if (key === 'docket') apply(); });
+	app.on('config-changed', (key: string) => {
+		if (key === 'docket') apply();
+		if (key === 'docketMode') docket?.applyModeFromConfig();
+	});
+	// A layout preset that brings the Docket (Revision: pinned on Authorities).
+	app.on('layout-preset', () => { if (docket && app.config.docketMode === 'pinned') docket.open({ panel: String(app.config.docketPanel) }); });
 	return { start: apply, get: () => docket };
 }

@@ -233,6 +233,9 @@ export class Docket {
 		new Notice(this.mode === 'pinned' ? 'Docket pinned above the editor.' : 'Docket in peek mode: it closes when you are done.');
 	}
 
+	/** Show the mode the settings now say (after a layout preset changed it). */
+	applyModeFromConfig(): void { this.applyMode(); }
+
 	private applyMode(mode = this.mode): void {
 		this.el.toggleClass('is-pinned', mode === 'pinned');
 		this.el.toggleClass('is-peek', mode === 'peek');

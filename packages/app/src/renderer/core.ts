@@ -9,6 +9,7 @@ import {
 	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES,
 } from '@quire/api';
 import { registerDocket } from './docket';
+import { registerTiling } from './tiling';
 import { FILE_EXPLORER, FileExplorerView, NameModal, freePath, promptRename } from './explorer';
 import { BACKLINK_VIEW, BacklinksView } from './panes/backlinks';
 import { LinkSuggest } from './panes/link-suggest';
@@ -703,6 +704,8 @@ export function registerCore(app: App): { reveal(): void } {
 	setIcon(toggleLeft, 'panel-left');
 	toggleLeft.addEventListener('click', () => app.commands.executeCommandById('app:toggle-left-sidebar'));
 
+	const tiling = registerTiling(app);
+	(app as unknown as { tiling: typeof tiling }).tiling = tiling;
 	const docket = registerDocket(app);
 	return {
 		reveal: () => { void seedSidebars(app); docket.start(); },
