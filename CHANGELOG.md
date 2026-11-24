@@ -1,5 +1,52 @@
 # Changelog
 
+## v0.5.0
+
+**The Docket replaces the sidebars.** Everything is now reached from the keyboard through one tray that drops
+from the top of the window: **Ctrl+P** (⌘P on macOS). The first time Quire opens, a hint says so.
+
+- **Search everything** from the Docket: notes by name (ranked by what you use and where you are), the text
+  inside notes (from three letters, with the matching line and words marked), headings in every note,
+  commands, settings and authorities. Each group shows its best few, with "Show all". If no note has the name
+  you typed, "Create note" makes it. Prefixes: `>` commands, `#` folders and tags, `/` headings in this note,
+  `@` authorities in this note, `?` the cheat sheet of every shortcut.
+- **Keys in the Docket**: ↑↓ to move, Enter to open, Ctrl+Enter to the right, Alt+Enter below, Shift+Enter to
+  insert a link at the cursor, → (or Ctrl+.) for more actions, Esc to step back. Peek (over the note) or
+  pinned (above it): Ctrl+Shift+P. Resize with Ctrl+Alt+↑/↓.
+- **Panels**, Ctrl+1 to Ctrl+6:
+  - **Authorities**: the cases (with their citations), legislation (with sections) and secondary sources in
+    the note, how often each appears, a jurisdiction filter; Enter goes to the next place; → finds every note
+    citing it, cites it again, or confirms or merges an unsure find. Opening the Docket with the cursor on a
+    case name goes straight to it.
+  - **Outline**: jump to a heading; Alt+↑/↓ moves a section, Alt+←/→ changes its level; case briefs list
+    Facts, Issues, Held, Ratio and Obiter and add a missing one.
+  - **Units**: pinned and recent notes, then subjects and topics (your folders); create, rename, move, pin,
+    archive and delete from the keyboard.
+  - **Cite**: build an AGLC4 citation (cases, legislation, articles, books) and insert it as a footnote; it
+    works out the full citation, Ibid or "(n X)" from the footnotes already there.
+  - **Homebase**: what is in it, and export a note to Markdown or HTML after a confirmation, with comments,
+    properties or names you list removed or blacked out.
+  - **Layout**: presets (Single, Brief + Source, Revision, Exam), saved layouts and the open panes.
+- **Actions on any note** (→): open beside, links to and from it, mentions not yet linked (→ turns one into
+  a link), pin, rename, move, copy, archive, delete, and every action plugins add (Export to Word …).
+- **Tiling from the keyboard**: Ctrl+\ split right, Ctrl+Shift+\ split down, Ctrl+Alt+arrows move between
+  panes, Ctrl+Alt+Shift+arrows move the tab, Ctrl+Alt+[ ] - = resize (⌘⌃arrows on macOS), Ctrl+Shift+=
+  even sizes, Ctrl+Shift+Enter zoom, Ctrl+Shift+T reopen a closed tab. The same note in two panes stays in
+  step as you type.
+- **Gone**: the sidebars (Files, Search, Tags, Backlinks, Outgoing links, Outline), the icon strip, the command
+  palette and quick switcher. Their shortcuts open the Docket where each feature now lives. The AGLC4 page
+  preview and version history open as normal tabs.
+- **Faster with big homebases**: opening a note took seconds with thousands of notes (links were resolved
+  by scanning every file); now milliseconds. Searching 10,000 notes takes a few milliseconds a keystroke.
+- **Fixed**: a wide empty band between side-by-side panes; shortcuts with Shift and punctuation (Ctrl+Shift+\)
+  never matched.
+- **Privacy**: logs never contain note text, note paths or searches (checked on every build). The search
+  index is kept in memory only.
+- **Plugin API**: `registerCommand`, `registerDocketPanel`, `registerSearchProvider`, `registerResultAction`;
+  commands gain `when`, `run(ctx, args)`, `section`, `aliases`, `keywords`, `context`, `confirm`,
+  `requiresUnlocked`. Plugins written for sidebars still load: their views open as tabs and ribbon buttons
+  become commands.
+
 ## v0.4.0
 
 - **Search.** A search pane (Ctrl/Cmd+Shift+F, or the search tab in the left sidebar) finds text in every
