@@ -86,6 +86,8 @@ jobs:
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - name: Build provenance attestation
+        # GitHub only stores attestations for public repositories (or organisations' private ones).
+        if: ${{ !github.event.repository.private }}
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: dist/*
@@ -107,8 +109,11 @@ jobs:
           **macOS:** the app is not notarised by Apple. After dragging Quire to Applications, run
           `xattr -dr com.apple.quarantine /Applications/Quire.app` once (or right-click → Open).
 
-          Verify a download with `SHA256SUMS.txt` or `gh attestation verify <file> --repo ${{ github.repository }}`.
+          Verify a download with `SHA256SUMS.txt`.
           NOTES
+          if [ "${{ github.event.repository.private }}" != "true" ]; then
+            echo 'Or check its build provenance: `gh attestation verify <file> --repo ${{ github.repository }}`.' >> notes.md
+          fi
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
