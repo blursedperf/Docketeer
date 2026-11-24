@@ -1,0 +1,5 @@
+node_modules/
+packages/app/dist/
+plugins/*/main.js
+*.map
+.DS_Store

@@ -1,0 +1,513 @@
+/* Underlines for AGLC4 problems in the editor, drawn with gradients so they take theme colours. */
+.aglc-issue {
+	background-repeat: repeat-x;
+	background-position: left bottom;
+	padding-bottom: 2px;
+}
+
+.aglc-error,
+.aglc-warning {
+	/* A wave: arcs alternately curving down and up, the second set offset by half a period. */
+	background-image:
+		radial-gradient(circle at 50% 0, transparent 1.9px, var(--aglc-underline) 2px, var(--aglc-underline) 2.9px, transparent 3px),
+		radial-gradient(circle at 50% 100%, transparent 1.9px, var(--aglc-underline) 2px, var(--aglc-underline) 2.9px, transparent 3px);
+	background-size: 6px 3px;
+	background-position: 0 100%, 3px 100%;
+}
+
+.aglc-error {
+	--aglc-underline: var(--color-red);
+}
+
+.aglc-warning {
+	--aglc-underline: var(--color-orange);
+}
+
+.aglc-info {
+	background-image: radial-gradient(circle, var(--color-blue) 0.9px, transparent 1.3px);
+	background-size: 4px 3px;
+}
+
+/* Next required element, shown faintly after the cursor */
+.aglc-hint {
+	color: var(--text-faint);
+	font-style: italic;
+	font-size: 0.9em;
+	margin-left: 0.25em;
+	pointer-events: none;
+	user-select: none;
+}
+
+/* Paragraph guide, shown above the paragraph being written; never part of the note */
+.aglc-guide {
+	margin: 0.4em 0 0.3em;
+	padding: 0.35em 0.7em;
+	border-left: 2px solid var(--background-modifier-border-focus);
+	color: var(--text-faint);
+	font-size: var(--font-ui-small);
+	line-height: 1.4;
+	user-select: none;
+	cursor: default;
+}
+
+.aglc-guide-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.6em;
+}
+
+.aglc-guide-aim {
+	color: var(--text-muted);
+	font-weight: var(--font-semibold);
+}
+
+.aglc-guide-nav {
+	margin-left: auto;
+	white-space: nowrap;
+}
+
+.aglc-guide-btn {
+	display: inline-block;
+	padding: 0 0.35em;
+	border-radius: var(--radius-s);
+	color: var(--text-faint);
+	cursor: pointer;
+}
+
+.aglc-guide-btn:hover {
+	color: var(--text-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+.aglc-guide-count {
+	font-size: 0.9em;
+	color: var(--text-faint);
+	margin: 0 0.2em;
+}
+
+.aglc-guide-other {
+	margin-left: 0.3em;
+}
+
+.aglc-guide-sentences li:not(.is-current) .aglc-guide-sentence {
+	cursor: pointer;
+}
+
+.aglc-guide-sentences li:not(.is-current) .aglc-guide-sentence:hover {
+	color: var(--text-muted);
+}
+
+.aglc-guide .is-alternative .aglc-guide-sentence {
+	color: var(--text-accent);
+}
+
+.aglc-guide-more {
+	margin: 0.2em 0 0 1.6em;
+	color: var(--text-muted);
+}
+
+.aglc-guide-sentences {
+	margin: 0.2em 0 0;
+	padding-left: 1.6em;
+}
+
+.aglc-guide-sentences li {
+	margin: 0.05em 0;
+}
+
+.aglc-guide-sentences li.is-current {
+	color: var(--text-normal);
+}
+
+.aglc-guide-sentences li.is-current::marker {
+	color: var(--text-accent);
+}
+
+.aglc-guide-role {
+	font-style: italic;
+}
+
+/* AGLC4 heading numbers, shown before headings in the editor */
+.aglc-heading-num {
+	color: var(--text-faint);
+	font-weight: normal;
+	font-style: normal;
+	margin-right: 0.6em;
+	user-select: none;
+}
+
+/* Hover explanation */
+.aglc-tooltip {
+	max-width: 420px;
+	padding: var(--size-4-2) var(--size-4-3);
+	font-size: var(--font-ui-small);
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	box-shadow: var(--shadow-s);
+}
+
+.aglc-tooltip-item + .aglc-tooltip-item {
+	margin-top: var(--size-4-2);
+	padding-top: var(--size-4-2);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.aglc-tooltip-head {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-2-1);
+}
+
+.aglc-tooltip-severity {
+	font-weight: var(--font-semibold);
+}
+
+.aglc-tooltip-error .aglc-tooltip-severity { color: var(--color-red); }
+.aglc-tooltip-warning .aglc-tooltip-severity { color: var(--color-orange); }
+.aglc-tooltip-info .aglc-tooltip-severity { color: var(--color-blue); }
+
+.aglc-tooltip-ref {
+	color: var(--text-muted);
+}
+
+.aglc-tooltip-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-4-1);
+	margin-top: var(--size-4-2);
+}
+
+.aglc-tooltip-actions button {
+	font-size: var(--font-ui-smaller);
+	padding: var(--size-2-1) var(--size-4-2);
+	height: auto;
+}
+
+/* Suggestion lists */
+.aglc-suggestion-top {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-4-2);
+}
+
+.aglc-suggestion-label {
+	font-weight: var(--font-medium);
+}
+
+.aglc-suggestion-required {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-on-accent);
+	background: var(--interactive-accent);
+	border-radius: var(--radius-s);
+	padding: 0 var(--size-2-2);
+}
+
+.aglc-suggestion-source {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-left: auto;
+}
+
+.aglc-suggestion-hint {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: normal;
+}
+
+.aglc-issue-row-error .aglc-suggestion-label { color: var(--color-red); }
+.aglc-issue-row-warning .aglc-suggestion-label { color: var(--color-orange); }
+.aglc-issue-row-info .aglc-suggestion-label { color: var(--color-blue); }
+
+/* Status bar */
+.aglc-status-errors {
+	color: var(--color-red);
+}
+
+/* Page preview */
+.workspace-leaf-content[data-type="aglc4-page-preview"] .view-content.aglc-pv-view {
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	overflow: hidden;
+}
+
+.aglc-pv-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	padding: var(--size-4-1) var(--size-4-3);
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+}
+
+.aglc-pv-buttons {
+	display: flex;
+	gap: var(--size-2-1);
+}
+
+.aglc-pv-scroller {
+	flex: 1;
+	overflow: auto;
+	background: var(--background-secondary);
+	padding: 16px;
+}
+
+.aglc-pv-pages {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 16px;
+}
+
+/* The page itself is always black on white, like paper. */
+.aglc-pv-page {
+	position: relative;
+	flex: none;
+	background: #fff;
+	color: #000;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+	overflow: hidden;
+}
+
+.aglc-pv-content {
+	position: absolute;
+}
+
+.aglc-pv-clip {
+	position: absolute;
+	left: 0;
+	right: 0;
+	overflow: hidden;
+}
+
+/* Off-screen measuring area at the real text width. */
+.aglc-pv-measure {
+	position: absolute;
+	left: -100000px;
+	top: 0;
+	visibility: hidden;
+	pointer-events: none;
+}
+
+.aglc-pv-para {
+	margin: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+	padding-right: 0;
+	white-space: normal;
+	overflow-wrap: break-word;
+	font-kerning: none;
+	font-variant-ligatures: none;
+	color: #000;
+}
+
+.aglc-pv-para * {
+	line-height: inherit;
+}
+
+/* Word superscripts do not change the line height. */
+.aglc-pv-para sup {
+	font-size: 0.67em;
+	line-height: 0;
+	vertical-align: baseline;
+	position: relative;
+	top: -0.4em;
+}
+
+.aglc-pv-marker {
+	display: inline-block;
+}
+
+/* AGLC4 levels two and three: the number is upright in an italic heading. */
+.aglc-pv-hnum-upright {
+	font-style: normal;
+}
+
+.aglc-pv-code,
+.aglc-pv-codeblock {
+	font-family: "Courier New", "Liberation Mono", Cousine, monospace;
+}
+
+.aglc-pv-para mark {
+	background: #ff0;
+	color: inherit;
+}
+
+.aglc-pv-hr {
+	border-bottom: 0.75pt solid #000;
+	box-sizing: border-box;
+}
+
+.aglc-pv-table table {
+	border-collapse: collapse;
+	width: 100%;
+}
+
+.aglc-pv-table td {
+	border: 0.5pt solid #000;
+	padding: 0 5.4pt;
+	vertical-align: top;
+}
+
+.aglc-pv-separator {
+	position: absolute;
+	left: 0;
+	width: 144pt;
+	border-top: 0.5pt solid #000;
+}
+
+.aglc-pv-pagenum {
+	position: absolute;
+	left: 0;
+	right: 0;
+	text-align: center;
+	color: #000;
+}
+
+/* Version history */
+.aglc-hist-view {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2);
+}
+.aglc-hist-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+}
+.aglc-hist-title {
+	font-weight: var(--font-semibold);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.aglc-hist-buttons {
+	display: flex;
+	gap: var(--size-2-1);
+}
+.aglc-hist-list {
+	max-height: 40%;
+	overflow-y: auto;
+	border: var(--border-width) solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+.aglc-hist-day {
+	padding: var(--size-2-2) var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	color: var(--text-muted);
+	background: var(--background-secondary);
+}
+.aglc-hist-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--size-2-2) var(--size-4-2);
+	padding: var(--size-2-2) var(--size-4-2);
+	cursor: var(--cursor);
+	font-size: var(--font-ui-small);
+}
+.aglc-hist-row:hover {
+	background: var(--background-modifier-hover);
+}
+.aglc-hist-row.is-selected {
+	background: var(--background-modifier-active-hover);
+}
+.aglc-hist-export {
+	cursor: default;
+}
+.aglc-hist-time {
+	font-variant-numeric: tabular-nums;
+}
+.aglc-hist-name {
+	font-weight: var(--font-semibold);
+	color: var(--text-accent);
+}
+.aglc-hist-label,
+.aglc-hist-size {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+.aglc-hist-row-actions {
+	margin-left: auto;
+}
+.aglc-hist-detail {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	gap: var(--size-4-2);
+}
+.aglc-hist-detail-title {
+	font-weight: var(--font-semibold);
+}
+.aglc-hist-detail-stats {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+.aglc-hist-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2);
+	margin-top: var(--size-2-2);
+}
+.aglc-hist-diff {
+	flex: 1;
+	overflow: auto;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	border: var(--border-width) solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: var(--size-2-2);
+}
+.aglc-hist-line {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+.aglc-hist-add {
+	background: rgba(var(--color-green-rgb), 0.15);
+}
+.aglc-hist-del {
+	background: rgba(var(--color-red-rgb), 0.15);
+}
+.aglc-hist-skip {
+	color: var(--text-faint);
+	font-style: italic;
+	padding: var(--size-2-1) 0;
+}
+.aglc-hist-empty {
+	color: var(--text-muted);
+	padding: var(--size-4-2);
+}
+.aglc-hist-error {
+	color: var(--text-error);
+	padding: var(--size-4-2);
+}
+.aglc-hist-footer {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+}
+
+.aglc-status.aglc-status-off {
+	color: var(--text-faint);
+}
+
+/* Placeholders of an inserted citation, until filled in (Tab moves to the next) */
+.aglc-placeholder {
+	border-bottom: 1px dotted var(--text-faint);
+	background-color: var(--background-modifier-hover);
+	border-radius: 2px;
+}
+
+/* The example of a kind of source in "Cite a kind of source" */
+.aglc-suggestion-example {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	margin-top: 0.1em;
+}

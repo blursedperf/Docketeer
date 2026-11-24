@@ -1,0 +1,85 @@
+/**
+ * Renderer entry. Publishes the app's single copy of the API and CodeMirror for plugins (their bare
+ * imports resolve through the page's import map to shims that read `__quireModules`), then starts the app
+ * or, with no vault open, the welcome screen.
+ */
+import * as api from '@quire/api';
+import * as cmState from '@codemirror/state';
+import * as cmView from '@codemirror/view';
+import * as cmLanguage from '@codemirror/language';
+import * as cmCommands from '@codemirror/commands';
+import * as cmSearch from '@codemirror/search';
+import * as cmAutocomplete from '@codemirror/autocomplete';
+import * as cmMarkdown from '@codemirror/lang-markdown';
+import * as lezerCommon from '@lezer/common';
+import * as lezerHighlight from '@lezer/highlight';
+import * as lezerMarkdown from '@lezer/markdown';
+import { App, getHost, setIcon } from '@quire/api';
+import { registerCore } from './core';
+import { runSmoke } from './smoke';
+
+(globalThis as Record<string, unknown>).__quireModules = {
+	'@quire/api': api,
+	'@codemirror/state': cmState,
+	'@codemirror/view': cmView,
+	'@codemirror/language': cmLanguage,
+	'@codemirror/commands': cmCommands,
+	'@codemirror/search': cmSearch,
+	'@codemirror/autocomplete': cmAutocomplete,
+	'@codemirror/lang-markdown': cmMarkdown,
+	'@lezer/common': lezerCommon,
+	'@lezer/highlight': lezerHighlight,
+	'@lezer/markdown': lezerMarkdown,
+};
+
+async function welcome() {
+	const host = getHost();
+	document.title = 'Quire';
+	const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+	document.body.addClass(dark ? 'theme-dark' : 'theme-light');
+	const root = document.body.createDiv({ cls: 'welcome' });
+	const box = root.createDiv({ cls: 'welcome-box' });
+	const logo = box.createDiv({ cls: 'welcome-logo' });
+	setIcon(logo, 'notebook-pen');
+	box.createEl('h1', { text: 'Quire' });
+	box.createEl('p', { cls: 'welcome-tagline', text: 'Notes in plain Markdown files, on your computer. Nothing goes online.' });
+	const actions = box.createDiv({ cls: 'welcome-actions' });
+	const b1 = actions.createEl('button', { cls: 'mod-cta', text: 'Open a folder as a vault' });
+	b1.addEventListener('click', () => { void host.app.chooseVault(false); });
+	const b2 = actions.createEl('button', { text: 'Create a new vault' });
+	b2.addEventListener('click', () => { void host.app.chooseVault(true); });
+	const recent = await host.app.recentVaults();
+	if (recent.length) {
+		box.createEl('h2', { text: 'Recent vaults' });
+		const list = box.createDiv({ cls: 'welcome-recent' });
+		for (const r of recent) {
+			const item = list.createDiv({ cls: 'welcome-recent-item' });
+			item.createDiv({ cls: 'welcome-recent-name', text: r.name });
+			item.createDiv({ cls: 'welcome-recent-path', text: r.path });
+			item.addEventListener('click', () => { void host.app.openVault(r.path); });
+		}
+	}
+}
+
+async function start() {
+	const host = getHost();
+	if (!host.vault) {
+		await welcome();
+		return;
+	}
+	document.title = `${host.vault.name} - Quire`;
+	const app = new App(host, document.body);
+	(globalThis as Record<string, unknown>).app = app;
+	const core = registerCore(app);
+	await app.start();
+	core.reveal();
+	if (host.app.isSmoke) await runSmoke(app);
+}
+
+start().catch((e: unknown) => {
+	console.error('Quire failed to start', e);
+	const el = document.body.createDiv({ cls: 'fatal-error' });
+	el.createEl('h2', { text: 'Quire failed to start' });
+	el.createEl('pre', { text: e instanceof Error ? `${e.message}\n\n${e.stack ?? ''}` : String(e) });
+	if (getHost().app.isSmoke) getHost().app.smokeReport?.({ ok: false, error: String(e) });
+});

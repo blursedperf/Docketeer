@@ -1,0 +1,60 @@
+# Quire
+
+A Markdown notes app in the spirit of Obsidian that runs **entirely offline**: a vault is a folder of
+plain `.md` files, and the app cannot reach the network — every request is blocked by the app itself,
+whatever a plugin tries. Plugins add commands, views, CodeMirror 6 editor extensions, settings and more.
+
+The first plugin, **AGLC4 Citations** (`plugins/aglc4`), is a port of
+[obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0 and ships built in.
+
+See [PLAN.md](PLAN.md) for the architecture, the plugin API and the roadmap.
+
+## Run it
+
+```bash
+npm install
+npm start            # build and open Quire (choose a folder as a vault)
+```
+
+Pass `--vault=/path/to/folder` after `npm start --` to open a folder directly.
+
+## Develop
+
+```bash
+npm run build        # plugins, then the app (packages/app/dist)
+npm test             # typecheck, API tests, AGLC4 tests (565), build, offline audit
+npm run smoke        # boot the app offscreen on a throwaway vault and drive it end to end
+npm run audit        # offline audit only
+```
+
+`npm run smoke` prints a JSON report (23 checks: vault indexing, editing, links, rename, the AGLC4
+plugin's underlines, fixes, Word/HTML export, footnote pane, page preview, settings, and that requests
+from both the page and the main process are refused) and saves a screenshot. Set `QUIRE_SMOKE_OUT` to
+choose where.
+
+| Path | What |
+|---|---|
+| `packages/api` | `@quire/api`: the plugin API (vault, metadata, workspace, editor, UI) — the app's renderer runtime |
+| `packages/app` | Electron shell: `src/main` (main process, preload), `src/renderer` (core UI, theme, smoke test) |
+| `plugins/aglc4` | AGLC4 Citations |
+| `scripts/offline-audit.mjs` | fails the build if anything shipped could reach the network or run generated code |
+
+## Writing a plugin
+
+A plugin is a folder in `<vault>/.quire/plugins/<id>/` with `manifest.json`, `main.js` and optionally
+`styles.css`. `main.js` is an **ES module** whose default export extends `Plugin`:
+
+```ts
+import { Notice, Plugin } from '@quire/api';
+
+export default class Hello extends Plugin {
+	async onload() {
+		this.addCommand({ id: 'hello', name: 'Say hello', callback: () => new Notice('Hello') });
+	}
+}
+```
+
+Bundle with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and `@lezer/*` external:
+the app supplies its own instances at run time through an import map. `plugins/aglc4/esbuild.config.mjs`
+is a working example. The API follows the shape of Obsidian's for the parts it covers, so most plugins
+port by changing `from 'obsidian'` to `from '@quire/api'`.

@@ -1,0 +1,165 @@
+#!/usr/bin/env node
+/*
+ * Offline audit for Quire: fails if anything that ships could make a network request, run generated
+ * code, or inject raw HTML. Same rules as the AGLC4 plugin's audit, applied to:
+ *   - the app's source (packages/api/src, packages/app/src),
+ *   - the built app (packages/app/dist: main, preload, renderer bundle, shims, CSS),
+ *   - every plugin, through its own audit (plugins/<name>/scripts/offline-audit.mjs) or these rules.
+ *
+ * A few uses are deliberate; each is listed in ALLOWED with its reason, and must still be found (so a
+ * stale entry fails too).
+ *
+ *   node scripts/offline-audit.mjs
+ */
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+const CODE_RULES = [
+	[/\bfetch\s*\(/, 'fetch()'],
+	[/\bXMLHttpRequest\b/, 'XMLHttpRequest'],
+	[/\bnew\s+WebSocket\b/, 'WebSocket'],
+	[/\bEventSource\b/, 'EventSource'],
+	[/\bsendBeacon\b/, 'navigator.sendBeacon'],
+	[/\bRTCPeerConnection\b/, 'WebRTC'],
+	[/\bserviceWorker\.register\b/, 'service workers'],
+	[/\bimportScripts\s*\(/, 'importScripts()'],
+	[/\bimport\s*\(/, 'dynamic import()'],
+	[/require\(\s*["'](?:node:)?(?:http|https|http2|net|tls|dns|dgram|child_process)["']\s*\)/, 'Node network or process module'],
+	[/\bfrom\s*["'](?:node:)?(?:http|https|http2|net|tls|dns|dgram|child_process)["']/, 'Node network or process module'],
+	[/\bnet\.request\b/, 'Electron net.request'],
+	[/\bopenExternal\b/, 'shell.openExternal'],
+	[/\bwindow\.open\s*\(/, 'window.open()'],
+	[/\bautoUpdater\b/, 'auto-updater'],
+	[/\bcrashReporter\b/, 'crash reporter'],
+	[/\beval\s*\(/, 'eval()'],
+	[/\bnew\s+Function\s*\(/, 'new Function()'],
+	[/\bset(?:Timeout|Interval)\s*\(\s*["'`]/, 'string timer (implicit eval)'],
+	[/\.outerHTML\s*[+]?=/, 'outerHTML assignment'],
+	[/\binsertAdjacentHTML\b/, 'insertAdjacentHTML'],
+	[/\bdocument\.write\b/, 'document.write'],
+	[/\bcreateContextualFragment\b/, 'createContextualFragment'],
+	[/\.src\s*=\s*["'`](?:https?:)?\/\//, 'remote src assignment'],
+];
+/** innerHTML is checked in our own source only: bundled libraries (CodeMirror) use it on their own, non-user content. */
+const SOURCE_ONLY_RULES = [[/\.innerHTML\s*[+]?=/, 'innerHTML assignment']];
+
+const CSS_RULES = [
+	[/@import\b/i, '@import'],
+	[/url\(\s*(?!["']?(?:data:|#))/i, 'url() that is not an inline data: URI'],
+	[/https?:\/\//i, 'remote URL'],
+];
+
+/** Deliberate uses: [file (relative), label, reason]. */
+const ALLOWED = [
+	['packages/api/src/app.ts', 'dynamic import()', 'loads a plugin\'s main.js from quire://app/plugins/ (local files only; the CSP allows scripts only from quire:)'],
+	['packages/app/src/renderer/smoke.ts', 'fetch()', 'smoke test: checks that a request from the page is refused'],
+	['packages/app/src/main/main.ts', 'fetch()', 'smoke test: checks that a request from the main process is refused'],
+	['packages/app/dist/main.cjs', 'fetch()', 'built from main.ts (see above)'],
+	['packages/app/dist/renderer/renderer.js', 'fetch()', 'built from smoke.ts (see above)'],
+	['packages/app/dist/renderer/renderer.js', 'dynamic import()', 'built from app.ts (see above)'],
+];
+
+function stripComments(code) {
+	let out = '';
+	for (let i = 0; i < code.length; i++) {
+		const ch = code[i];
+		const next = code[i + 1];
+		if (ch === '"' || ch === "'" || ch === '`') {
+			let j = i + 1;
+			while (j < code.length && code[j] !== ch) j += code[j] === '\\' ? 2 : 1;
+			out += code.slice(i, j + 1);
+			i = j;
+		} else if (ch === '/' && next === '/') {
+			while (i < code.length && code[i] !== '\n') i++;
+			out += '\n';
+		} else if (ch === '/' && next === '*') {
+			const end = code.indexOf('*/', i + 2);
+			out += code.slice(i, end === -1 ? code.length : end + 2).replace(/[^\n]/g, ' ');
+			i = end === -1 ? code.length : end + 1;
+		} else {
+			out += ch;
+		}
+	}
+	return out;
+}
+
+function walk(dir, exts, found = []) {
+	if (!existsSync(dir)) return found;
+	for (const name of readdirSync(dir)) {
+		if (name === 'node_modules' || name.startsWith('.')) continue;
+		const path = join(dir, name);
+		if (statSync(path).isDirectory()) walk(path, exts, found);
+		else if (exts.some((e) => name.endsWith(e)) && !name.endsWith('.d.ts') && !name.endsWith('.map')) found.push(path);
+	}
+	return found;
+}
+
+const problems = [];
+const used = new Set();
+function check(path, text, rules) {
+	const rel = relative(ROOT, path);
+	const lines = text.split('\n');
+	for (const [regex, label] of rules) {
+		for (let i = 0; i < lines.length; i++) {
+			if (!regex.test(lines[i])) continue;
+			const allowed = ALLOWED.findIndex(([f, l]) => f === rel && l === label);
+			if (allowed !== -1) { used.add(allowed); continue; }
+			problems.push(`${rel}:${i + 1}: ${label}`);
+		}
+	}
+}
+
+// Our source.
+const source = [...walk(join(ROOT, 'packages/api/src'), ['.ts']), ...walk(join(ROOT, 'packages/app/src'), ['.ts'])];
+for (const f of source) check(f, stripComments(readFileSync(f, 'utf8')), [...CODE_RULES, ...SOURCE_ONLY_RULES]);
+for (const f of walk(join(ROOT, 'packages/app/src'), ['.css'])) check(f, readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''), CSS_RULES);
+
+// The built app (bundled libraries included).
+const dist = join(ROOT, 'packages/app/dist');
+const built = existsSync(dist);
+if (built) {
+	for (const f of walk(dist, ['.js', '.cjs', '.mjs'])) {
+		if (f.includes(`${join(dist, 'plugins')}`)) continue; // audited with their plugin below
+		check(f, stripComments(readFileSync(f, 'utf8')), CODE_RULES);
+	}
+	for (const f of walk(join(dist, 'renderer'), ['.css'])) check(f, readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''), CSS_RULES);
+	const csp = readFileSync(join(dist, 'renderer/csp.txt'), 'utf8');
+	for (const must of ["connect-src 'none'", "default-src 'none'", "worker-src 'none'", "object-src 'none'"]) {
+		if (!csp.includes(must)) problems.push(`packages/app/dist/renderer/csp.txt: missing ${must}`);
+	}
+	if (/unsafe-eval/.test(csp)) problems.push('packages/app/dist/renderer/csp.txt: allows unsafe-eval');
+}
+
+// Plugins: their own audit if they have one, otherwise these rules.
+const pluginsDir = join(ROOT, 'plugins');
+for (const name of existsSync(pluginsDir) ? readdirSync(pluginsDir) : []) {
+	const dir = join(pluginsDir, name);
+	const own = join(dir, 'scripts/offline-audit.mjs');
+	if (existsSync(own)) {
+		try {
+			execFileSync(process.execPath, [own], { stdio: 'pipe' });
+		} catch (e) {
+			problems.push(`plugins/${name}: its offline audit failed:\n${e.stdout?.toString() ?? ''}${e.stderr?.toString() ?? ''}`);
+		}
+	} else {
+		for (const f of [...walk(join(dir, 'src'), ['.ts', '.js']), ...['main.js'].map((x) => join(dir, x)).filter(existsSync)]) {
+			check(f, stripComments(readFileSync(f, 'utf8')), [...CODE_RULES, ...SOURCE_ONLY_RULES]);
+		}
+	}
+}
+
+ALLOWED.forEach(([file, label], i) => {
+	const isDist = file.startsWith('packages/app/dist/');
+	if (!used.has(i) && (!isDist || built)) problems.push(`${file}: allowed "${label}" not found (remove it from ALLOWED)`);
+});
+
+if (problems.length) {
+	console.error('Offline audit failed:');
+	for (const p of problems) console.error(`  ${p}`);
+	process.exit(1);
+}
+console.log(`Offline audit passed: ${source.length} source files${built ? ', the built app' : ' (app not built: run npm run build to audit the bundle)'} and ${readdirSync(pluginsDir).length} plugin(s).`);

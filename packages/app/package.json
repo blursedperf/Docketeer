@@ -1,0 +1,12 @@
+{
+  "name": "@quire/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "electron .",
+    "smoke": "electron . --smoke"
+  }
+}

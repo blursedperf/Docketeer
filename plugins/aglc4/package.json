@@ -1,0 +1,15 @@
+{
+  "name": "quire-plugin-aglc4",
+  "version": "1.16.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "test": "vitest run && node scripts/offline-audit.mjs"
+  },
+  "dependencies": {
+    "docx": "^9.16.0",
+    "fflate": "^0.8.3"
+  }
+}
