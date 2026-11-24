@@ -188,10 +188,10 @@ Every row of the parity table (§6), and where it is now reachable from the Dock
 | Plugin file actions (version history, export, import Word) | ✓ | → on a note lists every plugin `file-menu` item (e.g. "Export to Word with AGLC4 footnotes") |
 | Full-text search | ✓ | Docket input: "In notes" group, matched words marked (Phase 3) |
 | Tags | ✓ | `#` prefix (tags and folders); Enter opens the tag search |
-| Backlinks, unlinked mentions | ◐ | → "Notes linking here" on any note lists each linking line. Unlinked mentions (with "Link" button) stay in the Backlinks sidebar until Phase 6 decides: a "Mentions" action is the planned home |
+| Backlinks, unlinked mentions | ✓ | → "Notes linking here" lists each linking line; → "Mentions (not linked)" lists each mention, and → on one turns it into a link (after Checkpoint 4) |
 | Outgoing links | ✓ | → "Links from this note"; Outline panel "Links" row; unresolved links create the note on Enter |
 | Outline | ✓ | Outline (Mod+2): jump, Alt+↑/↓ move section, Alt+←/→ promote/demote, case-brief fields (add missing) |
-| Page preview | ✓ | Cite panel → "Page preview" (opens the AGLC4 view, which can be tiled) |
+| Page preview | ✓ → Phase 6 | Cite panel → "Page preview". The view opens in the right sidebar today; Phase 6 makes it open in a normal tab (decision 49) |
 | Version history | ✓ | Homebase panel → "Version history of this note"; → on a note (plugin action) |
 | AGLC4 problems list, fixes | ✓ | Cite panel → "List citation problems", "Fix all fixable problems", "Tidy footnotes" |
 | Cite a kind of source, next element | ✓ | Cite panel: builder for cases (reported, MNC), legislation, articles, books; full / Ibid / (n X) chosen automatically. The plugin's as-you-type suggestions stay via "Insert a footnote" |
@@ -200,7 +200,7 @@ Every row of the parity table (§6), and where it is now reachable from the Dock
 | Quick switcher | ✓ | Docket input, ranked by use (Phase 3) |
 | Settings search | ✓ | "Settings" group in the Docket (Phase 3) |
 | Ribbon buttons | ✓ | Every ribbon button is a command (`>`); the ribbon goes in Phase 6 |
-| Toggle sidebars | → Phase 6 | Retired with the sidebars (kept for the Classic sidebars setting) |
+| Toggle sidebars | → Phase 6 | Retired with the sidebars (no Classic sidebars setting: decision 49) |
 | Splits, tabs | ◐ | Layout (Mod+6): open panes, Enter moves between them, → split or close. Keyboard focus/move/resize, presets, reopen closed tab: Phase 5 |
 | Open another homebase | ✓ | Homebase panel; command |
 | Status bar | ✓ | Unchanged (not a sidebar) |

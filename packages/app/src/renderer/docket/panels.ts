@@ -4,6 +4,7 @@
 import { type App, findAuthorities, nextOccurrence } from '@quire/api';
 import type { Docket } from './docket';
 import { AuthorityStore } from './authority-store';
+import { registerMentionAction } from './actions';
 import { authoritiesPanel } from './panels/authorities';
 import { citePanel } from './panels/cite';
 import { currentNote, jumpTo } from './panels/common';
@@ -16,6 +17,7 @@ export function registerCorePanels(app: App, docket: Docket): () => void {
 	const store = new AuthorityStore(app);
 	const cite = citePanel(app, docket);
 	const removers = [
+		registerMentionAction(app, docket),
 		app.docket.addPanel(authoritiesPanel(app, docket, store, (s) => cite.prefill(s))),
 		app.docket.addPanel(outlinePanel(app, docket)),
 		app.docket.addPanel(unitsPanel(app, docket)),

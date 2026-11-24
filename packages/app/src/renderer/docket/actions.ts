@@ -3,7 +3,7 @@
  * file commands, pin and archive, links to and from the note, and every action plugins add to the file
  * menu (export to Word, version history …), so nothing that was a right-click away is out of reach.
  */
-import { type App, Menu, type SearchResult, TFile, TFolder } from '@quire/api';
+import { type App, Menu, Notice, type SearchResult, TFile, TFolder, escapeRegExp } from '@quire/api';
 import type { ActionItem, Docket } from './docket';
 import { openFileIn } from './providers';
 
@@ -79,6 +79,7 @@ export function noteActions(app: App, docket: Docket, file: TFile): ActionItem[]
 		cmd('app:open-in-new-tab'),
 		{ title: 'Notes linking here', icon: 'link', run: () => showLinksTo(app, docket, file) },
 		{ title: 'Links from this note', icon: 'arrow-up-right', run: () => showLinksFrom(app, docket, file) },
+		{ title: 'Mentions (not linked)', icon: 'text-search', run: () => showMentions(app, docket, file) },
 		cmd('app:toggle-pin-note', isPinned(app, file) ? 'Unpin from Units' : 'Pin to Units'),
 		cmd('app:rename-file', 'Rename…'),
 		cmd('app:move-file', 'Move to…'),
@@ -132,4 +133,82 @@ export function showLinksFrom(app: App, docket: Docket, file: TFile): void {
 		});
 	}
 	docket.showList(`Links from ${file.basename}`, out);
+}
+
+export interface Mention { file: TFile; from: number; to: number; written: string; line: string }
+
+/**
+ * Places a note's name appears without a link: as a whole word, outside links, embeds, code and
+ * properties. Only notes the search index says contain the name's words are read.
+ */
+export async function findMentions(app: App, file: TFile, stale: () => boolean = () => false): Promise<Mention[] | null> {
+	const { vault, metadataCache, search } = app;
+	const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(file.basename)}(?![\\p{L}\\p{N}])`, 'giu');
+	const paths = search.isReady ? search.index.candidates(file.basename) : null;
+	const sources = paths ? paths.map((p) => vault.getFileByPath(p)).filter((f): f is TFile => !!f) : vault.getMarkdownFiles();
+	const out: Mention[] = [];
+	let n = 0;
+	for (const src of sources) {
+		if (src === file || app.isLocked(src)) continue;
+		if (++n % 200 === 0) await new Promise((r) => setTimeout(r, 0));
+		if (stale()) return null;
+		const text = await vault.cachedRead(src);
+		const cache = metadataCache.getFileCache(src);
+		const skip: [number, number][] = [...(cache?.links ?? []), ...(cache?.embeds ?? [])].map((l) => [l.position.start.offset, l.position.end.offset]);
+		if (cache?.frontmatterPosition) skip.push([0, cache.frontmatterPosition.end.offset]);
+		for (const m of text.matchAll(/```[\s\S]*?```|`[^`\n]*`/g)) skip.push([m.index, m.index + m[0].length]);
+		for (const m of text.matchAll(re)) {
+			if (skip.some(([a, b]) => m.index >= a && m.index < b)) continue;
+			const start = text.lastIndexOf('\n', m.index - 1) + 1;
+			const end = text.indexOf('\n', m.index);
+			out.push({ file: src, from: m.index, to: m.index + m[0].length, written: m[0], line: text.slice(start, end < 0 ? text.length : end).trim() });
+		}
+	}
+	return out;
+}
+
+/** Turn a mention into a [[link]] (keeping the text as written when it differs from the name). */
+export async function linkMention(app: App, target: TFile, m: Mention): Promise<boolean> {
+	const linktext = app.metadataCache.fileToLinktext(target, m.file.path);
+	const insert = m.written === linktext ? `[[${linktext}]]` : `[[${linktext}|${m.written}]]`;
+	const apply = (text: string) => (text.slice(m.from, m.to) === m.written ? text.slice(0, m.from) + insert + text.slice(m.to) : null);
+	const editor = app.workspace.editorForFile(m.file);
+	if (editor) {
+		const next = apply(editor.getValue());
+		if (next === null) return false;
+		editor.replaceWhole(next);
+		await app.workspace.saveFile(m.file);
+		return true;
+	}
+	let ok = true;
+	await app.vault.process(m.file, (t) => { const n = apply(t); if (n === null) { ok = false; return t; } return n; });
+	return ok;
+}
+
+/** Unlinked mentions of `file`, in the Docket; → on one offers "Turn into a link". */
+export async function showMentions(app: App, docket: Docket, file: TFile): Promise<void> {
+	const list = (await findMentions(app, file)) ?? [];
+	const results: SearchResult[] = list.map((m) => ({
+		...noteResult(app, m.file, m.line, { from: m.from, to: m.to }),
+		id: `mention:${m.file.path}:${m.from}`,
+	}));
+	const byId = new Map(results.map((r, i) => [r.id, list[i]!]));
+	docket.showList(`Mentions of ${file.basename}`, results);
+	mentionTargets.set(docket, { file, byId });
+}
+
+const mentionTargets = new WeakMap<Docket, { file: TFile; byId: Map<string, Mention> }>();
+
+/** The "Turn into a link" action on mentions. */
+export function registerMentionAction(app: App, docket: Docket): () => void {
+	return app.docket.addResultAction({
+		id: 'core:link-mention', title: 'Turn into a link', icon: 'link', source: 'core',
+		appliesTo: (r) => !!mentionTargets.get(docket)?.byId.has(r.id),
+		run: async (r) => {
+			const t = mentionTargets.get(docket);
+			const m = t?.byId.get(r.id);
+			if (!t || !m) return;
+			new Notice((await linkMention(app, t.file, m)) ? `Linked to ${t.file.basename}.` : 'The note changed; look again and retry.');
+		},
+	});
 }

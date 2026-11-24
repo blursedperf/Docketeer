@@ -1,5 +1,6 @@
 // Original fixtures (made-up names, real-looking shapes). Each expected string is marked
-// "VERIFY against AGLC": they encode our reading of the rules and should be checked against the guide.
+// "VERIFY against AGLC": our reading of the rules. The AGLC4 expectations were checked by the user on
+// 2026-11-24; keep the markers so later editions get the same check.
 import { describe, expect, it } from 'vitest';
 import { AGLC4, footnoteChanges, noteFootnotes, planCitation, type Source } from '../src/cite';
 

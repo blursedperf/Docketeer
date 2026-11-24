@@ -1177,6 +1177,29 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (panes >= 2 && moved) || `panes=${panes} moved=${moved}`;
 	});
 
+	await check('mentions: listed in the Docket, and turned into a link', async () => {
+		const note = await vault.create('Mention test.md', 'See Welcome for more.\n');
+		await sleep(150);
+		press('p', { ctrl: true });
+		await type('welcome');
+		press('ArrowRight');
+		await sleep(30);
+		const pick = (title: string) => { const i = titles().indexOf(title); for (let k = 0; k < i; k++) press('ArrowDown'); press('Enter'); return i >= 0; };
+		const had = pick('Mentions (not linked)');
+		await sleep(200);
+		const listed = titles().includes('Mention test');
+		const i = titles().indexOf('Mention test');
+		for (let k = 0; k < i; k++) press('ArrowDown');
+		press('ArrowRight');
+		await sleep(30);
+		const linkAction = pick('Turn into a link');
+		await sleep(200);
+		const text = await vault.read(note);
+		press('Escape'); press('Escape'); press('Escape');
+		await vault.trash(note, true);
+		return (had && listed && linkAction && text.includes('[[Welcome]]')) || `had=${had} listed=${listed} action=${linkAction} text=${text}`;
+	});
+
 	await check('note actions include links and the plugins\' file actions', async () => {
 		press('p', { ctrl: true });
 		await type('aglc4 example');

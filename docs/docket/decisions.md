@@ -159,3 +159,14 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     panels can show a list of results ("Notes citing …", "Links to …") the same way. Note actions everywhere
     include the plugins' `file-menu` items, read through a new `Menu.listItems()`.
 47. **Inside panel forms** (Cite), Tab moves between fields and arrows edit text; Esc goes back a step.
+
+## Checkpoint 4 (answers)
+
+48. **Unlinked mentions move to a "Mentions" action** on notes in the Docket: each mention with its line,
+    Enter opens it there, → "Turn into a link".
+49. **No Classic sidebars.** The sidebars are replaced entirely by the Docket in Phase 6; no fallback setting
+    (this replaces decision 8). The AGLC4 plugin's views that live in the right sidebar today, the page
+    (Word export) preview and version history, must open in a normal tab instead; done in Phase 6 with the
+    sidebar removal.
+50. **The AGLC4 fixture formats are confirmed** by the user (the `// VERIFY against AGLC` expectations in
+    `test/cite.test.ts` and `test/authorities.test.ts`); the markers stay so later editions get the same check.
