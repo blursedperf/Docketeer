@@ -71,6 +71,7 @@ export function getActiveIconPack(): { id: string; weight: string } {
 /** Register an icon under `name`, from Lucide-style node data or a single path. */
 export function addIcon(name: string, data: LucideNode | IconData): void {
 	custom.set(name, Array.isArray(data) ? { viewBox: '0 0 24 24', nodes: data, stroke: true } : data);
+	for (const k of [...built.keys()]) if (k.endsWith(`|${name}`)) built.delete(k);
 }
 
 function resolve(name: string): { data: IconData; pack: string } | null {
@@ -85,7 +86,19 @@ function resolve(name: string): { data: IconData; pack: string } | null {
 	return l ? { data: l, pack: 'lucide' } : null;
 }
 
+/** Built icons by set, weight and name: later uses copy them instead of building them again. */
+const built = new Map<string, SVGSVGElement>();
+
 export function getIcon(name: string): SVGSVGElement | null {
+	const key = `${active.id}|${activeWeight}|${name}`;
+	const hit = built.get(key);
+	if (hit) return hit.cloneNode(true) as SVGSVGElement;
+	const svg = buildIcon(name);
+	if (svg) built.set(key, svg.cloneNode(true) as SVGSVGElement);
+	return svg;
+}
+
+function buildIcon(name: string): SVGSVGElement | null {
 	const r = resolve(name);
 	if (!r) return null;
 	const svg = document.createElementNS(SVG_NS, 'svg');

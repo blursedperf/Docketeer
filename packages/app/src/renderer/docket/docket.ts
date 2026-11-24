@@ -381,7 +381,8 @@ export class Docket {
 			}
 		}
 		if (!this.items.length) this.resultsEl.createDiv({ cls: 'docket-empty', text: EMPTY[prefix] ?? 'No matches.' });
-		this.select(0);
+		this.resultsEl.scrollTop = 0;
+		this.select(0, false); // the first row is in view: no need to make the browser lay out to scroll
 		const n = this.items.length;
 		this.liveEl.setText(n ? `${n} result${n === 1 ? '' : 's'}` : EMPTY[prefix] ?? 'No matches.');
 	}
@@ -408,7 +409,7 @@ export class Docket {
 		return opt;
 	}
 
-	private select(i: number): void {
+	private select(i: number, scroll = true): void {
 		const count = this.actions ? this.actions.length : this.items.length;
 		if (!count) { this.inputEl.removeAttribute('aria-activedescendant'); return; }
 		this.selected = (i + count) % count;
@@ -416,7 +417,7 @@ export class Docket {
 			const on = el.id === `docket-opt-${this.selected}`;
 			el.toggleClass('is-selected', on);
 			el.setAttribute('aria-selected', String(on));
-			if (on) el.scrollIntoView({ block: 'nearest' });
+			if (on && scroll) el.scrollIntoView({ block: 'nearest' });
 		}
 		this.inputEl.setAttribute('aria-activedescendant', `docket-opt-${this.selected}`);
 		this.resultsEl.setAttribute('aria-activedescendant', `docket-opt-${this.selected}`);

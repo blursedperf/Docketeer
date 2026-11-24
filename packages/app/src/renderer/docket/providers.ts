@@ -67,6 +67,20 @@ export function registerCoreProviders(app: App): () => void {
 	let settings: ReturnType<typeof app.setting.listSettings> | null = null;
 	const warm = app.on('docket-open', () => { if (!settings) window.setTimeout(() => { settings ??= app.setting.listSettings(); }, 0); });
 
+	// Tag counts, worked out again only after a note changes.
+	let tags: Map<string, number> | null = null;
+	const tagsStale = [metadataCache.on('changed', () => { tags = null; }), metadataCache.on('deleted', () => { tags = null; }), vault.on('rename', () => { tags = null; })];
+	const tagCounts = () => {
+		if (tags) return tags;
+		tags = new Map();
+		for (const f of vault.getMarkdownFiles()) {
+			if (app.isLocked(f)) continue;
+			const cache = metadataCache.getFileCache(f);
+			for (const t of new Set(cache ? getAllTags(cache) ?? [] : [])) tags.set(t, (tags.get(t) ?? 0) + 1);
+		}
+		return tags;
+	};
+
 	const removers = [
 		docket.addSearchProvider({
 			id: 'core:commands', title: 'Commands', prefixes: ['', '>'], source: 'core',
@@ -108,7 +122,8 @@ export function registerCoreProviders(app: App): () => void {
 					}
 				}
 				// Full text: every word, as a prefix, anywhere in a note.
-				if (search.isReady && text.length >= 2 && (!only || only === 'In notes')) {
+				// From three characters: two match nearly every note, and cost a keystroke's budget for nothing.
+				if (search.isReady && text.length >= 3 && (!only || only === 'In notes')) {
 					const r = search.index.searchText(text, many(only, 'In notes'), ctx);
 					totals['In notes'] = r.total;
 					for (const h of r.hits) {
@@ -202,13 +217,7 @@ export function registerCoreProviders(app: App): () => void {
 						open: () => workspace.ensureSideLeaf(FILE_EXPLORER, 'left', { reveal: true }).then((leaf) => (leaf.view as FileExplorerView).reveal(folder)),
 					});
 				}
-				const counts = new Map<string, number>();
-				for (const f of vault.getMarkdownFiles()) {
-					if (app.isLocked(f)) continue;
-					const cache = metadataCache.getFileCache(f);
-					for (const t of new Set(cache ? getAllTags(cache) ?? [] : [])) counts.set(t, (counts.get(t) ?? 0) + 1);
-				}
-				for (const [tag, n] of counts) {
+				for (const [tag, n] of tagCounts()) {
 					const s = text ? fuzzyScore(text.replace(/^#/, ''), tag.replace(/^#/, '')) : n / 1000;
 					if (s === null) continue;
 					out.push({
@@ -239,6 +248,10 @@ export function registerCoreProviders(app: App): () => void {
 			},
 		}),
 	];
-	return () => { app.offref(warm); for (const r of removers) r(); };
+	return () => {
+		app.offref(warm);
+		metadataCache.offref(tagsStale[0]!); metadataCache.offref(tagsStale[1]!); vault.offref(tagsStale[2]!);
+		for (const r of removers) r();
+	};
 }
 

@@ -65,6 +65,14 @@ export class SearchIndex {
 	private sorted: string[] = [];
 	private unsorted: string[] = [];
 	private dead = 0;
+	/** Bumped on every change, so remembered matches from an earlier query are not reused after one. */
+	private version = 0;
+	/**
+	 * The last name and heading queries and what matched. Typing extends the query, and whatever matches
+	 * "smit" also matched "smi", so the next keystroke only rechecks those instead of every note.
+	 */
+	private lastNames: { q: string; version: number; ids: number[] } | null = null;
+	private lastHeadings: { q: string; version: number; hits: [number, number][] } | null = null;
 	/** Scratch for intersections: a stamp per note id. */
 	private marks = new Uint32Array(0);
 	private stamp = 0;
@@ -77,6 +85,7 @@ export class SearchIndex {
 	set(path: string, text: string, headings: IndexedHeading[] = []): void {
 		if (this.byPath.has(path)) this.remove(path);
 		const name = nameOf(path);
+		this.version++;
 		const id = this.docs.length;
 		this.docs.push({ path, name, lowerName: name.toLowerCase(), ...unitOf(path), text, lower: text.toLowerCase(), headings });
 		this.byPath.set(path, id);
@@ -94,7 +103,7 @@ export class SearchIndex {
 	/** Replace a note's headings (from the metadata cache) without re-reading its text. */
 	setHeadings(path: string, headings: IndexedHeading[]): void {
 		const id = this.byPath.get(path);
-		if (id !== undefined) this.docs[id]!.headings = headings;
+		if (id !== undefined) { this.docs[id]!.headings = headings; this.version++; }
 	}
 
 	remove(path: string): void {
@@ -102,6 +111,7 @@ export class SearchIndex {
 		if (id === undefined) return;
 		this.docs[id] = null;
 		this.byPath.delete(path);
+		this.version++;
 		this.dead++;
 		if (this.dead > 500 && this.dead > this.docs.length / 4) this.compact();
 	}
@@ -121,6 +131,9 @@ export class SearchIndex {
 		this.sorted = [];
 		this.unsorted = [];
 		this.dead = 0;
+		this.version++;
+		this.lastNames = null;
+		this.lastHeadings = null;
 	}
 
 	/** Drop dead ids: renumber the live notes and rebuild the postings. */
@@ -195,17 +208,24 @@ export class SearchIndex {
 
 	/** Notes whose name matches `query` (fuzzy), best first. */
 	searchNames(query: string, limit = 50, ctx: RankContext = {}): { hits: NameHit[]; total: number } {
-		const q = query.trim();
+		const q = query.trim().toLowerCase();
 		if (!q) return { hits: [], total: 0 };
+		const prev = this.lastNames;
+		const narrow = prev && prev.version === this.version && q.startsWith(prev.q) ? prev.ids : null;
+		const ids: number[] = [];
 		const hits: NameHit[] = [];
-		for (const d of this.docs) {
-			if (!d) continue;
-			const s = fuzzyScore(q, d.lowerName);
-			if (s === null) continue;
+		const check = (id: number) => {
+			const d = this.docs[id];
+			if (!d) return;
+			const s = fuzzyLower(q, d.lowerName);
+			if (s === null) return;
+			ids.push(id);
 			hits.push({ path: d.path, score: s + this.context(d, ctx) });
-		}
-		hits.sort((a, b) => b.score - a.score);
-		return { hits: hits.slice(0, limit), total: hits.length };
+		};
+		if (narrow) for (const id of narrow) check(id);
+		else for (let id = 0; id < this.docs.length; id++) check(id);
+		this.lastNames = { q, version: this.version, ids };
+		return { hits: topSorted(hits, limit), total: hits.length };
 	}
 
 	/**
@@ -244,20 +264,53 @@ export class SearchIndex {
 
 	/** Headings, in any note, containing every word of `query`, best first. */
 	searchHeadings(query: string, limit = 50, ctx: RankContext = {}): { hits: HeadingHit[]; total: number } {
-		const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+		const q = query.toLowerCase().trim();
+		const words = q.split(/\s+/).filter(Boolean);
 		if (!words.length) return { hits: [], total: 0 };
+		const prev = this.lastHeadings;
+		const narrow = prev && prev.version === this.version && q.startsWith(prev.q) && !/\s$/.test(query) ? prev.hits : null;
+		const kept: [number, number][] = [];
 		const hits: HeadingHit[] = [];
-		for (const d of this.docs) {
-			if (!d) continue;
-			for (const h of d.headings) {
-				if (!words.every((w) => h.lower.includes(w))) continue;
-				const starts = h.lower.startsWith(words[0]!) ? 4 : 0;
-				hits.push({ path: d.path, heading: h, score: 10 + starts - h.level * 0.5 - h.lower.length * 0.01 + this.context(d, ctx) });
-			}
-		}
-		hits.sort((a, b) => b.score - a.score);
-		return { hits: hits.slice(0, limit), total: hits.length };
+		const check = (id: number, hi: number) => {
+			const d = this.docs[id];
+			const h = d?.headings[hi];
+			if (!d || !h || !words.every((w) => h.lower.includes(w))) return;
+			kept.push([id, hi]);
+			const starts = h.lower.startsWith(words[0]!) ? 4 : 0;
+			hits.push({ path: d.path, heading: h, score: 10 + starts - h.level * 0.5 - h.lower.length * 0.01 + this.context(d, ctx) });
+		};
+		if (narrow) for (const [id, hi] of narrow) check(id, hi);
+		else for (let id = 0; id < this.docs.length; id++) { const d = this.docs[id]; if (d) for (let hi = 0; hi < d.headings.length; hi++) check(id, hi); }
+		this.lastHeadings = { q, version: this.version, hits: kept };
+		return { hits: topSorted(hits, limit), total: hits.length };
 	}
+}
+
+/** The best `limit` items, best first, without sorting every match when there are many. */
+function topSorted<T extends { score: number }>(items: T[], limit: number): T[] {
+	const top = items.length > limit * 4 ? topN(items, limit) : items;
+	return top.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
+/** `fuzzyScore` for text that is already lowercase (names are stored that way), without copying it. */
+function fuzzyLower(q: string, t: string): number | null {
+	const direct = t.indexOf(q);
+	if (direct !== -1) return 1000 - direct - (t.length - q.length) * 0.01;
+	let score = 0;
+	let ti = 0;
+	let prev = -2;
+	for (let i = 0; i < q.length; i++) {
+		const ch = q[i]!;
+		if (ch === ' ') continue;
+		const found = t.indexOf(ch, ti);
+		if (found === -1) return null;
+		score += found === prev + 1 ? 5 : 1;
+		if (found === 0) score += 3;
+		else { const c = t.charCodeAt(found - 1); if (c === 32 || c === 47 || c === 45 || c === 95 || c === 46) score += 3; }
+		prev = found;
+		ti = found + 1;
+	}
+	return score - t.length * 0.01;
 }
 
 /** The `n` highest-scoring items (unordered), without sorting them all. */

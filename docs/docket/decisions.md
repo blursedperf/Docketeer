@@ -119,3 +119,8 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     Links are now resolved through a name map, backlinks start from `resolvedLinks` (now re-resolved when
     a note is created), and unlinked mentions only check the notes the index says contain the name's
     words, a few at a time, stopping when a newer render starts. A split now takes about 11 ms.
+37. **Speed-ups after the first CI benchmark** (CI's shared machine put 10 % of keystrokes at 20 ms):
+    typing that extends the query only rechecks the previous name and heading matches; names are matched
+    without copying them to lowercase again; built icons are reused; the first result is selected without
+    forcing a layout; tag counts are cached until a note changes; and full text starts at **three
+    characters** (two match nearly every note). Locally: median 5 ms, worst 11.5 ms a keystroke.

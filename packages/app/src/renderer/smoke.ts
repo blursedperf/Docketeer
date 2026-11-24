@@ -1040,6 +1040,21 @@ export async function runBench(app: App): Promise<void> {
 	const results = document.querySelectorAll('.docket-option').length;
 	ui.close(true);
 	const key = stats(keys);
+	// Diagnosis: each provider alone, on a fresh index cache, for the slow first keystrokes.
+	const per: string[] = [];
+	for (const q of ['s', 'ne', '#to']) {
+		const parts: string[] = [];
+		const prefix = q.startsWith('#') ? '#' : '';
+		const text = q.replace(/^#/, '');
+		for (const p of app.docket.providers.values()) {
+			if (!p.prefixes.includes(prefix)) continue;
+			(app.search.index as unknown as { lastNames: null; lastHeadings: null }).lastNames = null;
+			(app.search.index as unknown as { lastHeadings: null }).lastHeadings = null;
+			const t = performance.now(); await p.search({ prefix, text }); parts.push(`${p.id.replace('core:', '')} ${round(performance.now() - t)}`);
+		}
+		per.push(`${q}: ${parts.join(', ')}`);
+	}
+	checks.push({ name: `(providers: ${per.join(' | ')})`, ok: true });
 	const slow = typed.map((q, i) => `${q}: ${round(keys[i]!)}`).filter((_, i) => keys[i]! > 12).join(', ');
 	checks.push({ name: `(slowest keystrokes: ${slow || 'none over 12 ms'})`, ok: true });
 	checks.push({ name: `Filtering takes under 16 ms a keystroke (median ${round(key.median)}, 90th percentile ${round(key.p90)}, worst ${round(key.worst)})`, ok: key.p90 < 16 && results > 0 });

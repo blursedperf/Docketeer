@@ -127,3 +127,18 @@ describe('candidates', () => {
 		expect(idx.candidates('Unknown name')).toEqual([]);
 	});
 });
+
+describe('typing narrows the last matches', () => {
+	it('gives the same results as a fresh search, and notices changes', () => {
+		const idx = small();
+		const fresh = () => { const f = small(); return f; };
+		for (const q of ['d', 'do', 'don', 'dono']) expect(idx.searchNames(q).hits.map((h) => h.path)).toEqual(fresh().searchNames(q).hits.map((h) => h.path));
+		idx.searchNames('do');
+		idx.set('Torts/Duty/Dorset Yacht.md', 'Home Office v Dorset Yacht.');
+		expect(idx.searchNames('dor').hits.map((h) => h.path)).toContain('Torts/Duty/Dorset Yacht.md');
+		idx.searchHeadings('he');
+		expect(idx.searchHeadings('held').total).toBe(1);
+		idx.setHeadings('Contracts/Formation/Carlill.md', [h('Held')]);
+		expect(idx.searchHeadings('held').total).toBe(2);
+	});
+});
