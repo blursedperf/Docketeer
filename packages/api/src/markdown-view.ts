@@ -219,8 +219,12 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		this.registerEvent(this.app.vault.on('modify', (f: TAbstractFile) => { if (f === this.file) void this.onExternalModify(); }));
 	}
 
-	override async onLoadFile(file: TFile): Promise<void> {
-		const text = await this.app.vault.read(file);
+	protected override async readFileContent(file: TFile): Promise<string> {
+		return this.app.vault.read(file);
+	}
+
+	override async onLoadFile(file: TFile, content?: unknown): Promise<void> {
+		const text = typeof content === 'string' ? content : await this.app.vault.read(file);
 		this.loading = true;
 		this.editor.cm.setState(this.makeState(text));
 		this.watchVim();

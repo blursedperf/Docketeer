@@ -92,15 +92,22 @@ export abstract class FileView extends ItemView {
 		await super.setState(state, result);
 	}
 
+	/**
+	 * Show `file`. Its content is read first (`readFileContent`), and only then does the view switch to
+	 * it, so nothing that asks for the active note sees the new note before its content is there.
+	 */
 	async loadFile(file: TFile): Promise<void> {
+		const content = await this.readFileContent(file);
 		if (this.file) await this.onUnloadFile(this.file);
 		this.file = file;
-		await this.onLoadFile(file);
+		await this.onLoadFile(file, content);
 		this.leaf.updateHeader();
 		this.app.workspace.onFileLoaded(this.leaf, file);
 	}
 
-	async onLoadFile(_file: TFile): Promise<void> {}
+	/** Read what the view shows of `file`, before switching to it (passed on to `onLoadFile`). */
+	protected async readFileContent(_file: TFile): Promise<unknown> { return undefined; }
+	async onLoadFile(_file: TFile, _content?: unknown): Promise<void> {}
 	async onUnloadFile(_file: TFile): Promise<void> {}
 	canAcceptExtension(_extension: string): boolean { return false; }
 	onRename(_file: TFile): void { this.leaf.updateHeader(); }

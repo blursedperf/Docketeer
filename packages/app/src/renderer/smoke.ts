@@ -52,6 +52,34 @@ export async function runSmoke(app: App): Promise<void> {
 		const disk = await vault.adapter.read('Welcome.md');
 		return disk.includes('Typed in the smoke test.') || disk;
 	});
+	await check('an opening note is never active before its text is in the editor', async () => {
+		const seen: string[] = [];
+		const watch = () => {
+			const v = workspace.getActiveViewOfType(MarkdownView);
+			if (v?.file?.path === 'Folder/Inside.md' && v.editor.getValue() === '') seen.push('empty');
+		};
+		const ref = workspace.on('active-leaf-change', watch);
+		const ref2 = workspace.on('file-open', watch);
+		// Reading the note is slowed down, so any moment where it is active with an empty editor is long.
+		const read = vault.read.bind(vault);
+		vault.read = async (f) => { await sleep(300); return read(f); };
+		const timer = window.setInterval(watch, 10);
+		try {
+			// As when a command opens a note into the empty tab you are in: the tab is already active.
+			const blank = workspace.getLeaf('tab');
+			workspace.setActiveLeaf(blank, { focus: false });
+			await workspace.getLeaf('tab').openFile(vault.getFileByPath('Folder/Inside.md')!);
+		} finally {
+			vault.read = read;
+		}
+		watch();
+		window.clearInterval(timer);
+		workspace.offref(ref);
+		workspace.offref(ref2);
+		workspace.activeLeaf?.detach();
+		await sleep(50);
+		return seen.length === 0 || `seen with an empty editor ${seen.length} time(s)`;
+	});
 	await check('reading view renders links and footnotes', async () => {
 		const view = workspace.getActiveViewOfType(MarkdownView)!;
 		await view.setMode('preview');
