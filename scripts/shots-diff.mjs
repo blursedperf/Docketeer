@@ -9,7 +9,7 @@
  * --update copies the new screenshots over the references (after reviewing the change). References are
  * per platform because fonts differ; CI compares on Linux.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pixelmatch from 'pixelmatch';
@@ -34,6 +34,12 @@ if (names.length === 0) {
 	process.exit(2);
 }
 
+const empty = names.filter((n) => statSync(join(shots, n)).size === 0);
+if (empty.length) {
+	console.error(`Empty screenshot(s), the capture failed: ${empty.join(', ')}`);
+	process.exit(1);
+}
+
 if (update) {
 	mkdirSync(baseline, { recursive: true });
 	for (const n of names) copyFileSync(join(shots, n), join(baseline, n));
@@ -52,8 +58,16 @@ const failures = [];
 for (const n of names) {
 	const refPath = join(baseline, n);
 	if (!existsSync(refPath)) { failures.push(`${n}: no reference image`); continue; }
-	const a = PNG.sync.read(readFileSync(refPath));
-	const b = PNG.sync.read(readFileSync(join(shots, n)));
+	let a;
+	let b;
+	try {
+		a = PNG.sync.read(readFileSync(refPath));
+		b = PNG.sync.read(readFileSync(join(shots, n)));
+	} catch (e) {
+		failures.push(`${n}: not a readable PNG (${e instanceof Error ? e.message : e})`);
+		console.log(`✗ ${n.padEnd(34)} unreadable`);
+		continue;
+	}
 	if (a.width !== b.width || a.height !== b.height) {
 		failures.push(`${n}: size ${b.width}×${b.height}, reference ${a.width}×${a.height}`);
 		continue;

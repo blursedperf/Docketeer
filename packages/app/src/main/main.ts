@@ -420,6 +420,7 @@ function createWindow() {
 	if (SMOKE) {
 		win.webContents.setFrameRate(30);
 		win.webContents.on('paint', (_e, _dirty, image) => {
+			if (image.isEmpty()) return;
 			lastFrame = image;
 			const waiting = frameWaiters;
 			frameWaiters = [];
@@ -474,12 +475,18 @@ let frameWaiters: ((img: Electron.NativeImage) => void)[] = [];
 async function captureFrame(): Promise<Electron.NativeImage> {
 	if (!win) throw new Error('No window');
 	if (!win.webContents.isOffscreen()) return win.webContents.capturePage();
-	const fresh = new Promise<Electron.NativeImage>((resolve) => frameWaiters.push(resolve));
-	win.webContents.invalidate();
-	const timeout = new Promise<Electron.NativeImage | null>((resolve) => setTimeout(() => resolve(null), 2000));
-	const img = (await Promise.race([fresh, timeout])) ?? lastFrame;
-	if (!img) throw new Error('No frame painted');
-	return img;
+	// Offscreen windows occasionally paint an empty frame; ask again until one has pixels.
+	for (let attempt = 0; attempt < 5; attempt++) {
+		const fresh = new Promise<Electron.NativeImage>((resolve) => frameWaiters.push(resolve));
+		win.webContents.invalidate();
+		const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+		const img = await Promise.race([fresh, timeout]);
+		if (img && !img.isEmpty()) return img;
+	}
+	if (lastFrame && !lastFrame.isEmpty()) return lastFrame;
+	const page = await win.webContents.capturePage();
+	if (page.isEmpty()) throw new Error('No frame painted');
+	return page;
 }
 
 async function smokeVault(): Promise<string> {
