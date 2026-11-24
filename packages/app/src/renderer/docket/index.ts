@@ -1,13 +1,13 @@
 /**
- * Docket commands and the feature flag. The commands always exist (so they can be found and remapped);
- * the tray is built only while Settings → Appearance → Docket is on. With it on, Mod+P opens the Docket
- * and the command palette gives up Mod+P (its commands are the Docket's ">" prefix).
+ * The Docket's commands, and building it. The Docket is the way into everything since the sidebars
+ * went (Phase 6): Mod+P opens it; the old palette, switcher and sidebar commands open it where their
+ * feature now lives. The `docket` setting exists only so tests can take it down and build it again.
  */
 import type { App, Hotkey } from '@quire/api';
 import { Docket } from './docket';
 import { registerCorePanels } from './panels';
 import { registerCoreProviders } from './providers';
-import { registerNoteCommands, showLinksFrom, showLinksTo } from './actions';
+import { registerNoteCommands, showLinksFrom, showLinksTo, showMentions } from './actions';
 
 const MOD_P: Hotkey = { modifiers: ['Mod'], key: 'p' };
 
@@ -39,45 +39,32 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 	registerNoteCommands(app);
 
 	/**
-	 * The old sidebar commands, and the palette and switcher, now open the Docket where their feature lives
-	 * (decision: map old shortcuts to new commands where sensible). Same ids, so remapped keys keep working.
+	 * The old palette, switcher and sidebar commands, kept by id (so remapped keys and plugins calling them
+	 * still work) and now opening the Docket where each feature lives.
 	 */
-	const retarget = (id: string, run: () => unknown, when: () => boolean = () => !!docket) => {
-		const c = app.commands.findCommand(id);
-		if (!c) return;
-		delete c.callback; delete c.checkCallback; delete c.editorCallback; delete c.editorCheckCallback;
-		c.run = run;
-		c.when = when;
-	};
 	const note = () => app.workspace.getActiveFile();
-	const retargetAll = () => {
-		retarget('app:command-palette', () => docket?.open({ query: '>' }));
-		retarget('app:quick-switcher', () => docket?.open());
-		retarget('app:search', () => docket?.open());
-		retarget('app:show-outline', () => docket?.showPanel('core:outline'));
-		retarget('app:show-tags', () => docket?.open({ query: '#' }));
-		retarget('app:reveal-file', () => docket?.showPanel('core:units'), () => !!docket && !!note());
-		retarget('app:show-backlinks', () => { const f = note(); if (f && docket) { docket.open(); void showLinksTo(app, docket, f); } }, () => !!docket && !!note());
-		retarget('app:show-outgoing-links', () => { const f = note(); if (f && docket) { docket.open(); showLinksFrom(app, docket, f); } }, () => !!docket && !!note());
-		for (const id of ['app:toggle-left-sidebar', 'app:toggle-right-sidebar', 'app:collapse-folders']) retarget(id, () => undefined, () => app.workspace.sidebars);
-		// Mod+O and Mod+Shift+F keep working: they open the Docket too.
-	};
+	const open = (o?: { query?: string; panel?: string }) => { if (docket) { if (o?.panel) docket.showPanel(o.panel); else docket.open(o); } };
+	add({ id: 'app:command-palette', name: 'Commands', icon: 'terminal', section: 'Search', aliases: ['Command palette'], when: () => !!docket, run: () => open({ query: '>' }) });
+	add({ id: 'app:quick-switcher', name: 'Find a note', icon: 'search', section: 'Search', aliases: ['Quick switcher', 'Open note', 'Go to file'], hotkeys: [{ modifiers: ['Mod'], key: 'o' }], when: () => !!docket, run: () => open() });
+	add({ id: 'app:search', name: 'Search in all notes', icon: 'search', section: 'Search', aliases: ['Find in notes', 'Full-text search'], hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'f' }], when: () => !!docket, run: () => open() });
+	add({ id: 'app:show-outline', name: 'Show outline', icon: 'list-tree', section: 'View', when: () => !!docket, run: () => open({ panel: 'core:outline' }) });
+	add({ id: 'app:show-tags', name: 'Show tags', icon: 'tags', section: 'View', when: () => !!docket, run: () => open({ query: '#' }) });
+	add({ id: 'app:reveal-file', name: 'Show this note in Units', icon: 'folders', section: 'Notes', aliases: ['Reveal current file in navigation'], when: () => !!docket && !!note(), run: () => open({ panel: 'core:units' }) });
+	add({ id: 'app:show-backlinks', name: 'Show links to this note', icon: 'link', section: 'View', aliases: ['Backlinks'], when: () => !!docket && !!note(), run: () => { const f = note(); if (f && docket) { docket.open(); void showLinksTo(app, docket, f); } } });
+	add({ id: 'app:show-outgoing-links', name: 'Show links from this note', icon: 'arrow-up-right', section: 'View', aliases: ['Outgoing links'], when: () => !!docket && !!note(), run: () => { const f = note(); if (f && docket) { docket.open(); showLinksFrom(app, docket, f); } } });
+	add({ id: 'app:show-mentions', name: 'Show mentions of this note', icon: 'text-search', section: 'View', aliases: ['Unlinked mentions'], when: () => !!docket && !!note(), run: () => { const f = note(); if (f && docket) { docket.open(); void showMentions(app, docket, f); } } });
 
 	const apply = () => {
-		const palette = app.commands.findCommand('app:command-palette');
 		if (on() && !docket) {
-			retargetAll();
 			docket = new Docket(app);
 			(app as unknown as { docketUI?: Docket }).docketUI = docket;
-			cleanup = [registerCoreProviders(app), registerCorePanels(app, docket)];
-			if (palette) palette.hotkeys = [];
+			cleanup = [registerCoreProviders(app, docket), registerCorePanels(app, docket)];
 		} else if (!on() && docket) {
 			docket.destroy();
 			docket = null;
 			delete (app as unknown as { docketUI?: Docket }).docketUI;
 			for (const c of cleanup) c();
 			cleanup = [];
-			if (palette) palette.hotkeys = [MOD_P];
 		}
 	};
 	app.on('config-changed', (key: string) => {

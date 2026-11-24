@@ -3,7 +3,7 @@
  * reopen a closed tab; layout presets and saved layouts. All are commands, so they are in the Docket.
  */
 import { type App, type Direction, type Hotkey, Notice, PRESETS, Platform, type Preset, TFile } from '@quire/api';
-import { NameModal } from './explorer';
+import { NameModal } from './dialogs';
 
 const ARROW: Record<Direction, string> = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' };
 const NAME: Record<Direction, string> = { left: 'left', right: 'right', up: 'above', down: 'below' };

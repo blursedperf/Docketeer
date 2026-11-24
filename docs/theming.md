@@ -36,7 +36,7 @@ Every colour in the app comes from the `--doom-*` tokens, set per mode on `body.
 ```css
 body.theme-dark {
 	--doom-bg: #0f1115;          /* editor background */
-	--doom-bg-alt: #0a0c0f;      /* sidebars */
+	--doom-bg-alt: #0a0c0f;      /* the Docket, dialogs and menus */
 	--doom-blue: #7aa2f7;        /* accent */
 	--doom-blue-rgb: 122, 162, 247;
 	--doom-blue-text: #7aa2f7;   /* accent as text: keep 4.5:1 against --doom-bg */

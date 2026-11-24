@@ -1,7 +1,7 @@
 /**
  * The Docket: a tray that drops from the top of the window with search, commands and panels, all from
  * the keyboard. Peek overlays the editor and keeps focus until dismissed; pinned docks above the editor.
- * Behind the `docket` setting until the sidebars retire (docs/docket/PLAN.md, Phase 2).
+ * It replaced the sidebars in Phase 6 (docs/docket/PLAN.md).
  */
 import type { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';

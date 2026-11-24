@@ -120,24 +120,16 @@ export class WorkspaceSplit extends WorkspaceItem {
 	}
 }
 
-/** A sidebar: collapsible, holds one tab group. */
-export class WorkspaceSidedock extends WorkspaceSplit {
-	collapsed = false;
-	size = 280;
-	tabs: WorkspaceTabs;
-	constructor(workspace: Workspace, public side: 'left' | 'right') {
-		super(workspace, 'horizontal', `mod-sidedock mod-${side}-split`);
-		this.tabs = new WorkspaceTabs(workspace, true);
-		this.insertChild(0, this.tabs);
-		this.applySize();
-	}
-	applySize(): void {
-		this.containerEl.setCssStyles({ width: this.collapsed ? '0px' : `${this.size}px` });
-		this.containerEl.toggleClass('is-collapsed', this.collapsed);
-	}
-	collapse(): void { this.collapsed = true; this.applySize(); this.workspace.onResized(); }
-	expand(): void { this.collapsed = false; this.applySize(); this.workspace.onResized(); }
-	toggle(): void { if (this.collapsed) this.expand(); else this.collapse(); }
+/**
+ * What plugins written for sidebars find at `workspace.leftSplit` / `rightSplit`. Quire has no sidebars
+ * (the Docket replaces them): always collapsed, and expanding does nothing. Views such plugins open in a
+ * sidebar open as tabs instead (`getRightLeaf`).
+ */
+export class WorkspaceSidedock {
+	readonly collapsed = true;
+	collapse(): void { /* no sidebars */ }
+	expand(): void { /* no sidebars */ }
+	toggle(): void { /* no sidebars */ }
 }
 
 /** A group of tabs; one leaf shows at a time. */
@@ -149,11 +141,14 @@ export class WorkspaceTabs extends WorkspaceItem {
 	contentEl: HTMLElement;
 	override parent: WorkspaceSplit | null = null;
 
-	constructor(workspace: Workspace, public sidebar = false) {
-		super(workspace, `workspace-tabs${sidebar ? ' mod-sidebar' : ''}`);
+	/** Always false: there are no sidebar tab groups (kept for plugins that check). */
+	readonly sidebar = false;
+
+	constructor(workspace: Workspace) {
+		super(workspace, 'workspace-tabs');
 		this.headerEl = this.containerEl.createDiv({ cls: 'workspace-tab-header-container' });
 		this.tabsEl = this.headerEl.createDiv({ cls: 'workspace-tab-header-container-inner' });
-		if (!sidebar) {
+		{
 			const add = this.headerEl.createDiv({ cls: 'workspace-tab-header-new-tab clickable-icon', attr: { 'aria-label': 'New tab' } });
 			setIcon(add, 'plus');
 			add.addEventListener('click', () => {
@@ -245,7 +240,8 @@ export class WorkspaceLeaf extends Events {
 		this.updateHeader();
 	}
 
-	isSidebar(): boolean { return !!this.parent?.sidebar; }
+	/** Always false: there are no sidebars (kept for plugins that check). */
+	isSidebar(): boolean { return false; }
 
 	getRoot(): WorkspaceItem | null { return this.parent?.getRoot() ?? null; }
 
@@ -322,13 +318,15 @@ export class WorkspaceLeaf extends Events {
 }
 
 /**
- * The app's panes: a root area of tab groups and splits, and left and right sidebars.
+ * The app's panes: a tree of splits and tab groups. (No sidebars: the Docket replaces them.)
  */
 export class Workspace extends Events {
 	containerEl: HTMLElement;
 	rootSplit: WorkspaceSplit;
-	leftSplit: WorkspaceSidedock;
-	rightSplit: WorkspaceSidedock;
+	/** For plugins that expect sidebars: always collapsed (see WorkspaceSidedock). */
+	leftSplit = new WorkspaceSidedock();
+	rightSplit = new WorkspaceSidedock();
+	/** For plugins that add ribbon buttons: there is no ribbon; `Plugin.addRibbonIcon` adds a command instead. */
 	leftRibbon: { containerEl: HTMLElement; addRibbonItemButton: (id: string, icon: string, title: string, cb: (evt: MouseEvent) => unknown) => HTMLElement };
 	activeLeaf: WorkspaceLeaf | null = null;
 	layoutReady = false;
@@ -342,38 +340,9 @@ export class Workspace extends Events {
 		super();
 		this.containerEl = containerEl;
 		containerEl.addClass('workspace');
-		const ribbonEl = containerEl.createDiv({ cls: 'workspace-ribbon side-dock-ribbon mod-left' });
-		const ribbonTop = ribbonEl.createDiv({ cls: 'side-dock-actions' });
-		// App actions first, then plugins' actions as their own group.
-		const coreGroup = ribbonTop.createDiv({ cls: 'side-dock-group mod-core' });
-		const pluginGroup = ribbonTop.createDiv({ cls: 'side-dock-group mod-plugins' });
-		const ribbonBottom = ribbonEl.createDiv({ cls: 'side-dock-settings' });
-		this.leftRibbon = {
-			containerEl: ribbonEl,
-			addRibbonItemButton: (id, icon, title, cb) => {
-				const group = id.startsWith('app:') ? coreGroup : pluginGroup;
-				const b = group.createDiv({ cls: 'side-dock-ribbon-action clickable-icon', attr: { 'aria-label': title, title, 'data-id': id } });
-				setIcon(b, icon);
-				b.addEventListener('click', cb);
-				return b;
-			},
-		};
-		const bottomButton = (icon: string, title: string, command: string) => {
-			const b = ribbonBottom.createDiv({ cls: 'side-dock-ribbon-action clickable-icon', attr: { 'aria-label': title, title } });
-			setIcon(b, icon);
-			b.addEventListener('click', () => this.app.commands.executeCommandById(command));
-		};
-		bottomButton('folder-open', 'Open another homebase', 'app:open-homebase');
-		bottomButton('settings', 'Settings', 'app:open-settings');
-
-		this.leftSplit = new WorkspaceSidedock(this, 'left');
+		this.leftRibbon = { containerEl: createDiv(), addRibbonItemButton: (_id, _icon, title) => createDiv({ attr: { 'aria-label': title } }) };
 		this.rootSplit = new WorkspaceSplit(this, 'vertical', 'mod-root');
-		this.rightSplit = new WorkspaceSidedock(this, 'right');
-		const leftHandle = createDiv({ cls: 'workspace-sidedock-resize-handle mod-left' });
-		const rightHandle = createDiv({ cls: 'workspace-sidedock-resize-handle mod-right' });
-		containerEl.append(this.leftSplit.containerEl, leftHandle, this.rootSplit.containerEl, rightHandle, this.rightSplit.containerEl);
-		this.sideResize(leftHandle, this.leftSplit, 1);
-		this.sideResize(rightHandle, this.rightSplit, -1);
+		containerEl.append(this.rootSplit.containerEl);
 
 		this.registerViewType('empty', (leaf) => new EmptyView(leaf));
 		this.registerViewType('markdown', (leaf) => new MarkdownView(leaf), ['md', 'markdown', 'txt']);
@@ -386,29 +355,6 @@ export class Workspace extends Events {
 		});
 		app.vault.on('delete', (file: TAbstractFile) => {
 			this.iterateAllLeaves((leaf) => { if (leaf.view instanceof FileView && leaf.view.file === file) leaf.detach(); });
-		});
-	}
-
-	private sideResize(handle: HTMLElement, dock: WorkspaceSidedock, sign: 1 | -1) {
-		handle.addEventListener('mousedown', (e) => {
-			e.preventDefault();
-			const start = e.clientX;
-			const size = dock.size;
-			document.body.addClass('is-resizing');
-			const move = (ev: MouseEvent) => {
-				dock.size = Math.max(160, Math.min(720, size + sign * (ev.clientX - start)));
-				dock.collapsed = false;
-				dock.applySize();
-				this.trigger('resize');
-			};
-			const up = () => {
-				document.body.removeClass('is-resizing');
-				window.removeEventListener('mousemove', move);
-				window.removeEventListener('mouseup', up);
-				this.onResized();
-			};
-			window.addEventListener('mousemove', move);
-			window.addEventListener('mouseup', up);
 		});
 	}
 
@@ -505,7 +451,7 @@ export class Workspace extends Events {
 	/** A new leaf beside (vertical) or below (horizontal) `leaf`. */
 	createLeafBySplit(leaf: WorkspaceLeaf, direction: SplitDirection = 'vertical', before = false): WorkspaceLeaf {
 		const tabs = leaf.parent;
-		if (!tabs || tabs.sidebar) return this.getLeaf('tab');
+		if (!tabs) return this.getLeaf('tab');
 		const split = tabs.parent!;
 		const newTabs = new WorkspaceTabs(this);
 		const fresh = new WorkspaceLeaf(this);
@@ -533,31 +479,13 @@ export class Workspace extends Events {
 		return next;
 	}
 
-	/**
-	 * Whether there are sidebars and a ribbon. Quire turns them off (the Docket replaces them); then views
-	 * that plugins open "in a sidebar" open as normal tabs in the main area.
-	 */
-	sidebars = true;
-
-	setSidebarsEnabled(on: boolean): void {
-		this.sidebars = on;
-		this.leftRibbon.containerEl.toggle(on);
-		this.leftSplit.containerEl.toggle(on);
-		this.rightSplit.containerEl.toggle(on);
-		this.containerEl.toggleClass('mod-no-sidebars', !on);
-		if (!on) for (const dock of [this.leftSplit, this.rightSplit]) for (const leaf of [...dock.tabs.children]) leaf.detach();
-		this.onResized();
-	}
-
+	/** A new tab in the active pane: where views plugins open "in a sidebar" go (there are no sidebars). */
 	getRightLeaf(_split = false): WorkspaceLeaf {
-		if (!this.sidebars) return this.createLeafInTabs(this.activeRootTabs());
-		const leaf = this.createLeafInTabs(this.rightSplit.tabs, this.rightSplit.tabs.children.length);
-		return leaf;
+		return this.createLeafInTabs(this.activeRootTabs());
 	}
 
 	getLeftLeaf(_split = false): WorkspaceLeaf {
-		if (!this.sidebars) return this.createLeafInTabs(this.activeRootTabs());
-		return this.createLeafInTabs(this.leftSplit.tabs, this.leftSplit.tabs.children.length);
+		return this.createLeafInTabs(this.activeRootTabs());
 	}
 
 	ensureSideLeaf(type: string, side: 'left' | 'right', opts: { active?: boolean; reveal?: boolean; state?: Record<string, unknown> } = {}): Promise<WorkspaceLeaf> {
@@ -578,7 +506,7 @@ export class Workspace extends Events {
 		const tabs = leaf.parent;
 		if (!tabs) return;
 		// Remember closed notes (main area) for "Reopen closed tab".
-		if (!tabs.sidebar) {
+		{
 			const st = leaf.getViewState();
 			if (st.type !== 'empty' && typeof st.state?.file === 'string') {
 				this.closedTabs.push(st);
@@ -603,7 +531,7 @@ export class Workspace extends Events {
 
 	/** Remove a tab group left empty, and splits left with one child. */
 	private tidyEmpty(tabs: WorkspaceTabs): void {
-		if (tabs.children.length === 0 && !tabs.sidebar) {
+		if (tabs.children.length === 0) {
 			let node: WorkspaceSplit | WorkspaceTabs = tabs;
 			let parent = node.parent;
 			while (parent && parent !== this.rootSplit && parent.children.length === 1) {
@@ -658,7 +586,7 @@ export class Workspace extends Events {
 
 	private activeRootLeaf(): WorkspaceLeaf | null {
 		const l = this.activeLeaf;
-		return l && !l.isSidebar() ? l : this.getMostRecentLeaf();
+		return l ?? this.getMostRecentLeaf();
 	}
 
 	/** Give the keyboard to the pane next to the active one. */
@@ -677,7 +605,7 @@ export class Workspace extends Events {
 	/** Move a tab into the pane next to it, making a new pane there when there is none. */
 	moveLeafToPane(leaf: WorkspaceLeaf, dir: Direction): boolean {
 		const from = leaf.parent;
-		if (!from || from.sidebar) return false;
+		if (!from) return false;
 		const { tree, panes } = this.layoutTree();
 		const id = [...panes].find(([, t]) => t === from)?.[0];
 		const next = id ? neighbour(tree, id, dir) : null;
@@ -804,8 +732,6 @@ export class Workspace extends Events {
 
 	iterateAllLeaves(cb: (leaf: WorkspaceLeaf) => unknown): void {
 		this.iterateLeaves(this.rootSplit, cb);
-		this.iterateLeaves(this.leftSplit, cb);
-		this.iterateLeaves(this.rightSplit, cb);
 	}
 
 	getLeavesOfType(type: string): WorkspaceLeaf[] {
@@ -820,11 +746,7 @@ export class Workspace extends Events {
 
 	async revealLeaf(leaf: WorkspaceLeaf): Promise<void> {
 		leaf.parent?.selectTab(leaf);
-		if (!this.sidebars && !leaf.isSidebar()) { this.setActiveLeaf(leaf, { focus: true }); return; }
-		const root = leaf.getRoot();
-		if (root === this.leftSplit && this.leftSplit.collapsed) this.leftSplit.expand();
-		if (root === this.rightSplit && this.rightSplit.collapsed) this.rightSplit.expand();
-		leaf.onResize();
+		this.setActiveLeaf(leaf, { focus: true });
 	}
 
 	setActiveLeaf(leaf: WorkspaceLeaf, params: { focus?: boolean } | boolean = {}): void {
@@ -837,7 +759,7 @@ export class Workspace extends Events {
 			leaf.activeTime = Date.now();
 			leaf.containerEl.addClass('mod-active');
 			leaf.parent?.containerEl.addClass('mod-active');
-			if (leaf.view instanceof FileView && leaf.view.file && !leaf.isSidebar()) this.lastFileLeaf = leaf;
+			if (leaf.view instanceof FileView && leaf.view.file) this.lastFileLeaf = leaf;
 			// Let editor extensions see that their editor is now the active one (as a focus change would).
 			if (leaf.view instanceof MarkdownView) leaf.view.editor.cm.dispatch({ selection: leaf.view.editor.cm.state.selection });
 			this.trigger('active-leaf-change', leaf);
@@ -942,8 +864,6 @@ export class Workspace extends Events {
 	getLayout(): Record<string, unknown> {
 		return {
 			main: this.serialize(this.rootSplit),
-			left: { collapsed: this.leftSplit.collapsed, size: this.leftSplit.size, tabs: this.serialize(this.leftSplit.tabs) },
-			right: { collapsed: this.rightSplit.collapsed, size: this.rightSplit.size, tabs: this.serialize(this.rightSplit.tabs) },
 		};
 	}
 
@@ -1001,20 +921,13 @@ export class Workspace extends Events {
 				if (child) this.rootSplit.insertChild(this.rootSplit.children.length, child);
 			}
 		}
-		for (const [dock, data] of [[this.leftSplit, layout?.left], [this.rightSplit, layout?.right]] as const) {
-			if (!data || !this.sidebars) continue;
-			dock.size = Number(data.size) || dock.size;
-			dock.collapsed = !!data.collapsed;
-			dock.applySize();
-			await fillTabs(dock.tabs, data.tabs);
-		}
 		if (this.rootTabs().length === 0) {
 			const tabs = new WorkspaceTabs(this);
 			this.rootSplit.insertChild(0, tabs);
 			this.createLeafInTabs(tabs);
 		}
 		const first = active ?? this.getMostRecentLeaf() ?? this.rootTabs()[0]?.activeLeaf ?? null;
-		if (first && !first.isSidebar()) this.setActiveLeaf(first, { focus: true });
+		if (first) this.setActiveLeaf(first, { focus: true });
 		else { const l = this.rootTabs()[0]?.activeLeaf; if (l) this.setActiveLeaf(l, { focus: true }); }
 	}
 

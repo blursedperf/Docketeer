@@ -355,7 +355,7 @@ export interface AppConfig {
 	/** Installed CSS theme (folder name in .quire/themes), or empty. */
 	cssTheme: string;
 	enabledSnippets: string[];
-	/** The Docket (preview, behind a flag until the sidebars retire). */
+	/** The Docket (always on; false only while tests take it down and build it again). */
 	docket: boolean;
 	/** Peek overlays the editor; pinned docks above it. */
 	docketMode: 'peek' | 'pinned';

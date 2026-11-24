@@ -258,38 +258,13 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .app-container { display: flex; flex-direction: column; height: 100vh; }
 .workspace { flex: 1; display: flex; min-height: 0; }
 
-.workspace-ribbon {
-	width: var(--ribbon-w);
-	flex-shrink: 0;
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	align-items: center;
-	padding: var(--space-1) 0 var(--space-2);
-	background: var(--doom-base0);
-	border-right: var(--border-width) solid var(--doom-hairline);
-}
-.side-dock-actions, .side-dock-settings { display: flex; flex-direction: column; gap: var(--space-1); align-items: center; }
-.side-dock-actions { padding-top: calc((var(--header-band) - var(--control-h)) / 2 - var(--space-1)); }
-.side-dock-settings { padding-top: var(--space-2); border-top: var(--border-width) solid var(--doom-hairline); }
-.side-dock-group { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
-.side-dock-group.mod-plugins:not(:empty) { margin-top: var(--space-1); padding-top: var(--space-2); border-top: var(--border-width) solid var(--doom-hairline); }
-.side-dock-actions { gap: 0; }
-.side-dock-ribbon-action { width: 32px; height: 32px; }
-.side-dock-ribbon-action .svg-icon { width: var(--icon-lg); height: var(--icon-lg); }
-
 .workspace-split { display: flex; min-width: 0; min-height: 0; }
 .workspace-split.mod-vertical { flex-direction: row; }
 .workspace-split.mod-horizontal { flex-direction: column; }
 .workspace-split.mod-root { flex: 1; background: var(--doom-bg); }
 /* Panes keep a usable minimum; the 1px dividers between them must not (they would widen into a band). */
-.workspace-split.mod-root > :not(.workspace-leaf-resize-handle), .workspace-split:not(.mod-sidedock) > .workspace-split, .workspace-split:not(.mod-sidedock) > .workspace-tabs { min-width: 120px; min-height: 80px; }
-.workspace-split.mod-sidedock { flex-shrink: 0; background: var(--doom-bg-alt); overflow: hidden; transition: width 120ms ease; }
-.workspace-split.mod-sidedock.is-collapsed { width: 0 !important; }
-.workspace-split.mod-sidedock > .workspace-tabs { flex: 1; }
-.workspace-sidedock-resize-handle { width: 5px; margin: 0 -2px; cursor: col-resize; z-index: 5; flex-shrink: 0; position: relative; }
-.workspace-sidedock-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 1px; background: var(--doom-hairline); }
-.workspace-sidedock-resize-handle:hover::after { width: 2px; left: 1.5px; background: var(--doom-blue); }
+.workspace-split.mod-root > :not(.workspace-leaf-resize-handle), .workspace-split > .workspace-split, .workspace-split > .workspace-tabs { min-width: 120px; min-height: 80px; }
+.workspace-tabs .workspace-leaf-content { background: var(--doom-bg); }
 .workspace-leaf-resize-handle { flex: 0 0 1px; background: var(--doom-border-subtle); position: relative; z-index: 4; }
 .mod-vertical > .workspace-leaf-resize-handle { cursor: col-resize; }
 .mod-horizontal > .workspace-leaf-resize-handle { cursor: row-resize; }
@@ -335,18 +310,10 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .workspace-tab-header-new-tab { align-self: center; margin: 0 var(--space-1); }
 .workspace-tab-header-spacer { flex: 1; }
 /* Sidebars: icon tabs; a lone tab shows its title, so the strip is not empty. */
-.workspace-tabs.mod-sidebar .workspace-tab-header-container-inner { padding: 0 var(--space-2); gap: var(--space-1); align-items: center; }
-.workspace-tabs.mod-sidebar .workspace-tab-header {
-	min-width: 0; height: var(--control-h); padding: 0 var(--space-2); border: none; border-radius: var(--radius-s);
-}
-.workspace-tabs.mod-sidebar .workspace-tab-header.is-active { background: var(--doom-bg); color: var(--doom-blue-text); box-shadow: inset 0 2px 0 var(--doom-blue); }
-.workspace-tabs.mod-sidebar .workspace-tab-header-inner-close-button { display: none; }
-.workspace-tabs.mod-sidebar .workspace-tab-header:not(:only-child) .workspace-tab-header-inner-title { display: none; }
-.workspace-tabs.mod-sidebar .workspace-tab-header:only-child { max-width: none; }
+
 .workspace-tab-container { flex: 1; position: relative; min-height: 0; }
 .workspace-leaf { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .workspace-leaf-content { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.workspace-tabs:not(.mod-sidebar) .workspace-leaf-content { background: var(--doom-bg); }
 
 /* The row under the tab strips: the same band in every column (the view's header line). */
 .view-header {
@@ -366,7 +333,6 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .view-actions { display: flex; gap: 0; }
 .view-action { width: 26px; height: 26px; }
 .view-content { flex: 1; overflow: auto; min-height: 0; position: relative; }
-.mod-sidebar .view-content { background: var(--doom-bg-alt); }
 
 /* ---------------------------------------------------------------- modeline (status bar) */
 .status-bar {
@@ -413,40 +379,10 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 /* ------------------------------------------------------------- file explorer (Treemacs)
    Every row is [indent][chevron slot][name]: files get an empty chevron slot, so names at the
    same depth share one column; guides run under the parent's chevron. */
-.nav-files-container { padding: var(--space-1) var(--space-2) var(--space-6); font-family: var(--font-chrome); font-size: var(--text-sm); }
+
 .nav-vault-title {
 	display: flex; align-items: center; height: var(--row-h); padding: 0 var(--space-2);
 	color: var(--doom-magenta-text); font-weight: var(--font-bold); font-size: var(--text-xs); letter-spacing: 0.05em; text-transform: uppercase;
-}
-.tree-item { position: relative; }
-.tree-item-self {
-	display: flex;
-	align-items: center;
-	gap: var(--space-1);
-	height: var(--row-h);
-	padding-right: var(--space-2);
-	border-radius: var(--radius-s);
-	color: var(--text-normal);
-	white-space: nowrap;
-	cursor: var(--cursor);
-}
-.tree-item-self:hover { background: rgba(var(--doom-blue-rgb), 0.09); box-shadow: inset 2px 0 0 rgba(var(--doom-blue-rgb), 0.45); }
-.tree-item-self.nav-folder-title { color: var(--doom-blue-text); font-weight: var(--font-medium); }
-.tree-item-self.is-active { background: rgba(var(--doom-blue-rgb), 0.16); color: var(--doom-blue-text); box-shadow: inset 0 0 0 1px var(--doom-blue); font-weight: var(--font-semibold); }
-.tree-item-self.is-being-dragged-over, .nav-files-container.is-being-dragged-over { background: rgba(var(--doom-blue-rgb), 0.15); }
-.tree-item-icon { display: flex; align-items: center; justify-content: center; width: var(--icon-md); flex-shrink: 0; color: var(--text-faint); }
-.tree-item-icon .svg-icon { width: var(--icon-sm); height: var(--icon-sm); }
-.tree-item-self:hover .collapse-icon { color: var(--doom-blue-text); }
-.tree-item-inner { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.tree-item-children { position: relative; }
-.tree-item-children::before {
-	content: ""; position: absolute; top: 0; bottom: 0; left: var(--guide-left, 15px); width: 1px;
-	background: rgba(var(--doom-blue-rgb), 0.35); pointer-events: none;
-}
-.nav-file-tag {
-	flex-shrink: 0; margin-left: auto; padding: 0 var(--space-1); line-height: 16px;
-	font-size: 10px; text-transform: uppercase; color: var(--doom-yellow-text, var(--doom-yellow));
-	background: var(--doom-base2); border: var(--border-width) solid var(--doom-border-subtle); border-radius: var(--radius-s);
 }
 
 /* ----------------------------------------------------------------------------- editor */
@@ -754,39 +690,11 @@ input.settings-search { margin: var(--space-2) var(--space-2) 0; }
 
 /* ------------------------------------------------------------------ sidebar panes
    Search, backlinks, outgoing links, tags, outline: tree rows, groups with counts, snippets. */
-.pane-toolbar { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-2) var(--space-1); }
-input.pane-search-input { flex: 1; min-width: 0; }
+
 .clickable-icon.is-active { color: var(--doom-blue-text); background: rgba(var(--doom-blue-rgb), 0.16); }
-.pane-summary { padding: 0 var(--space-3) var(--space-1); font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
-.pane-summary:empty { display: none; }
-.pane-results { padding: var(--space-1) var(--space-2) var(--space-6); font-size: var(--text-sm); }
-.pane-group-header { font-family: var(--font-chrome); color: var(--doom-blue-text); font-weight: var(--font-medium); }
-.pane-group-header.pane-section { margin-top: var(--space-2); color: var(--doom-magenta-text); font-size: var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase; }
-.pane-group-header.pane-section:first-child { margin-top: 0; }
-.pane-group-body { padding-left: var(--space-1); }
-.tree-item-flair { flex-shrink: 0; margin-left: auto; padding: 0 var(--space-1); line-height: 16px; font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); background: var(--doom-base2); border-radius: var(--radius-s); }
-.pane-file {
-	display: flex; align-items: center; gap: var(--space-2); height: var(--row-h); padding: 0 var(--space-2);
-	font-family: var(--font-chrome); color: var(--text-normal); border-radius: var(--radius-s); cursor: var(--cursor);
-}
-.pane-file:hover { background: rgba(var(--doom-blue-rgb), 0.09); }
-.pane-file.is-unresolved { color: var(--text-muted); font-style: italic; }
-.pane-match {
-	display: block;
-	margin: 0 0 var(--space-1) var(--space-4); padding: var(--space-1) var(--space-2);
-	font-size: var(--text-sm); line-height: 1.45; color: var(--text-muted);
-	background: var(--doom-base1); border-left: 2px solid var(--doom-border-subtle); border-radius: var(--radius-s);
-	white-space: pre-wrap; word-break: break-word; cursor: var(--cursor); user-select: text;
-}
-.pane-match:hover { border-left-color: var(--doom-blue); color: var(--text-normal); }
 /* A snippet with a button beside it (unlinked mentions). */
-.pane-match:has(> .pane-match-text) { display: flex; align-items: flex-start; gap: var(--space-2); }
-.pane-match-text { flex: 1; min-width: 0; }
+
 mark.search-match { color: var(--text-normal); background: var(--text-highlight-bg); border-radius: 2px; padding: 0 1px; }
-button.pane-link-button { height: 20px; padding: 0 var(--space-2); font-size: var(--text-xs); flex-shrink: 0; }
-.pane-more { margin-left: var(--space-4); padding: var(--space-1) var(--space-2); font-size: var(--text-xs); color: var(--text-faint); }
-.pane-empty { padding: var(--space-2) var(--space-3); font-size: var(--text-sm); color: var(--text-faint); }
-.tag-pane-tag { color: var(--doom-yellow-text, var(--doom-yellow)); }
 .outline-heading { color: var(--text-muted); }
 .outline-heading.mod-level-1 { color: var(--h1-color); font-weight: var(--font-semibold); }
 .outline-heading.mod-level-2 { color: var(--h2-color); }

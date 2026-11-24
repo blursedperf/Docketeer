@@ -41,7 +41,7 @@ export async function runSmoke(app: App): Promise<void> {
 	});
 	await check('links resolved', () => metadataCache.resolvedLinks['Welcome.md']?.['Second note.md'] === 1 || JSON.stringify(metadataCache.resolvedLinks));
 	await check('no sidebars or ribbon: the Docket is the way in', () => {
-		const hidden = [workspace.leftSplit.containerEl, workspace.rightSplit.containerEl, workspace.leftRibbon.containerEl].every((el) => el.offsetParent === null);
+		const hidden = !document.querySelector('.workspace-ribbon, .mod-sidedock, .workspace-sidedock-resize-handle');
 		const handle = !!document.querySelector('.docket-handle');
 		const sideLeaves = workspace.getLeavesOfType('file-explorer').length + workspace.getLeavesOfType('backlink').length;
 		return (hidden && handle && sideLeaves === 0) || `hidden=${hidden} handle=${handle} sideLeaves=${sideLeaves}`;
@@ -328,8 +328,8 @@ export async function runSmoke(app: App): Promise<void> {
 			if (!ui?.isOpen) tried.push(id);
 			ui?.close(true);
 		}
-		const sideOff = !commands.isAvailable(commands.findCommand('app:toggle-left-sidebar')!);
-		return (tried.length === 0 && sideOff) || `did not open: ${tried.join(', ')} sidebarToggle=${!sideOff}`;
+		const gone = ['app:toggle-left-sidebar', 'app:toggle-right-sidebar', 'app:collapse-folders'].every((id) => !commands.findCommand(id));
+		return (tried.length === 0 && gone) || `did not open: ${tried.join(', ')} sidebarCommandsGone=${gone}`;
 	});
 	await check('[[ completes links', async () => {
 		const view = workspace.getActiveViewOfType(MarkdownView)!;
@@ -513,15 +513,15 @@ export async function runSmoke(app: App): Promise<void> {
 	const cssVar = (name: string) => getComputedStyle(document.body).getPropertyValue(name).trim();
 	await check('homebase is the vault', () => app.homebase === app.vault);
 	await check('icons drawn from Phosphor by default', () => {
-		const svg = document.querySelector('.workspace-ribbon .svg-icon');
+		const svg = document.querySelector('.workspace-tab-header .svg-icon');
 		return svg?.getAttribute('viewBox') === '0 0 256 256' || `${svg?.getAttribute('class')} ${svg?.getAttribute('viewBox')}`;
 	});
 	await check('icon set switch redraws icons on screen', async () => {
 		await app.setConfig('iconSet', 'lucide');
-		const lucide = document.querySelector('.workspace-ribbon .svg-icon')?.getAttribute('viewBox');
+		const lucide = document.querySelector('.workspace-tab-header .svg-icon')?.getAttribute('viewBox');
 		await app.setConfig('iconWeight', 'bold');
 		await app.setConfig('iconSet', 'phosphor');
-		const back = document.querySelector('.workspace-ribbon .svg-icon')?.getAttribute('viewBox');
+		const back = document.querySelector('.workspace-tab-header .svg-icon')?.getAttribute('viewBox');
 		await app.setConfig('iconWeight', 'regular');
 		return (lucide === '0 0 24 24' && back === '0 0 256 256') || `${lucide} / ${back}`;
 	});
@@ -1218,11 +1218,33 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (acts.includes('Notes linking here') && acts.some((t) => /Word/.test(t ?? '')) && acts.includes('Pin to Units')) || acts.join('|');
 	});
 
+	await check('docket: creates a note that does not exist; # lists notes with a tag', async () => {
+		press('p', { ctrl: true });
+		await type('Brand new idea');
+		const offered = titles().includes('Create note “Brand new idea”');
+		const i = titles().indexOf('Create note “Brand new idea”');
+		for (let k = 0; k < i; k++) press('ArrowDown');
+		press('Enter');
+		await sleep(200);
+		const created = !!vault.getMarkdownFiles().find((f) => f.basename === 'Brand new idea') && workspace.getActiveFile()?.basename === 'Brand new idea';
+		const made = vault.getMarkdownFiles().find((f) => f.basename === 'Brand new idea');
+		if (made) await vault.trash(made, true);
+		press('p', { ctrl: true });
+		await type('#test');
+		const j = titles().indexOf('#test');
+		for (let k = 0; k < j; k++) press('ArrowDown');
+		press('Enter');
+		await sleep(100);
+		const tagged = titles();
+		press('Escape'); press('Escape'); press('Escape');
+		return (offered && created && tagged.includes('Renamed note')) || `offered=${offered} created=${created} tagged=${tagged.join('|')}`;
+	});
+
 	await check('docket: can be taken down and built again (plugins and tests)', async () => {
 		await app.setConfig('docket', false);
 		await app.setConfig('docketPanel', 'core:outline');
 		const gone = !document.querySelector('.docket') && !ui();
-		const palette = commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 1;
+		const palette = !commands.isAvailable(commands.findCommand('app:command-palette')!); // nothing to open without the Docket
 		const noProviders = app.docket.providers.size === 0 && app.docket.panels.size === 0;
 		await app.setConfig('docket', true);
 		const back = !!ui() && app.docket.panels.size === 6;

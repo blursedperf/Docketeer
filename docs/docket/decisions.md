@@ -226,3 +226,20 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 
 66. **Screenshots**: the sidebar screens (file menu, search, outline, backlinks and tags panes, palette and
     switcher) are replaced by "07-docket-commands" and "09-docket-note-actions"; the others cover the Docket.
+
+## Phase 6 (after Checkpoint 6: deletion approved)
+
+67. **Deleted**: the Files tree (`explorer.ts`), the Search, Backlinks, Outgoing links, Tags and Outline panes
+    (`panes/*`), the command palette and quick switcher, sidebar seeding, the sidebar toggle and "collapse
+    folders" commands, the docks, the ribbon and their styles (about 1,000 lines). The name, rename and confirm
+    dialogs moved to `renderer/dialogs.ts`; `[[` completion to `renderer/link-suggest.ts`.
+68. **Plugin compatibility stays**: `workspace.leftSplit` / `rightSplit` are stubs that are always collapsed,
+    `leftRibbon.addRibbonItemButton` returns a detached element (the button is a command instead),
+    `getRightLeaf` / `getLeftLeaf` / `ensureSideLeaf` give a tab in the active pane, `isSidebar()` is always
+    false. A saved `workspace.json` with sidebar panes still loads (they are ignored).
+69. **The old commands keep their ids** and open the Docket (palette, switcher, search, outline, tags,
+    backlinks, outgoing links, reveal file), plus a new "Show mentions of this note"; names now say what they do
+    ("Find a note", "Show links to this note"). Mod+O and Mod+Shift+F keep working.
+70. **The quick switcher could create a note**; the Docket now offers "Create note “…”" when no note has exactly
+    that name. "#" folder results open Units at that folder; tag results list the notes with that tag
+    (including nested tags).

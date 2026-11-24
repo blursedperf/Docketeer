@@ -6,8 +6,8 @@ import {
 	type App, type Command, type OpenWhere, type SearchResult, MarkdownView, TFile,
 	formatHotkey, fuzzyScore, getAllTags, wordMatch,
 } from '@quire/api';
-import { SEARCH_VIEW, type SearchView } from '../panes/search';
-import { FILE_EXPLORER, type FileExplorerView } from '../explorer';
+import type { Docket } from './docket';
+import { revealInUnits } from './panels/units';
 
 /** The best score of `q` against any of `texts` (the first counts most); word-wise for commands and settings. */
 function best(q: string, texts: (string | undefined)[], match: (q: string, t: string) => number | null = fuzzyScore): number | null {
@@ -44,7 +44,7 @@ export function openFileIn(app: App, file: TFile, where: OpenWhere, subpath?: st
 	});
 }
 
-export function registerCoreProviders(app: App): () => void {
+export function registerCoreProviders(app: App, ui: Docket): () => void {
 	const { docket, commands, vault, metadataCache, workspace, search } = app;
 	const hint = (c: Command) => { const k = commands.hotkeysFor(c)[0]; return k ? formatHotkey(k) : undefined; };
 	const activePath = () => workspace.getActiveFile()?.path ?? '';
@@ -80,6 +80,19 @@ export function registerCoreProviders(app: App): () => void {
 	// Settings: read once a session, when the Docket first opens (drawing every page takes a moment).
 	let settings: ReturnType<typeof app.setting.listSettings> | null = null;
 	const warm = app.on('docket-open', () => { window.setTimeout(() => { settings ??= app.setting.listSettings(); tagCounts(); }, 0); });
+
+	/** Notes with a tag (or a tag under it: #torts finds #torts/duty). */
+	const notesTagged = (tag: string): SearchResult[] => {
+		const out: SearchResult[] = [];
+		const t = tag.toLowerCase();
+		for (const f of vault.getMarkdownFiles()) {
+			if (app.isLocked(f)) continue;
+			const cache = metadataCache.getFileCache(f);
+			const tags = (cache ? getAllTags(cache) ?? [] : []).map((x) => x.toLowerCase());
+			if (tags.some((x) => x === t || x.startsWith(`${t}/`))) out.push(noteResult(f, 0));
+		}
+		return out.sort((a, b) => a.title.localeCompare(b.title));
+	};
 
 	const removers = [
 		docket.addSearchProvider({
@@ -120,6 +133,18 @@ export function registerCoreProviders(app: App): () => void {
 							if (s !== null) results.push(noteResult(f, s + (ctx.usage?.(f.path) ?? 0)));
 						}
 					}
+				}
+				// No note by exactly that name: offer to create it (what the quick switcher did).
+				if ((!only || only === 'Notes') && !/[\\/:]/.test(text) && !vault.getMarkdownFiles().some((f) => f.basename.toLowerCase() === text.toLowerCase())) {
+					results.push({
+						id: `create:${text}`, type: 'Notes', title: `Create note “${text}”`, icon: 'file-plus', score: -1e6,
+						open: async (where) => {
+							const parent = app.fileManager.getNewFileParent(activePath());
+							const path = parent.isRoot() ? `${text}.md` : `${parent.path}/${text}.md`;
+							const file = await vault.create(path, '');
+							await openFileIn(app, file, where);
+						},
+					});
 				}
 				// Full text: every word, as a prefix, anywhere in a note.
 				// From three characters: two match nearly every note, and cost a keystroke's budget for nothing.
@@ -214,7 +239,7 @@ export function registerCoreProviders(app: App): () => void {
 					out.push({
 						id: folder.path, type: 'Folders', title: folder.name, detail: `${folder.path} · ${notes} note${notes === 1 ? '' : 's'}`,
 						icon: 'folder', score: s,
-						open: () => workspace.ensureSideLeaf(FILE_EXPLORER, 'left', { reveal: true }).then((leaf) => (leaf.view as FileExplorerView).reveal(folder)),
+						open: () => { revealInUnits(folder.path); ui.showPanel('core:units'); },
 					});
 				}
 				for (const [tag, n] of tagCounts()) {
@@ -222,7 +247,7 @@ export function registerCoreProviders(app: App): () => void {
 					if (s === null) continue;
 					out.push({
 						id: tag, type: 'Tags', title: tag, detail: `${n} note${n === 1 ? '' : 's'}`, icon: 'tag', score: s,
-						open: () => workspace.ensureSideLeaf(SEARCH_VIEW, 'left', { reveal: true }).then((leaf) => (leaf.view as SearchView).setQuery(`tag:${tag}`)),
+						open: () => ui.showList(`Notes tagged ${tag}`, notesTagged(tag)),
 						insert: () => tag,
 					});
 				}

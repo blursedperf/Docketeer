@@ -1,6 +1,6 @@
 /**
- * The app's own features, built on the same API plugins use: file explorer, command palette, quick
- * switcher, core commands, settings pages and the word count.
+ * The app's own features, built on the same API plugins use: core commands, settings pages, the mode
+ * badge and word count. Search, navigation and panels are the Docket's (./docket).
  */
 import { EditorSelection } from '@codemirror/state';
 import { Vim } from '@replit/codemirror-vim';
@@ -10,112 +10,8 @@ import {
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
-import { FILE_EXPLORER, FileExplorerView, NameModal, freePath, promptRename } from './explorer';
-import { BACKLINK_VIEW, BacklinksView } from './panes/backlinks';
-import { LinkSuggest } from './panes/link-suggest';
-import { OUTGOING_VIEW, OutgoingLinksView } from './panes/outgoing';
-import { OUTLINE_VIEW, OutlineView } from './panes/outline';
-import { SEARCH_VIEW, SearchView } from './panes/search';
-import { TAG_VIEW, TagsView } from './panes/tags';
-
-/** The panes Quire puts in the sidebars, in order. Each is added once per homebase; closing one is remembered. */
-const SIDEBAR_PANES: [type: string, side: 'left' | 'right'][] = [
-	[FILE_EXPLORER, 'left'], [SEARCH_VIEW, 'left'], [TAG_VIEW, 'left'],
-	[BACKLINK_VIEW, 'right'], [OUTGOING_VIEW, 'right'], [OUTLINE_VIEW, 'right'],
-];
-
-// -------------------------------------------------------------------------------------------------
-// Command palette
-
-class CommandPalette extends SuggestModal<Command> {
-	private recent: string[];
-	constructor(app: App, recent: string[]) {
-		super(app);
-		this.recent = recent;
-		this.setPlaceholder('Type a command…');
-		this.setInstructions([{ command: '↑↓', purpose: 'to navigate' }, { command: '↵', purpose: 'to use' }, { command: 'esc', purpose: 'to dismiss' }]);
-	}
-	getSuggestions(query: string): Command[] {
-		const cmds = this.app.commands.listCommands().filter((c) => this.app.commands.isAvailable(c));
-		if (!query.trim()) {
-			const rank = (c: Command) => { const i = this.recent.indexOf(c.id); return i === -1 ? 999 : i; };
-			return cmds.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-		}
-		return cmds.map((c) => ({ c, s: fuzzyScore(query, c.name) })).filter((x) => x.s !== null).sort((a, b) => b.s! - a.s!).map((x) => x.c);
-	}
-	renderSuggestion(c: Command, el: HTMLElement): void {
-		el.addClass('mod-complex');
-		const content = el.createDiv({ cls: 'suggestion-content' });
-		// A plugin's commands: its name as a muted prefix, the command itself in normal weight.
-		const plugin = this.app.plugins.manifests[c.id.slice(0, c.id.indexOf(':'))];
-		const prefix = plugin && c.name.startsWith(`${plugin.name}: `) ? `${plugin.name}: ` : '';
-		if (prefix) content.createSpan({ cls: 'suggestion-prefix', text: prefix });
-		content.createSpan({ text: c.name.slice(prefix.length) });
-		const keys = this.app.commands.hotkeysFor(c);
-		if (keys.length) {
-			const aux = el.createDiv({ cls: 'suggestion-aux' });
-			for (const k of keys) aux.createSpan({ cls: 'suggestion-hotkey', text: formatHotkey(k) });
-		}
-	}
-	onChooseSuggestion(c: Command): void {
-		this.recent.splice(0, this.recent.length, c.id, ...this.recent.filter((x) => x !== c.id).slice(0, 19));
-		// Let the palette close (and focus return to the editor) before running.
-		window.setTimeout(() => this.app.commands.executeCommand(c), 0);
-	}
-}
-
-// -------------------------------------------------------------------------------------------------
-// Quick switcher
-
-type SwitchItem = TFile | { create: string };
-
-class QuickSwitcher extends SuggestModal<SwitchItem> {
-	constructor(app: App) {
-		super(app);
-		this.setPlaceholder('Find or create a note…');
-		this.setInstructions([{ command: '↵', purpose: 'to open' }, { command: 'ctrl ↵', purpose: 'to open in new tab' }, { command: 'shift ↵', purpose: 'to create' }]);
-		this.inputEl.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter' && e.shiftKey && this.inputEl.value.trim()) {
-				e.preventDefault();
-				e.stopPropagation();
-				this.close();
-				void this.create(this.inputEl.value.trim(), false);
-			}
-		});
-	}
-	getSuggestions(query: string): SwitchItem[] {
-		const files = this.app.vault.getFiles();
-		const recent = (f: TFile) => f.stat.mtime;
-		if (!query.trim()) return files.filter((f) => f.extension === 'md').sort((a, b) => recent(b) - recent(a));
-		const out = files.map((f) => ({ f, s: fuzzyScore(query, f.extension === 'md' ? f.path.replace(/\.md$/, '') : f.path) }))
-			.filter((x) => x.s !== null).sort((a, b) => b.s! - a.s!).map((x) => x.f as SwitchItem);
-		if (!files.some((f) => f.basename.toLowerCase() === query.trim().toLowerCase())) out.push({ create: query.trim() });
-		return out;
-	}
-	renderSuggestion(item: SwitchItem, el: HTMLElement): void {
-		el.addClass('mod-complex');
-		if (!(item instanceof TFile)) {
-			el.createDiv({ cls: 'suggestion-content', text: `Create "${item.create}"` });
-			el.createDiv({ cls: 'suggestion-note', text: 'New note' });
-			return;
-		}
-		el.createDiv({ cls: 'suggestion-content', text: item.extension === 'md' ? item.basename : item.name });
-		if (item.parent && !item.parent.isRoot()) el.createDiv({ cls: 'suggestion-note', text: item.parent.path });
-	}
-	onChooseSuggestion(item: SwitchItem, evt: MouseEvent | KeyboardEvent): void {
-		const newTab = evt.ctrlKey || evt.metaKey;
-		if (item instanceof TFile) void this.app.workspace.getLeaf(newTab ? 'tab' : false).openFile(item);
-		else void this.create(item.create, newTab);
-	}
-	private async create(name: string, newTab: boolean) {
-		const parent = this.app.fileManager.getNewFileParent(this.app.workspace.getActiveFile()?.path ?? '');
-		const rel = name.endsWith('.md') ? name : `${name}.md`;
-		const path = rel.includes('/') || parent.isRoot() ? rel : `${parent.path}/${rel}`;
-		const existing = this.app.vault.getFileByPath(path);
-		const file = existing ?? await this.app.vault.create(path, '');
-		await this.app.workspace.getLeaf(newTab ? 'tab' : false).openFile(file);
-	}
-}
+import { NameModal, freePath, promptRename } from './dialogs';
+import { LinkSuggest } from './link-suggest';
 
 /** Pick a folder (for "Move file"). */
 class FolderPicker extends FuzzySuggestModal<TFolder> {
@@ -517,20 +413,6 @@ function wrapSelection(app: App, before: string, after = before) {
 
 export function registerCore(app: App): { reveal(): void } {
 	const { workspace, vault } = app;
-	// The Docket replaces the sidebars and the ribbon (docs/docket/PLAN.md, Phase 6).
-	workspace.setSidebarsEnabled(false);
-	workspace.registerViewType(FILE_EXPLORER, (leaf) => new FileExplorerView(leaf));
-	const openSearch = async (query?: string) => {
-		const leaf = await workspace.ensureSideLeaf(SEARCH_VIEW, 'left', { reveal: true });
-		const view = leaf.view as SearchView;
-		if (query !== undefined) view.setQuery(query);
-		view.focus();
-	};
-	workspace.registerViewType(SEARCH_VIEW, (leaf) => new SearchView(leaf));
-	workspace.registerViewType(BACKLINK_VIEW, (leaf) => new BacklinksView(leaf));
-	workspace.registerViewType(OUTGOING_VIEW, (leaf) => new OutgoingLinksView(leaf));
-	workspace.registerViewType(TAG_VIEW, (leaf) => new TagsView(leaf, (tag) => { void openSearch(`tag:${tag}`); }));
-	workspace.registerViewType(OUTLINE_VIEW, (leaf) => new OutlineView(leaf));
 	app.editorSuggests.push(new LinkSuggest(app));
 	for (const tab of [new EditorTab(app), new FilesTab(app), new AppearanceTab(app), new HotkeysTab(app), new PluginsTab(app), new AboutTab(app)]) app.setting.addCoreTab(tab);
 	// Vim's ex commands act on the app: save, close the tab.
@@ -542,26 +424,9 @@ export function registerCore(app: App): { reveal(): void } {
 	modeBadge(app);
 	wordCount(app);
 
-	const recent: string[] = [];
 	const add = (c: Command) => app.commands.addCommand(c);
 	const activeMarkdown = () => workspace.getActiveViewOfType(MarkdownView);
-	const explorer = () => workspace.getLeavesOfType(FILE_EXPLORER)[0]?.view as FileExplorerView | undefined;
 
-	add({ id: 'app:command-palette', name: 'Command palette: Open', icon: 'terminal', section: 'Search', aliases: ['Commands'], hotkeys: [{ modifiers: ['Mod'], key: 'p' }], callback: () => new CommandPalette(app, recent).open() });
-	add({
-		id: 'app:search', name: 'Search: Search in all notes', icon: 'search', section: 'Search', aliases: ['Find in notes', 'Full-text search'], hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'f' }],
-		callback: () => {
-			const sel = activeMarkdown()?.editor.getSelection();
-			void openSearch(sel && !sel.includes('\n') ? sel : undefined);
-		},
-	});
-	const showPane = (id: string, name: string, icon: string, type: string, side: 'left' | 'right') =>
-		add({ id, name, icon, section: 'View', callback: () => { void workspace.ensureSideLeaf(type, side, { reveal: true }); } });
-	showPane('app:show-backlinks', 'Show backlinks', 'link', BACKLINK_VIEW, 'right');
-	showPane('app:show-outgoing-links', 'Show outgoing links', 'arrow-up-right', OUTGOING_VIEW, 'right');
-	showPane('app:show-outline', 'Show outline', 'list-tree', OUTLINE_VIEW, 'right');
-	showPane('app:show-tags', 'Show tags', 'tags', TAG_VIEW, 'left');
-	add({ id: 'app:quick-switcher', name: 'Quick switcher: Open', icon: 'search', section: 'Search', aliases: ['Open note', 'Go to file'], hotkeys: [{ modifiers: ['Mod'], key: 'o' }], callback: () => new QuickSwitcher(app).open() });
 	add({ id: 'app:open-settings', name: 'Open settings', icon: 'settings', section: 'App', aliases: ['Preferences', 'Options'], hotkeys: [{ modifiers: ['Mod'], key: ',' }], callback: () => app.setting.open() });
 	add({ id: 'app:open-homebase', name: 'Open another homebase', icon: 'folder-open', section: 'Homebase', aliases: ['Switch homebase', 'Open vault'], callback: () => { void app.host.app.chooseVault(false); } });
 	/** The file a command acts on: the one a menu passed, or the open note. */
@@ -585,7 +450,7 @@ export function registerCore(app: App): { reveal(): void } {
 			new NameModal(app, 'New folder', 'New folder', 'Create', (name) => {
 				if (!name) return;
 				const path = parent.isRoot() ? name : `${parent.path}/${name}`;
-				vault.createFolder(path).then(() => explorer()?.expandTo(path)).catch(report);
+				vault.createFolder(path).catch(report);
 			}).open();
 		},
 	});
@@ -610,13 +475,11 @@ export function registerCore(app: App): { reveal(): void } {
 	add({ id: 'app:next-tab', name: 'Go to next tab', section: 'Layout', hotkeys: [{ modifiers: ['Ctrl'], key: 'Tab' }], checkCallback: cycleTab(1) });
 	add({ id: 'app:previous-tab', name: 'Go to previous tab', section: 'Layout', hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'Tab' }], checkCallback: cycleTab(-1) });
 	const split = (direction: 'vertical' | 'horizontal') => ({
-		when: (ctx: CommandContext) => { const l = leafArg(ctx); return !!l && !l.isSidebar(); },
+		when: (ctx: CommandContext) => !!leafArg(ctx),
 		run: (ctx: CommandContext) => { void workspace.duplicateLeaf(leafArg(ctx)!, direction); },
 	});
 	add({ id: 'app:split-right', name: 'Split right', icon: 'separator-vertical', section: 'Layout', ...split('vertical') });
 	add({ id: 'app:split-down', name: 'Split down', icon: 'separator-horizontal', section: 'Layout', ...split('horizontal') });
-	add({ id: 'app:toggle-left-sidebar', name: 'Toggle left sidebar', icon: 'panel-left', section: 'Layout', callback: () => workspace.leftSplit.toggle() });
-	add({ id: 'app:toggle-right-sidebar', name: 'Toggle right sidebar', icon: 'panel-right', section: 'Layout', callback: () => workspace.rightSplit.toggle() });
 	add({
 		id: 'app:toggle-reading', name: 'Toggle reading view', icon: 'book-open', section: 'View', hotkeys: [{ modifiers: ['Mod'], key: 'e' }],
 		checkCallback: (checking) => { const v = activeMarkdown(); if (!v) return false; if (!checking) void v.toggleMode(); return true; },
@@ -674,16 +537,6 @@ export function registerCore(app: App): { reveal(): void } {
 		run: (ctx) => workspace.getLeaf('split').openFile(ctx.args.file as TFile),
 	});
 	add({
-		id: 'app:reveal-file', name: 'Reveal current file in navigation', section: 'Notes',
-		when: (ctx) => !!ctx.file,
-		run: (ctx) => workspace.ensureSideLeaf(FILE_EXPLORER, 'left', { reveal: true }).then((leaf) => (leaf.view as FileExplorerView).reveal(ctx.file!)),
-	});
-	add({
-		id: 'app:collapse-folders', name: 'Collapse all folders', icon: 'chevrons-down-up', section: 'Notes',
-		when: () => !!explorer(),
-		run: () => explorer()?.collapseAll(),
-	});
-	add({
 		id: 'app:show-in-folder', name: 'Show in system file manager', icon: 'folder-open', section: 'Notes',
 		when: (ctx) => !!fileArg(ctx),
 		run: (ctx) => { const f = fileArg(ctx)!; void app.host.app.showItemInFolder(f instanceof TFolder && f.isRoot() ? '' : f.path); },
@@ -698,10 +551,6 @@ export function registerCore(app: App): { reveal(): void } {
 	add({ id: 'editor:toggle-code', name: 'Toggle inline code', section: 'Edit', editorCallback: () => wrapSelection(app, '`') });
 	add({ id: 'editor:toggle-strikethrough', name: 'Toggle strikethrough', section: 'Edit', editorCallback: () => wrapSelection(app, '~~') });
 
-	// Ribbon
-	workspace.leftRibbon.addRibbonItemButton('app:quick-switcher', 'search', 'Open quick switcher', () => app.commands.executeCommandById('app:quick-switcher'));
-	workspace.leftRibbon.addRibbonItemButton('app:command-palette', 'terminal', 'Open command palette', () => app.commands.executeCommandById('app:command-palette'));
-	workspace.leftRibbon.addRibbonItemButton('app:new-note', 'square-pen', 'Create new note', () => app.commands.executeCommandById('app:new-note'));
 	// The status bar's Docket button (where the sidebar toggle was).
 	const docketBtn = app.statusBarEl.createDiv({ cls: 'status-bar-item mod-clickable', attr: { 'aria-label': 'Open the Docket' } });
 	setIcon(docketBtn, 'panel-top');
@@ -713,33 +562,4 @@ export function registerCore(app: App): { reveal(): void } {
 	return {
 		reveal: () => { docket.start(); },
 	};
-}
-
-/**
- * Add the sidebar panes a homebase has not had yet (new homebases, and panes added in a later version),
- * keeping whichever tab was showing. A pane the user closes stays closed: each is added only once.
- */
-async function seedSidebars(app: App): Promise<void> {
-	const { workspace } = app;
-	const seeded = new Set(Array.isArray(app.config.seededPanes) ? (app.config.seededPanes as string[]) : []);
-	const before = { left: workspace.leftSplit.tabs.activeLeaf, right: workspace.rightSplit.tabs.activeLeaf };
-	let added = false;
-	for (const [type, side] of SIDEBAR_PANES) {
-		if (seeded.has(type) && type !== FILE_EXPLORER) continue;
-		if (workspace.getLeavesOfType(type).length === 0) {
-			await workspace.ensureSideLeaf(type, side);
-			added = true;
-		}
-		seeded.add(type);
-	}
-	if (added) {
-		for (const side of ['left', 'right'] as const) {
-			const tabs = side === 'left' ? workspace.leftSplit.tabs : workspace.rightSplit.tabs;
-			const keep = before[side] ?? tabs.children[0];
-			if (keep) tabs.selectTab(keep);
-		}
-	}
-	if (seeded.size !== (Array.isArray(app.config.seededPanes) ? (app.config.seededPanes as string[]).length : 0)) {
-		await app.setConfig('seededPanes', [...seeded]);
-	}
 }

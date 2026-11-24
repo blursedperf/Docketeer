@@ -7,6 +7,11 @@ whatever a plugin tries. Plugins add commands, views, CodeMirror 6 editor extens
 The first plugin, **AGLC4 Citations** (`plugins/aglc4`), is a port of
 [obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0 and ships built in.
 
+Everything is reached from the keyboard through **the Docket**, a tray that drops from the top of the window
+(**Ctrl+P**, ⌘P on macOS): search across notes, commands, and panels for authorities, the outline, units
+(subjects and topics), citations, the homebase and the layout. Notes tile into panes from the keyboard. See
+[docs/docket/shortcuts.md](docs/docket/shortcuts.md) and [docs/docket/walkthrough.md](docs/docket/walkthrough.md).
+
 See [PLAN.md](PLAN.md) for the architecture, the plugin API and the roadmap.
 
 ## Install

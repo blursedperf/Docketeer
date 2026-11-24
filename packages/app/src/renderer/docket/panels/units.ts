@@ -13,6 +13,10 @@ import { empty, row, section } from './common';
 
 export const UNIT_LABELS = { level1: 'Subject', level2: 'Topic', plural1: 'Subjects' };
 
+/** A folder to open the way to next time Units is drawn (from a "#" folder result). */
+let pendingReveal: string | null = null;
+export function revealInUnits(path: string): void { pendingReveal = path; }
+
 export function unitsPanel(app: App, docket: Docket): DocketPanel {
 	const open = new Set<string>();
 
@@ -65,6 +69,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			const active = app.workspace.getActiveFile();
 			// Open the way to the open note.
 			if (active) { const parts = active.path.split('/'); for (let i = 1; i < parts.length; i++) open.add(parts.slice(0, i).join('/')); }
+			if (pendingReveal) { const parts = pendingReveal.split('/'); for (let i = 1; i <= parts.length; i++) open.add(parts.slice(0, i).join('/')); pendingReveal = null; }
 
 			const pinned = (app.config.pinnedNotes ?? []).map((p) => app.vault.getFileByPath(p)).filter((f): f is TFile => !!f && !app.isLocked(f));
 			if (pinned.length) {
