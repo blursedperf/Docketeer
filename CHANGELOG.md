@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.2.0
 
 - **Homebase.** The folder of notes is now called a homebase everywhere in the app (welcome screen,
   commands, settings, dialogs). `--homebase=<folder>` opens one directly. The plugin API keeps
