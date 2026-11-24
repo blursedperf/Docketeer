@@ -126,6 +126,9 @@ export abstract class Plugin extends Component {
 	}
 
 	addRibbonIcon(icon: string, title: string, callback: (evt: MouseEvent) => unknown): HTMLElement {
+		// With no ribbon (Quire's Docket), the button is a command, unless the plugin has one of that name.
+		const exists = this.app.commands.listCommands().some((c) => c.source === `plugin:${this.manifest.id}` && c.name.toLowerCase().endsWith(`: ${title.toLowerCase()}`));
+		if (!exists) this.addCommand({ id: `ribbon-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, name: title, icon, callback: () => callback(new MouseEvent('click')) });
 		const el = this.app.workspace.leftRibbon.addRibbonItemButton(`${this.manifest.id}:${title}`, icon, title, callback);
 		this.register(() => el.detach());
 		return el;

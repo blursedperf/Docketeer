@@ -40,7 +40,12 @@ export async function runSmoke(app: App): Promise<void> {
 		return JSON.stringify(metadataCache.getFileCache(f)?.frontmatter) === '{"tags":["test"]}' || JSON.stringify(metadataCache.getFileCache(f));
 	});
 	await check('links resolved', () => metadataCache.resolvedLinks['Welcome.md']?.['Second note.md'] === 1 || JSON.stringify(metadataCache.resolvedLinks));
-	await check('file explorer shown', () => workspace.getLeavesOfType('file-explorer').length === 1);
+	await check('no sidebars or ribbon: the Docket is the way in', () => {
+		const hidden = [workspace.leftSplit.containerEl, workspace.rightSplit.containerEl, workspace.leftRibbon.containerEl].every((el) => el.offsetParent === null);
+		const handle = !!document.querySelector('.docket-handle');
+		const sideLeaves = workspace.getLeavesOfType('file-explorer').length + workspace.getLeavesOfType('backlink').length;
+		return (hidden && handle && sideLeaves === 0) || `hidden=${hidden} handle=${handle} sideLeaves=${sideLeaves}`;
+	});
 
 	await check('open, edit and save a note', async () => {
 		const f = vault.getFileByPath('Welcome.md')!;
@@ -297,15 +302,15 @@ export async function runSmoke(app: App): Promise<void> {
 
 	await check('hotkeys: record, run, conflicts, reset, saved', async () => {
 		const cmds = app.commands;
-		await cmds.setHotkeys('app:toggle-left-sidebar', [{ modifiers: ['Mod', 'Alt'], key: 'l' }]);
-		const before = workspace.leftSplit.collapsed;
+		await cmds.setHotkeys('app:toggle-live-preview', [{ modifiers: ['Mod', 'Alt'], key: 'l' }]);
+		const before = app.config.livePreview;
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ctrlKey: true, altKey: true, bubbles: true }));
-		const toggled = workspace.leftSplit.collapsed !== before;
-		if (toggled) workspace.leftSplit.toggle();
-		const clash = cmds.conflicts({ modifiers: ['Mod'], key: 'p' }).map((c) => c.id).includes('app:command-palette');
-		const saved = (await vault.adapter.read('.quire/hotkeys.json')).includes('app:toggle-left-sidebar');
-		await cmds.setHotkeys('app:toggle-left-sidebar', null);
-		const reset = !cmds.isCustomised('app:toggle-left-sidebar');
+		const toggled = app.config.livePreview !== before;
+		if (toggled) await app.setConfig('livePreview', before);
+		const clash = cmds.conflicts({ modifiers: ['Mod'], key: 'p' }).map((c) => c.id).includes('app:docket');
+		const saved = (await vault.adapter.read('.quire/hotkeys.json')).includes('app:toggle-live-preview');
+		await cmds.setHotkeys('app:toggle-live-preview', null);
+		const reset = !cmds.isCustomised('app:toggle-live-preview');
 		app.setting.openTabById('hotkeys');
 		await sleep(50);
 		const rows = document.querySelectorAll('.hotkey-list .setting-item').length;
@@ -313,33 +318,19 @@ export async function runSmoke(app: App): Promise<void> {
 		return (toggled && clash && saved && reset && rows > 30) || `ran=${toggled} clash=${clash} saved=${saved} reset=${reset} rows=${rows}`;
 	});
 
-	// Navigation panes (Phase 3).
-	const paneText = (type: string) => (workspace.getLeavesOfType(type)[0]?.view.containerEl.textContent ?? '');
-	await check('sidebar panes are added', () => {
-		const missing = ['file-explorer', 'search', 'tag', 'backlink', 'outgoing-link', 'outline'].filter((t) => workspace.getLeavesOfType(t).length !== 1);
-		return missing.length === 0 || `missing: ${missing.join(', ')}`;
+	// The old sidebar commands open the Docket where their feature now lives.
+	await check('old sidebar commands open the Docket', async () => {
+		const ui = (app as unknown as { docketUI?: { isOpen: boolean; close(hide?: boolean): void } }).docketUI;
+		const tried: string[] = [];
+		for (const id of ['app:search', 'app:quick-switcher', 'app:command-palette', 'app:show-outline', 'app:show-tags', 'app:show-backlinks']) {
+			commands.executeCommandById(id);
+			await sleep(30);
+			if (!ui?.isOpen) tried.push(id);
+			ui?.close(true);
+		}
+		const sideOff = !commands.isAvailable(commands.findCommand('app:toggle-left-sidebar')!);
+		return (tried.length === 0 && sideOff) || `did not open: ${tried.join(', ')} sidebarToggle=${!sideOff}`;
 	});
-	await check('search finds text in notes', async () => {
-		commands.executeCommandById('app:search');
-		await sleep(100);
-		const view = workspace.getLeavesOfType('search')[0]!.view as unknown as { setQuery(q: string): void };
-		view.setQuery('footnote');
-		const ok = await until(() => /Welcome/.test(paneText('search')) && /match/.test(paneText('search')), 3000);
-		view.setQuery('tag:#test');
-		const tag = await until(() => /Renamed note/.test(paneText('search')), 3000);
-		view.setQuery('"no such phrase anywhere"');
-		const none = await until(() => /No matches/.test(paneText('search')), 3000);
-		return (ok && tag && none) || `words=${ok} tag=${tag} none=${none}: ${paneText('search').slice(0, 200)}`;
-	});
-	await check('backlinks, outgoing links and outline follow the note', async () => {
-		await workspace.getLeaf(false).openFile(vault.getFileByPath('Renamed note.md')!);
-		const back = await until(() => /Linkedmentions[1-9]/.test(paneText('backlink').replace(/\s+/g, '')) && /Welcome/.test(paneText('backlink')), 3000);
-		const outline = await until(() => /Second/.test(paneText('outline')), 3000);
-		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
-		const out = await until(() => /Renamed note/.test(paneText('outgoing-link')), 3000);
-		return (back && outline && out) || `backlinks=${back} outline=${outline} outgoing=${out} | backlinks pane: ${JSON.stringify(paneText('backlink').slice(0, 300))}`;
-	});
-	await check('tags pane counts tags', () => /#test\s*1/.test(paneText('tag')) || paneText('tag'));
 	await check('[[ completes links', async () => {
 		const view = workspace.getActiveViewOfType(MarkdownView)!;
 		const cm = view.editor.cm;
@@ -434,6 +425,20 @@ export async function runSmoke(app: App): Promise<void> {
 		const ok = await until(() => document.querySelectorAll('.aglc-pv-page').length > 1, 15000);
 		return ok || document.querySelector('.aglc-pv-info')?.textContent || 'no preview';
 	});
+	await check('AGLC4: page preview and version history open as normal tabs', async () => {
+		const preview = workspace.getLeavesOfType('aglc4-page-preview')[0];
+		commands.executeCommandById(`${id}:show-version-history`);
+		await sleep(300);
+		const history = workspace.getLeavesOfType('aglc4-version-history')[0];
+		const inMain = (l: typeof preview) => !!l && !l.isSidebar() && l.parent !== null && workspace.rootTabs().includes(l.parent);
+		const ok = inMain(preview) && inMain(history);
+		history?.detach();
+		preview?.detach();
+		await sleep(100);
+		const main = workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file?.basename === 'AGLC4 example essay');
+		if (main) workspace.setActiveLeaf(main, { focus: true });
+		return ok || `preview=${inMain(preview)} history=${inMain(history)}`;
+	});
 	await check('AGLC4: settings page renders', async () => {
 		app.setting.openTabById(id);
 		const ok = await until(() => document.querySelectorAll('.modal.mod-settings .setting-item').length > 20, 2000);
@@ -443,7 +448,11 @@ export async function runSmoke(app: App): Promise<void> {
 
 	// Alignment (polish plan): bands line up across the three columns, in every density.
 	const visible = (root: Element | null, sel: string) => [...(root?.querySelectorAll<HTMLElement>(sel) ?? [])].find((e) => e.offsetParent !== null) ?? null;
-	const columns = () => [workspace.leftSplit.containerEl, workspace.rootSplit.containerEl, workspace.rightSplit.containerEl];
+	// With the sidebars gone, the columns are the panes: split once so there are two to compare.
+	const firstLeaf = workspace.activeLeaf!;
+	const secondLeaf = await workspace.duplicateLeaf(firstLeaf, 'vertical');
+	await sleep(100);
+	const columns = () => workspace.rootTabs().map((t) => t.containerEl);
 	for (const density of ['compact', 'comfortable', 'spacious'] as const) {
 		await app.setConfig('density', density);
 		await sleep(50);
@@ -455,11 +464,8 @@ export async function runSmoke(app: App): Promise<void> {
 		});
 	}
 	await app.setConfig('density', 'comfortable');
-	await check('file and folder names share a column', () => {
-		const folder = document.querySelector('.nav-folder-title .tree-item-inner')?.getBoundingClientRect().left;
-		const file = document.querySelector('.nav-file-title .tree-item-inner')?.getBoundingClientRect().left;
-		return (folder !== undefined && folder === file) || `folder ${folder} file ${file}`;
-	});
+	secondLeaf.detach();
+	await sleep(50);
 	await check('settings controls share one column', async () => {
 		app.setting.openTabById('appearance');
 		await sleep(50);
@@ -605,6 +611,9 @@ export async function runShots(app: App): Promise<void> {
 	await until(() => workspace.getActiveFile()?.basename === 'AGLC4 example essay', 8000);
 	commands.executeCommandById('aglc-citations:page-preview');
 	await until(() => document.querySelectorAll('.aglc-pv-page').length > 1, 15000);
+	// The preview opens as a tab (no sidebars); put it in a pane beside the essay, as a user would (Mod+Alt+Shift+→).
+	const pv = workspace.getLeavesOfType('aglc4-page-preview')[0];
+	if (pv) { workspace.moveLeafToPane(pv, 'right'); const essayLeaf = workspace.getLeavesOfType('markdown')[0]; if (essayLeaf) workspace.setActiveLeaf(essayLeaf, { focus: true }); }
 	await sleep(1200);
 	document.querySelectorAll('.notice').forEach((n) => n.detach());
 	await app.setConfig('theme', 'dark');
@@ -634,16 +643,17 @@ export async function runShots(app: App): Promise<void> {
 	await app.setConfig('iconWeight', 'regular');
 	const view = workspace.getActiveViewOfType(MarkdownView);
 	if (view) { await view.setMode('preview'); await shot('06-reading-view'); await view.setMode('source'); }
-	commands.executeCommandById('app:command-palette');
-	await shot('07-command-palette');
-	topModal()?.close();
-	commands.executeCommandById('app:quick-switcher');
-	await shot('08-quick-switcher');
-	topModal()?.close();
-	const item = document.querySelector<HTMLElement>('.nav-file-title');
-	item?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 160, clientY: 220 }));
-	await shot('09-context-menu');
-	document.querySelector('.menu')?.detach();
+	// The Docket replaces the palette, the switcher and the file menu (Phase 6).
+	type Ui = { open(o?: { query?: string; panel?: string }): number; close(hide?: boolean): void };
+	const dock = () => (app as unknown as { docketUI: Ui }).docketUI;
+	dock().open({ query: '>' });
+	await shot('07-docket-commands');
+	dock().close(true);
+	dock().open({ query: 'second' });
+	await sleep(50);
+	document.querySelector<HTMLInputElement>('.docket-input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+	await shot('09-docket-note-actions');
+	dock().close(true);
 	app.setting.openTabById('appearance');
 	await shot('10-settings-appearance');
 	const scroller = document.querySelector('.vertical-tab-content-container');
@@ -653,23 +663,6 @@ export async function runShots(app: App): Promise<void> {
 	app.setting.search('footnote');
 	await shot('13-settings-search');
 	app.setting.close();
-	// Navigation panes.
-	commands.executeCommandById('app:search');
-	await sleep(100);
-	(workspace.getLeavesOfType('search')[0]?.view as unknown as { setQuery(q: string): void }).setQuery('native title');
-	await sleep(600);
-	await shot('14-search');
-	workspace.leftSplit.tabs.selectTab(workspace.getLeavesOfType('file-explorer')[0]!);
-	commands.executeCommandById('app:show-outline');
-	await sleep(400);
-	await shot('15-outline');
-	await workspace.getLeaf(false).openFile(app.vault.getFileByPath('Second note.md')!);
-	commands.executeCommandById('app:show-backlinks');
-	await sleep(600);
-	await shot('16-backlinks');
-	commands.executeCommandById('app:show-tags');
-	await sleep(400);
-	await shot('17-tags');
 	app.setting.openTabById('hotkeys');
 	await shot('18-settings-hotkeys');
 	app.setting.close();
@@ -795,9 +788,9 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	const titles = () => [...document.querySelectorAll('.docket-option-title')].map((e) => e.textContent);
 	const rootLeaves = () => { let n = 0; workspace.iterateRootLeaves(() => { n++; }); return n; };
 
-	await check('docket: off by default; the setting builds it and gives it Mod+P', async () => {
-		const before = !document.querySelector('.docket') && commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 1;
-		await app.setConfig('docket', true);
+	await check('docket: on from the start, with Mod+P', async () => {
+		const before = !!document.querySelector('.docket') && commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 0;
+		ui()?.close(true);
 		const built = !!ui() && !!document.querySelector('.docket-handle');
 		const paletteFree = commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 0;
 		return (before && built && paletteFree) || `before=${before} built=${built} paletteFree=${paletteFree}`;
@@ -811,6 +804,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	const cm = view.editor.cm;
 
 	await check('docket: Mod+P opens it with the cursor in the input, within 50 ms', async () => {
+		ui()?.close(true);
 		cm.focus();
 		cm.dispatch({ selection: { anchor: 20, head: 25 } });
 		press('p', { ctrl: true });
@@ -1224,13 +1218,15 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (acts.includes('Notes linking here') && acts.some((t) => /Word/.test(t ?? '')) && acts.includes('Pin to Units')) || acts.join('|');
 	});
 
-	await check('docket: turning it off removes it and gives Mod+P back to the palette', async () => {
+	await check('docket: can be taken down and built again (plugins and tests)', async () => {
 		await app.setConfig('docket', false);
 		await app.setConfig('docketPanel', 'core:outline');
 		const gone = !document.querySelector('.docket') && !ui();
 		const palette = commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 1;
 		const noProviders = app.docket.providers.size === 0 && app.docket.panels.size === 0;
-		return (gone && palette && noProviders) || `gone=${gone} palette=${palette} providers=${app.docket.providers.size}`;
+		await app.setConfig('docket', true);
+		const back = !!ui() && app.docket.panels.size === 6;
+		return (gone && palette && noProviders && back) || `gone=${gone} palette=${palette} providers=${app.docket.providers.size} back=${back}`;
 	});
 }
 

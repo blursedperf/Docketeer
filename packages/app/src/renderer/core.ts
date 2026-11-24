@@ -246,9 +246,9 @@ class AppearanceTab extends SettingTab {
 				.onChange((v) => set('density', v as AppConfig['density'])));
 
 		new Setting(el).setName('Docket').setHeading();
-		new Setting(el).setName('Use the Docket (preview)')
-			.setDesc('A tray from the top of the window for search, commands and panels, all from the keyboard. Opens with Mod+P, which then no longer opens the command palette (type > in the Docket for commands).')
-			.addToggle((t) => t.setValue(c.docket === true).onChange((v) => { void this.app.setConfig('docket', v); }));
+		new Setting(el).setName('Mode')
+			.setDesc('Peek: over the note, closing when you are done. Pinned: docked above the note. Mod+Shift+P switches.')
+			.addDropdown((d) => d.addOption('peek', 'Peek').addOption('pinned', 'Pinned').setValue(c.docketMode === 'pinned' ? 'pinned' : 'peek').onChange((v) => { void this.app.setConfig('docketMode', v as 'peek' | 'pinned'); }));
 		new Setting(el).setName('Icons').setHeading();
 		const packs = getIconPacks();
 		const pack = packs.find((p) => p.id === c.iconSet) ?? packs[0]!;
@@ -517,6 +517,8 @@ function wrapSelection(app: App, before: string, after = before) {
 
 export function registerCore(app: App): { reveal(): void } {
 	const { workspace, vault } = app;
+	// The Docket replaces the sidebars and the ribbon (docs/docket/PLAN.md, Phase 6).
+	workspace.setSidebarsEnabled(false);
 	workspace.registerViewType(FILE_EXPLORER, (leaf) => new FileExplorerView(leaf));
 	const openSearch = async (query?: string) => {
 		const leaf = await workspace.ensureSideLeaf(SEARCH_VIEW, 'left', { reveal: true });
@@ -700,15 +702,16 @@ export function registerCore(app: App): { reveal(): void } {
 	workspace.leftRibbon.addRibbonItemButton('app:quick-switcher', 'search', 'Open quick switcher', () => app.commands.executeCommandById('app:quick-switcher'));
 	workspace.leftRibbon.addRibbonItemButton('app:command-palette', 'terminal', 'Open command palette', () => app.commands.executeCommandById('app:command-palette'));
 	workspace.leftRibbon.addRibbonItemButton('app:new-note', 'square-pen', 'Create new note', () => app.commands.executeCommandById('app:new-note'));
-	const toggleLeft = app.statusBarEl.createDiv({ cls: 'status-bar-item mod-clickable', attr: { 'aria-label': 'Toggle sidebars' } });
-	setIcon(toggleLeft, 'panel-left');
-	toggleLeft.addEventListener('click', () => app.commands.executeCommandById('app:toggle-left-sidebar'));
+	// The status bar's Docket button (where the sidebar toggle was).
+	const docketBtn = app.statusBarEl.createDiv({ cls: 'status-bar-item mod-clickable', attr: { 'aria-label': 'Open the Docket' } });
+	setIcon(docketBtn, 'panel-top');
+	docketBtn.addEventListener('click', () => app.commands.executeCommandById('app:docket'));
 
 	const tiling = registerTiling(app);
 	(app as unknown as { tiling: typeof tiling }).tiling = tiling;
 	const docket = registerDocket(app);
 	return {
-		reveal: () => { void seedSidebars(app); docket.start(); },
+		reveal: () => { docket.start(); },
 	};
 }
 

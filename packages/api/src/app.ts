@@ -400,7 +400,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 	density: 'comfortable',
 	cssTheme: '',
 	enabledSnippets: [],
-	docket: false,
+	docket: true,
 	docketMode: 'peek',
 	docketHeight: 0.35,
 	docketPanel: 'core:outline',

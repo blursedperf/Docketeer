@@ -198,3 +198,31 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 59. **Dragging tabs to dock them is not added** (optional in the plan, keyboard first): tabs can already be
     moved with Mod+Alt+Shift+arrows and from the Layout panel.
 60. **Commands and settings match word-wise** (`wordMatch`): typed letters must run on from the last match or start a word, so "mabo" no longer brings up "Move tab to the pane left" while "ntab" still finds "New tab". Notes keep the looser fuzzy match (names are short).
+
+## Phase 6 (before Checkpoint 6)
+
+61. **The Docket is always on**; its setting is gone (Settings → Appearance → Docket now chooses Peek or Pinned).
+    The `docket` flag remains only so tests (and a future plugin reload) can take it down and build it again.
+62. **The sidebars and the ribbon are switched off, not yet deleted** (`Workspace.setSidebarsEnabled(false)`):
+    hidden, their saved panes not restored, and the code kept until Checkpoint 6 approves deleting it.
+63. **Views plugins open "in a sidebar" open as normal tabs** in the active pane (`getRightLeaf` / `getLeftLeaf`
+    / `ensureSideLeaf`). This is how the AGLC4 page preview (Word export preview) and version history now open,
+    with no change to the plugin (decision 49). Mod+Alt+Shift+→ puts one beside the note.
+64. **Ribbon buttons become commands** (`Plugin.addRibbonIcon` also adds "<Plugin>: <title>" unless the plugin
+    already has a command of that name), so anything a plugin put on the ribbon is in the Docket.
+65. **Old shortcuts, mapped** (same command ids, so remapped keys keep working):
+
+    | Old | Now |
+    |---|---|
+    | Mod+P command palette | Docket (Mod+P); `>` lists commands |
+    | Mod+O quick switcher | Docket |
+    | Mod+Shift+F search pane | Docket (full text under "In notes") |
+    | Show outline | Docket, Outline panel (Mod+2) |
+    | Show tags | Docket with `#` |
+    | Show backlinks / outgoing links | Docket list "Links to …" / "Links from …" for the open note |
+    | Reveal current file in navigation | Docket, Units panel (opens the way to the note) |
+    | Toggle left / right sidebar, Collapse all folders | Unavailable (no sidebars); removed with the code |
+    | Status bar sidebar button | Status bar Docket button |
+
+66. **Screenshots**: the sidebar screens (file menu, search, outline, backlinks and tags panes, palette and
+    switcher) are replaced by "07-docket-commands" and "09-docket-note-actions"; the others cover the Docket.

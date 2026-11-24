@@ -533,12 +533,30 @@ export class Workspace extends Events {
 		return next;
 	}
 
+	/**
+	 * Whether there are sidebars and a ribbon. Quire turns them off (the Docket replaces them); then views
+	 * that plugins open "in a sidebar" open as normal tabs in the main area.
+	 */
+	sidebars = true;
+
+	setSidebarsEnabled(on: boolean): void {
+		this.sidebars = on;
+		this.leftRibbon.containerEl.toggle(on);
+		this.leftSplit.containerEl.toggle(on);
+		this.rightSplit.containerEl.toggle(on);
+		this.containerEl.toggleClass('mod-no-sidebars', !on);
+		if (!on) for (const dock of [this.leftSplit, this.rightSplit]) for (const leaf of [...dock.tabs.children]) leaf.detach();
+		this.onResized();
+	}
+
 	getRightLeaf(_split = false): WorkspaceLeaf {
+		if (!this.sidebars) return this.createLeafInTabs(this.activeRootTabs());
 		const leaf = this.createLeafInTabs(this.rightSplit.tabs, this.rightSplit.tabs.children.length);
 		return leaf;
 	}
 
 	getLeftLeaf(_split = false): WorkspaceLeaf {
+		if (!this.sidebars) return this.createLeafInTabs(this.activeRootTabs());
 		return this.createLeafInTabs(this.leftSplit.tabs, this.leftSplit.tabs.children.length);
 	}
 
@@ -802,6 +820,7 @@ export class Workspace extends Events {
 
 	async revealLeaf(leaf: WorkspaceLeaf): Promise<void> {
 		leaf.parent?.selectTab(leaf);
+		if (!this.sidebars && !leaf.isSidebar()) { this.setActiveLeaf(leaf, { focus: true }); return; }
 		const root = leaf.getRoot();
 		if (root === this.leftSplit && this.leftSplit.collapsed) this.leftSplit.expand();
 		if (root === this.rightSplit && this.rightSplit.collapsed) this.rightSplit.expand();
@@ -983,7 +1002,7 @@ export class Workspace extends Events {
 			}
 		}
 		for (const [dock, data] of [[this.leftSplit, layout?.left], [this.rightSplit, layout?.right]] as const) {
-			if (!data) continue;
+			if (!data || !this.sidebars) continue;
 			dock.size = Number(data.size) || dock.size;
 			dock.collapsed = !!data.collapsed;
 			dock.applySize();
