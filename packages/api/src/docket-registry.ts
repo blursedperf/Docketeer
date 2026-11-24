@@ -58,8 +58,12 @@ export interface DocketPanel {
 	icon?: string;
 	/** Position for Mod+1 … Mod+9; plugins without one take the next free number, or none. */
 	order?: number;
-	/** Fill `el` (called each time the panel is shown). */
-	render(el: HTMLElement): void | Promise<void>;
+	/**
+	 * Fill `el` (called each time the panel is shown). `focus` is what the Docket opened on, such as the
+	 * case name under the cursor for the Authorities panel. Items marked `data-docket-item` can be reached
+	 * with the arrow keys.
+	 */
+	render(el: HTMLElement, opts: { focus?: string }): void | Promise<void>;
 	/** Called when the panel is hidden. */
 	hide?(): void;
 	source?: string;

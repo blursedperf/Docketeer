@@ -573,6 +573,8 @@ export async function runSmoke(app: App): Promise<void> {
 		return compact === '22px' || compact;
 	});
 
+	await docketChecks(app, check);
+
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
 		try {
@@ -700,5 +702,242 @@ export async function runShots(app: App): Promise<void> {
 	if (mark) { const r = mark.getBoundingClientRect(); mark.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 4, clientY: r.bottom })); }
 	await shot('22-spelling');
 	document.querySelector('.menu')?.detach();
+	// The Docket (preview).
+	await app.setConfig('docket', true);
+	type DocketUI = { open(o?: { panel?: string; query?: string }): number; close(hide?: boolean): void; toggleMode(): void };
+	const docket = (app as unknown as { docketUI: DocketUI }).docketUI;
+	const essay = app.vault.getFileByPath('AGLC4 example essay.md');
+	if (essay) await workspace.getLeaf(false).openFile(essay);
+	await sleep(300);
+	docket.open({ query: 'mabo' });
+	await shot('23-docket-search');
+	docket.close(true);
+	docket.open({ query: '>split' });
+	await shot('24-docket-commands');
+	docket.close(true);
+	docket.open({ query: 'second' });
+	await sleep(50);
+	document.querySelector<HTMLInputElement>('.docket-input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+	await shot('25-docket-actions');
+	docket.close(true);
+	const ecm = workspace.getActiveViewOfType(MarkdownView)?.editor.cm;
+	const at = ecm?.state.doc.toString().indexOf('Mabo v Queensland') ?? -1;
+	if (ecm && at >= 0) { ecm.dispatch({ selection: { anchor: at + 2 } }); ecm.focus(); }
+	docket.open();
+	await shot('26-docket-authorities');
+	docket.close(true);
+	docket.toggleMode();
+	docket.open({ panel: 'core:outline' });
+	await shot('27-docket-pinned-outline');
+	docket.toggleMode();
+	docket.close(true);
+	await app.setConfig('docket', false);
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
+}
+
+type CheckFn = (name: string, fn: () => Promise<boolean | string> | boolean | string) => Promise<void>;
+
+/** Press a key where the keyboard is (the window's capture handlers see it too). */
+function press(key: string, mods: { ctrl?: boolean; shift?: boolean; alt?: boolean } = {}): void {
+	const target = document.activeElement ?? document.body;
+	target.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: !!mods.ctrl, shiftKey: !!mods.shift, altKey: !!mods.alt, bubbles: true, cancelable: true }));
+}
+
+/** The Docket, used only from the keyboard (Phase 2 of docs/docket/PLAN.md). */
+async function docketChecks(app: App, check: CheckFn): Promise<void> {
+	const { workspace, vault, commands } = app;
+	type DocketUI = { isOpen: boolean; mode: string; el: HTMLElement; open(o?: object): number; close(hide?: boolean): void };
+	const ui = () => (app as unknown as { docketUI?: DocketUI }).docketUI;
+	const input = () => document.querySelector<HTMLInputElement>('.docket-input')!;
+	const type = async (text: string) => { input().value = text; input().dispatchEvent(new Event('input')); await sleep(50); };
+	const titles = () => [...document.querySelectorAll('.docket-option-title')].map((e) => e.textContent);
+	const rootLeaves = () => { let n = 0; workspace.iterateRootLeaves(() => { n++; }); return n; };
+
+	await check('docket: off by default; the setting builds it and gives it Mod+P', async () => {
+		const before = !document.querySelector('.docket') && commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 1;
+		await app.setConfig('docket', true);
+		const built = !!ui() && !!document.querySelector('.docket-handle');
+		const paletteFree = commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 0;
+		return (before && built && paletteFree) || `before=${before} built=${built} paletteFree=${paletteFree}`;
+	});
+
+	const essay = vault.getFileByPath('AGLC4 example essay.md') ?? vault.getMarkdownFiles()[0]!;
+	await workspace.getLeaf(false).openFile(essay);
+	await sleep(200);
+	const view = workspace.getActiveViewOfType(MarkdownView)!;
+	if (view.getMode() !== 'source') await view.setMode('source');
+	const cm = view.editor.cm;
+
+	await check('docket: Mod+P opens it with the cursor in the input, within 50 ms', async () => {
+		cm.focus();
+		cm.dispatch({ selection: { anchor: 20, head: 25 } });
+		press('p', { ctrl: true });
+		await sleep(30);
+		const opened = !!ui()?.isOpen && document.activeElement === input();
+		ui()!.close(true);
+		cm.focus();
+		const times: number[] = [];
+		for (let i = 0; i < 5; i++) { times.push(ui()!.open()); ui()!.close(true); }
+		cm.focus();
+		const worst = Math.max(...times.slice(1));
+		const aria = ui()!.el.getAttribute('role') === 'dialog' && input().getAttribute('role') === 'combobox';
+		return (opened && worst < 50 && aria) || `opened=${opened} worst=${worst.toFixed(1)}ms aria=${aria}`;
+	});
+
+	await check('docket: Esc returns to the same cursor and selection', async () => {
+		cm.dispatch({ selection: { anchor: 20, head: 25 } });
+		cm.focus();
+		press('p', { ctrl: true });
+		await type('welc');
+		press('Escape'); // clears the input
+		const cleared = input().value === '' && ui()!.isOpen;
+		press('Escape'); // closes
+		await sleep(20);
+		const sel = cm.state.selection.main;
+		const back = !ui()!.isOpen && cm.dom.contains(document.activeElement) && sel.anchor === 20 && sel.head === 25;
+		return (cleared && back) || `cleared=${cleared} closed=${!ui()!.isOpen} focus=${cm.dom.contains(document.activeElement)} sel=${sel.anchor}-${sel.head}`;
+	});
+
+	await check('docket: ">" lists commands with their shortcuts; Enter runs one', async () => {
+		press('p', { ctrl: true });
+		await type('>new tab');
+		const first = titles()[0];
+		const hint = document.querySelector('.docket-option.is-selected .docket-option-hint')?.textContent;
+		const before = rootLeaves();
+		press('Enter');
+		await sleep(100);
+		const ran = rootLeaves() === before + 1 && !ui()!.isOpen;
+		commands.executeCommandById('app:close-tab');
+		await workspace.getLeaf(false).openFile(essay);
+		return (first === 'New tab' && !!hint && ran) || `first=${first} hint=${hint} ran=${ran}`;
+	});
+
+	await check('docket: notes search; Mod+Enter opens to the right; announced', async () => {
+		press('p', { ctrl: true });
+		await type('renamed');
+		const group = document.querySelector('.docket-group')?.getAttribute('aria-label');
+		const live = document.querySelector('.docket [role=status]')?.textContent ?? '';
+		const active = input().getAttribute('aria-activedescendant');
+		const before = rootLeaves();
+		press('Enter', { ctrl: true });
+		await sleep(200);
+		const opened = rootLeaves() === before + 1 && workspace.getActiveFile()?.basename === 'Renamed note';
+		commands.executeCommandById('app:close-tab');
+		await sleep(50);
+		await workspace.getLeaf(false).openFile(essay);
+		return (group === 'Notes' && /result/.test(live) && !!active && opened) || `group=${group} live=${live} active=${active} opened=${opened}`;
+	});
+
+	await check('docket: Shift+Enter inserts a link at the cursor', async () => {
+		const v = workspace.getActiveViewOfType(MarkdownView)!;
+		const ed = v.editor.cm;
+		ed.focus();
+		ed.dispatch({ selection: { anchor: ed.state.doc.length } });
+		press('p', { ctrl: true });
+		await type('welcome');
+		press('Enter', { shift: true });
+		await sleep(50);
+		const text = ed.state.doc.toString();
+		const ok = text.endsWith('[[Welcome]]') && ed.dom.contains(document.activeElement);
+		ed.dispatch({ changes: { from: text.length - '[[Welcome]]'.length, to: text.length } });
+		return ok || `end=${JSON.stringify(text.slice(-20))} focus=${ed.dom.contains(document.activeElement)}`;
+	});
+
+	await check('docket: → shows actions for a result; Esc goes back', async () => {
+		press('p', { ctrl: true });
+		await type('renamed');
+		press('ArrowRight');
+		await sleep(20);
+		const acts = titles();
+		const shown = acts.includes('Open to the right') && acts.includes('Insert as a link');
+		press('Escape');
+		await sleep(50);
+		const back = titles()[0] === 'Renamed note';
+		press('Escape'); press('Escape');
+		return (shown && back) || `actions=${acts.join('|')} back=${titles().join('|')}`;
+	});
+
+	await check('docket: Mod+2 shows the outline; Tab moves between input, panel and tabs', async () => {
+		cm.focus();
+		press('p', { ctrl: true });
+		press('2', { ctrl: true });
+		await sleep(50);
+		const outline = document.querySelectorAll('.docket-outline-item').length > 3;
+		const tabActive = document.querySelector('.docket-tab.is-active')?.textContent?.includes('Outline');
+		press('Tab');
+		const inPanel = !!document.activeElement?.closest('.docket-panel');
+		press('ArrowDown');
+		const moved = document.activeElement?.classList.contains('docket-outline-item');
+		press('Tab');
+		const inTabs = !!document.activeElement?.closest('.docket-tabs');
+		press('Tab');
+		const inInput = document.activeElement === input();
+		press('Escape');
+		return (outline && tabActive && inPanel && moved && inTabs && inInput) || `outline=${outline} tab=${tabActive} panel=${inPanel} moved=${moved} tabs=${inTabs} input=${inInput}`;
+	});
+
+	await check('docket: opens on Authorities for a case name, Cite in a footnote', async () => {
+		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		const text = ed.state.doc.toString();
+		const at = text.indexOf('Mabo v Queensland');
+		ed.focus();
+		ed.dispatch({ selection: { anchor: at + 2 } });
+		ui()!.open();
+		await sleep(30);
+		const auth = document.querySelector('.docket-tab.is-active')?.textContent ?? '';
+		const name = document.querySelector('.docket-selected-name')?.textContent ?? '';
+		ui()!.close(true);
+		const fn = text.search(/^\[\^\d+\]:/m);
+		ed.dispatch({ selection: { anchor: fn + 6 } });
+		ed.focus();
+		ui()!.open();
+		await sleep(30);
+		const cite = document.querySelector('.docket-tab.is-active')?.textContent ?? '';
+		ui()!.close(true);
+		return (at >= 0 && auth.includes('Authorities') && name.startsWith('Mabo v Queensland') && cite.includes('Cite')) || `at=${at} auth=${auth} name=${name} cite=${cite}`;
+	});
+
+	await check('docket: pinned mode stays docked, resizes from the keyboard, is remembered', async () => {
+		cm.focus();
+		press('p', { ctrl: true, shift: true });
+		await sleep(30);
+		const pinned = ui()!.el.classList.contains('is-pinned') && app.config.docketMode === 'pinned';
+		const h0 = Number(app.config.docketHeight);
+		press('ArrowDown', { ctrl: true, alt: true });
+		const taller = Number(app.config.docketHeight) > h0;
+		press('Escape');
+		await sleep(20);
+		const docked = ui()!.isOpen && !ui()!.el.contains(document.activeElement);
+		press('p', { ctrl: true }); // focuses the docked Docket
+		const refocused = document.activeElement === input();
+		press('ArrowUp', { ctrl: true, alt: true });
+		press('p', { ctrl: true, shift: true }); // back to peek
+		press('Escape');
+		await sleep(20);
+		return (pinned && taller && docked && refocused && app.config.docketMode === 'peek') || `pinned=${pinned} taller=${taller} docked=${docked} refocused=${refocused} mode=${app.config.docketMode}`;
+	});
+
+	await check('docket: "?" lists shortcuts; a plugin panel takes the next number', async () => {
+		press('p', { ctrl: true });
+		await type('?new note');
+		const help = titles().includes('Create new note');
+		const remove = app.docket.addPanel({ id: 'test:panel', title: 'Test panel', render: (el) => { el.setText('hello'); } });
+		await type('');
+		press('7', { ctrl: true });
+		await sleep(30);
+		const plugin = document.querySelector('.docket-panel')?.textContent === 'hello';
+		remove();
+		press('1', { ctrl: true });
+		press('Escape');
+		return (help && plugin) || `help=${help} plugin=${plugin}`;
+	});
+
+	await check('docket: turning it off removes it and gives Mod+P back to the palette', async () => {
+		await app.setConfig('docket', false);
+		await app.setConfig('docketPanel', 'core:outline');
+		const gone = !document.querySelector('.docket') && !ui();
+		const palette = commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 1;
+		const noProviders = app.docket.providers.size === 0 && app.docket.panels.size === 0;
+		return (gone && palette && noProviders) || `gone=${gone} palette=${palette} providers=${app.docket.providers.size}`;
+	});
 }

@@ -58,3 +58,32 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 19. **Logs never carry error messages from file operations**, since Node puts the path in them: `errorSummary(e)`
     logs only the error's name and code. The two path-logging places from the inventory are fixed, and the
     main process logs only the scheme of a blocked request.
+
+## Phase 2
+
+20. **Feature flag**: Settings → Appearance → Docket → "Use the Docket (preview)" (`docket` in `.quire/app.json`,
+    off by default). Off, nothing of the Docket is built and Mod+P opens the command palette as before. On,
+    Mod+P opens the Docket and the palette's default shortcut is removed (its commands are the `>` prefix).
+21. **Esc in steps**: actions → results; panel or tabs → input; text in the input → cleared (back to the panel);
+    empty input → closes. This is the plan's "back one level", with clearing the query counted as a level.
+22. **Pinned mode and focus**: pinned stays docked. Esc (or choosing a result) gives the keyboard back to the
+    editor without hiding it; Mod+P then moves the keyboard into it, and Mod+P from inside hides it.
+    Peek closes when chosen from, on Esc, or when focus leaves it (a click elsewhere); dialogs it opens (a
+    delete confirmation) do not close it.
+23. **Shortcut changes from the plan**, following Checkpoint 0: open/close is Mod+P; peek/pinned is
+    Mod+Shift+P (which also opens it). The handle's hint shows whatever key is set.
+24. **Mod+1 … Mod+9** are commands with the `docket` context, so they only act while the Docket has the
+    keyboard and never clash with anything in the editor.
+25. **Panel content is Phase 4.** Phase 2 ships the six panels in their final order; Outline already works
+    (headings, arrows, Enter to jump, Mod+Enter / Alt+Enter to open in a split). The others describe what
+    they will hold and list today's commands for the same job, so no panel is a dead end. Authorities shows
+    the case name it was opened on.
+26. **Search is Phase 2 grade**: fuzzy matching on note names and paths, headings of the open note, commands
+    (by name, alias, keyword, section; recently used first), folders and tags, shortcuts. Full text, the
+    index, ranking by use and "show all" are Phase 3. The Docket drops any result whose note is locked,
+    whatever provider returned it.
+27. **Context-aware opening** reads the line at the cursor: a footnote definition or inline footnote opens Cite;
+    a case name ("X v Y", with leading words such as "In" or "See" dropped) opens Authorities with it
+    selected. Detection is deliberately simple until the Authorities parser (Phase 4).
+28. **Budget check**: the smoke test opens the Docket five times and requires each open under 50 ms (with the
+    small test homebase; the 10,000-note fixture comes in Phase 3).

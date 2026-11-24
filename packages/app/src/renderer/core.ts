@@ -8,6 +8,7 @@ import {
 	type App, type AppConfig, type Command, type CommandContext, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
 	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES,
 } from '@quire/api';
+import { registerDocket } from './docket';
 import { FILE_EXPLORER, FileExplorerView, NameModal, freePath, promptRename } from './explorer';
 import { BACKLINK_VIEW, BacklinksView } from './panes/backlinks';
 import { LinkSuggest } from './panes/link-suggest';
@@ -243,6 +244,10 @@ class AppearanceTab extends SettingTab {
 			.addDropdown((d) => d.addOptions({ compact: 'Compact', comfortable: 'Comfortable', spacious: 'Spacious' }).setValue(c.density)
 				.onChange((v) => set('density', v as AppConfig['density'])));
 
+		new Setting(el).setName('Docket').setHeading();
+		new Setting(el).setName('Use the Docket (preview)')
+			.setDesc('A tray from the top of the window for search, commands and panels, all from the keyboard. Opens with Mod+P, which then no longer opens the command palette (type > in the Docket for commands).')
+			.addToggle((t) => t.setValue(c.docket === true).onChange((v) => { void this.app.setConfig('docket', v); }));
 		new Setting(el).setName('Icons').setHeading();
 		const packs = getIconPacks();
 		const pack = packs.find((p) => p.id === c.iconSet) ?? packs[0]!;
@@ -698,8 +703,9 @@ export function registerCore(app: App): { reveal(): void } {
 	setIcon(toggleLeft, 'panel-left');
 	toggleLeft.addEventListener('click', () => app.commands.executeCommandById('app:toggle-left-sidebar'));
 
+	const docket = registerDocket(app);
 	return {
-		reveal: () => { void seedSidebars(app); },
+		reveal: () => { void seedSidebars(app); docket.start(); },
 	};
 }
 

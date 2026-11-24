@@ -147,3 +147,46 @@ describe('plugins', () => {
 		expect(() => r.addPanel({ id: 'one', title: 'again', render: () => undefined })).toThrow();
 	});
 });
+
+import { caseNameAt, clampHeight, contextPanel, groupResults, inFootnote, parsePrefix } from '../src/docket-logic';
+
+describe('docket logic', () => {
+	it('reads prefixes', () => {
+		expect(parsePrefix('> new note')).toEqual({ prefix: '>', text: 'new note' });
+		expect(parsePrefix('mabo')).toEqual({ prefix: '', text: 'mabo' });
+		expect(parsePrefix('?')).toEqual({ prefix: '?', text: '' });
+	});
+	it('finds the case name under the cursor', () => {
+		const line = 'In *Mabo v Queensland [No 2]* the High Court held';
+		expect(caseNameAt(line, line.indexOf('Queensland'))).toBe('Mabo v Queensland [No 2]');
+		expect(caseNameAt(line, line.indexOf('held'))).toBeNull();
+		expect(caseNameAt('See Cooper v Stuart (1889) 14 App Cas 286.', 6)).toBe('Cooper v Stuart');
+		expect(caseNameAt('R v Tang is about slavery', 1)).toBe('R v Tang');
+	});
+	it('knows when the cursor is in a footnote', () => {
+		expect(inFootnote('[^3]: Ibid 12.', 8)).toBe(true);
+		expect(inFootnote('Text^[Ibid 4.] more', 8)).toBe(true);
+		expect(inFootnote('Text^[Ibid 4.] more', 17)).toBe(false);
+	});
+	it('chooses the panel from the context', () => {
+		expect(contextPanel('[^1]: Mabo v Queensland [No 2] (1992) 175 CLR 1.', 10)).toEqual({ panel: 'cite' });
+		expect(contextPanel('Mabo v Queensland [No 2] decided', 3)).toEqual({ panel: 'authorities', focus: 'Mabo v Queensland [No 2]' });
+		expect(contextPanel('Nothing here', 3)).toBeNull();
+	});
+	it('groups and limits results', () => {
+		const g = groupResults([
+			{ id: 'c1', type: 'Commands', title: 'a', score: 1 },
+			{ id: 'n1', type: 'Notes', title: 'b', score: 1 },
+			{ id: 'n2', type: 'Notes', title: 'c', score: 5 },
+			{ id: 'n3', type: 'Notes', title: 'd', score: 3 },
+		], 2);
+		expect(g.map((x) => x.type)).toEqual(['Notes', 'Commands']);
+		expect(g[0]!.items.map((x) => x.id)).toEqual(['n2', 'n3']);
+		expect(g[0]!.total).toBe(3);
+	});
+	it('clamps the height', () => {
+		expect(clampHeight(0.9)).toBe(0.6);
+		expect(clampHeight(0.1)).toBe(0.2);
+		expect(clampHeight(0.351)).toBe(0.35);
+	});
+});

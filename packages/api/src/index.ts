@@ -38,6 +38,7 @@ export {
 } from './ui';
 export { Plugin, type Command, type CommandContext, type Hotkey, type Modifier, type PluginManifest } from './plugin';
 export { type KeyContext, hotkeyString, eventString, parseHotkey, reservedFor } from './keymap';
+export { parsePrefix, caseNameAt, inFootnote, contextPanel, groupResults, clampHeight, DOCKET_PREFIXES } from './docket-logic';
 export { DocketRegistry, type DocketPanel, type SearchProvider, type SearchResult, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';

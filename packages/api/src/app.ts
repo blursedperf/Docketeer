@@ -351,6 +351,14 @@ export interface AppConfig {
 	/** Installed CSS theme (folder name in .quire/themes), or empty. */
 	cssTheme: string;
 	enabledSnippets: string[];
+	/** The Docket (preview, behind a flag until the sidebars retire). */
+	docket: boolean;
+	/** Peek overlays the editor; pinned docks above it. */
+	docketMode: 'peek' | 'pinned';
+	/** Height as a fraction of the window (0.2–0.6). */
+	docketHeight: number;
+	/** The last panel shown. */
+	docketPanel: string;
 	[key: string]: unknown;
 }
 
@@ -380,6 +388,10 @@ export const DEFAULT_CONFIG: AppConfig = {
 	density: 'comfortable',
 	cssTheme: '',
 	enabledSnippets: [],
+	docket: false,
+	docketMode: 'peek',
+	docketHeight: 0.35,
+	docketPanel: 'core:outline',
 };
 
 /** The running app: everything a plugin reaches through `this.app`. */
@@ -457,6 +469,7 @@ export class App extends Events {
 		if ((key === 'spellcheck' || key === 'spellcheckLanguage') && this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage).catch((e: unknown) => console.error(e));
 		if (key === 'spellcheckFootnotes') this.spellchecker.refreshEditors();
 		if (key === 'spellcheckLegal' && this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage, true).catch((e: unknown) => console.error(e));
+		this.trigger('config-changed', key);
 		await this.vault.adapter.write(`${this.vault.configDir}/app.json`, JSON.stringify(this.config, null, '\t'));
 	}
 
