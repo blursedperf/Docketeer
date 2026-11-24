@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.6.0
+
+- **Locking.** Lock a note, or a folder (a subject or topic), and it is encrypted on disk: other apps see
+  only "This note is encrypted by Quire". Set it up once (Settings → Security, or "Set up locking"): a
+  passphrase, and a recovery key shown once to keep somewhere safe. One passphrase unlocks every locked note.
+  - **Lock now** with Ctrl+L (⌘L) or the lock in the status bar. Open locked notes are saved and closed and
+    nothing of them stays in memory. Quire also locks after 15 idle minutes and when the computer sleeps or
+    the screen locks (both can be turned off), and always starts locked.
+  - While locked, locked notes show only as names with a lock in Units; search, Authorities, links, embeds
+    and previews show nothing of them. Opening one asks for the passphrase.
+  - Forgot the passphrase? "Use the recovery key…" lets you set a new one.
+  - New notes in a locked folder are encrypted too. Remove a lock from a note's or folder's actions.
+  - File and folder names, and attachments, are not encrypted. Exporting a locked note warns first.
+  - The AGLC4 plugin keeps no version history of locked notes.
+- **Drag tabs**: along the tab bar to reorder, onto another pane to move (its edges split it), or to an edge
+  of the window for a pane along that whole side. A preview shows where it will land.
+- **Search finds subjects and topics** by name; Enter shows them in Units.
+- A note found by its name is not listed again under "In notes".
+- Typing **>** alone lists recently used commands first, then commands by section.
+- Authorities and note text come before commands in search.
+- Plugin buttons no longer duplicate the plugin's own commands.
+- Clearer labels: "in <note>" for headings, "Torts / Negligence" for places.
+
 ## v0.5.1
 
 - **New notes: the name first, and where it goes.** Ctrl+N (⌘N), or "New note" in Units, asks for the name
