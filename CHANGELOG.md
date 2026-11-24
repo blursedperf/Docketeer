@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.9.0
 
 - **Change the Docket key.** Settings → Hotkeys starts with *Docket key*: click *Change…* and press the keys. It is
   the same in every homebase (it is kept with Quire's own settings, not in the homebase), and the handle at the top
