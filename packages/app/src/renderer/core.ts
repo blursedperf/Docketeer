@@ -40,6 +40,8 @@ class EditorTab extends SettingTab {
 			.addToggle((t) => t.setValue(c.readableLineLength).onChange((v) => { void this.app.setConfig('readableLineLength', v); }));
 		new Setting(el).setName('Live preview').setDesc('Show Markdown formatted as you write: headings without #, bold without **, links as their text, bullets and task boxes. The lines you are editing show the Markdown as written. Off: the Markdown is always shown as written (source mode).')
 			.addToggle((t) => t.setValue(c.livePreview).onChange((v) => { void this.app.setConfig('livePreview', v); }));
+		new Setting(el).setName('Note name as title').setDesc('Show each note\'s name as a title above its text. Editing it (then Enter, or moving away) renames the note; links to it follow. It is not part of the note\'s text.')
+			.addToggle((t) => t.setValue(c.inlineTitle !== false).onChange((v) => { void this.app.setConfig('inlineTitle', v); }));
 		new Setting(el).setName('Vim key bindings').setDesc('Edit with Vim keys: normal, insert and visual modes, motions, operators, :w to save and :q to close the tab. The modeline shows the mode.')
 			.addToggle((t) => t.setValue(c.vimMode).onChange((v) => { void this.app.setConfig('vimMode', v); }));
 		new Setting(el).setName('Auto-pair brackets').setDesc('Type the closing bracket or quote with the opening one.')

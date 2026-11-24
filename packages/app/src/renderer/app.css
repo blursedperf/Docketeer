@@ -898,3 +898,13 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 body.is-dragging-tab .workspace-tab-header { cursor: grabbing; }
 .workspace-tab-header[draggable="true"] { -webkit-user-drag: element; }
 @media (prefers-reduced-motion: no-preference) { .workspace-drop-overlay { transition: left 80ms, top 80ms, width 80ms, height 80ms; } }
+
+/* The note's name as a title above its text (editable; renames the note). */
+.inline-title-wrap { padding: 0 0 var(--space-4); }
+input.inline-title {
+	display: block; width: 100%; height: auto; padding: var(--space-1) 0; margin: 0; outline: none; cursor: text;
+	font-family: var(--font-text); font-size: var(--h1-size, 1.9em); font-weight: var(--font-bold); line-height: 1.25;
+	color: var(--text-normal); background: transparent; border: none; border-bottom: var(--border-width) solid transparent; border-radius: 0; box-shadow: none;
+}
+input.inline-title:hover { border-bottom-color: var(--doom-border-subtle); }
+input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: none; }

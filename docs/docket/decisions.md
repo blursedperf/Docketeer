@@ -345,3 +345,14 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     was until reopened.
 99. **Checked, no change needed**: after creating a note (search, Mod+N or Units) or opening one, the keyboard
     is in that note's editor.
+
+## The note's name as its title (user request, 0.7.1)
+
+100. **Decided with the user**: the note's name shows as a title above its text (not saved in the file; the
+     note's own headings are unchanged). Editing it and pressing Enter or ↓ (or moving away) renames the file,
+     and links follow; Esc puts the name back; ↑ on the first line of the text goes up into it. Names with
+     / \ or : and names already taken in the folder are refused. Reading view shows it too. Settings →
+     Editor → "Note name as title" turns it off.
+101. **The title is a text field** in a block widget at the top of the editor: an editable block inside the
+     editor cannot take the keyboard (the editor is itself editable), and the editor measures it at once so
+     clicks just after opening a note land on the right line.

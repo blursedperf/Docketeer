@@ -3,7 +3,7 @@
  * and the AGLC4 plugin end to end, and checks that network access is refused. Not part of the normal
  * app flow: it only runs when the main process was started with --smoke.
  */
-import { EditorView } from '@codemirror/view';
+import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
 import { type App, MarkdownView, Platform, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 
@@ -219,7 +219,7 @@ export async function runSmoke(app: App): Promise<void> {
 		[...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent?.startsWith('Add "mispelled"'))?.click();
 		await sleep(150);
 		const gone = ![...document.querySelectorAll('.cm-misspelled')].some((e) => e.textContent === 'mispelled');
-		const saved = (await vault.adapter.read('.quire/dictionary.txt')).includes('mispelled');
+		const saved = (await vault.adapter.read('.quire/dictionary.txt').catch(() => '')).includes('mispelled');
 		const notices = await app.host.app.notices();
 		const licences = notices.includes('SCOWL') && notices.includes('nspell');
 		return (fixed && gone && saved && licences) || `menu=${items.map((i) => i.textContent).join('|')} fixed=${fixed} gone=${gone} saved=${saved} licences=${licences}`;
@@ -591,6 +591,7 @@ export async function runSmoke(app: App): Promise<void> {
 	await docketChecks(app, check);
 	await tilingChecks(app, check);
 	await lockingChecks(app, check);
+	await titleChecks(app, check);
 
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
@@ -1987,5 +1988,64 @@ async function lockingChecks(app: App, check: CheckFn): Promise<void> {
 		const folderPlain = (await raw('Matters/New file note.md')).includes(SECRET);
 		for (const p of ['Client matter.md', 'Matters/Old file note.md', 'Matters/New file note.md']) { const f = vault.getFileByPath(p); if (f) await vault.trash(f, true); }
 		return (slept && plain && folderPlain) || `slept=${slept} notePlain=${plain} folderPlain=${folderPlain}`;
+	});
+}
+
+/** The note's name as an editable title above its text. */
+async function titleChecks(app: App, check: CheckFn): Promise<void> {
+	const { vault, workspace } = app;
+	const title = () => [...document.querySelectorAll<HTMLInputElement>('.workspace-leaf.mod-active input.inline-title')].find((e) => e.offsetParent !== null) ?? null;
+	const editTitle = async (text: string, key: string) => {
+		const t = title()!;
+		t.focus();
+		t.value = text;
+		t.dispatchEvent(new Event('input'));
+		t.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+		await sleep(300);
+	};
+	await check('title: the note\'s name above its text; editing it renames the note and links follow', async () => {
+		const note = vault.getFileByPath('Renamed note.md')!;
+		await workspace.getLeaf(false).openFile(note);
+		const v = workspace.getActiveViewOfType(MarkdownView)!;
+		if (v.getMode() !== 'source') await v.setMode('source');
+		await sleep(150);
+		const shows = title()?.value === 'Renamed note';
+		const notInText = !v.editor.getValue().startsWith('Renamed note');
+		await editTitle('Retitled note', 'Enter');
+		const renamed = !!vault.getFileByPath('Retitled note.md') && !vault.getFileByPath('Renamed note.md');
+		const linkFollowed = (await vault.read(vault.getFileByPath('Welcome.md')!)).includes('[[Retitled note');
+		const inText = v.editor.cm.dom.contains(document.activeElement);
+		const showsNew = title()?.value === 'Retitled note';
+		// Esc puts the name back; a bad name and a name already taken are refused.
+		await editTitle('Something else', 'Escape');
+		const escaped = title()?.value === 'Retitled note' && !!vault.getFileByPath('Retitled note.md');
+		await editTitle('Bad: name', 'Enter');
+		const badRefused = !!vault.getFileByPath('Retitled note.md') && title()?.value === 'Retitled note';
+		await editTitle('Welcome', 'Enter');
+		const takenRefused = !!vault.getFileByPath('Retitled note.md');
+		// ↑ on the first line goes up into the title; ↓ (or Enter) back down.
+		v.editor.cm.dispatch({ selection: { anchor: 0 } });
+		v.editor.cm.focus();
+		runScopeHandlers(v.editor.cm, new KeyboardEvent('keydown', { key: 'ArrowUp' }), 'editor');
+		await sleep(50);
+		const upInto = document.activeElement === title();
+		title()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+		await sleep(50);
+		const downOut = v.editor.cm.dom.contains(document.activeElement);
+		// Reading view has it too.
+		await v.setMode('preview');
+		await sleep(150);
+		const reading = [...document.querySelectorAll<HTMLInputElement>('.markdown-reading-view input.inline-title')].some((e) => e.value === 'Retitled note');
+		await v.setMode('source');
+		// Turned off in Settings → Editor: gone.
+		await app.setConfig('inlineTitle', false);
+		await sleep(80);
+		const off = !title();
+		await app.setConfig('inlineTitle', true);
+		await sleep(80);
+		// Put the name back for the rest of the tests.
+		await app.fileManager.renameFile(vault.getFileByPath('Retitled note.md')!, 'Renamed note.md');
+		const ok = shows && notInText && renamed && linkFollowed && inText && showsNew && escaped && badRefused && takenRefused && upInto && downOut && reading && off;
+		return ok || `shows=${shows} notInText=${notInText} renamed=${renamed} links=${linkFollowed} inText=${inText} showsNew=${showsNew} esc=${escaped} bad=${badRefused} taken=${takenRefused} up=${upInto} down=${downOut} reading=${reading} off=${off}`;
 	});
 }

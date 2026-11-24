@@ -8,6 +8,7 @@ import { baseExtensions, bracketExtensions } from './cm-setup';
 import { attachFiles, embedMarkdown, isImage } from './attachments';
 import { imageEmbeds } from './embeds-editor';
 import { livePreview } from './live-preview';
+import { type TitleHandlers, inlineTitle, setTitle, titleElement } from './inline-title';
 import { spellcheckExtension, wordAt } from './spellcheck';
 import { Menu } from './ui';
 import { Editor, editorInfoField, type MarkdownFileInfo } from './editor';
@@ -33,6 +34,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	private bracketCompartment = new Compartment();
 	private livePreviewCompartment = new Compartment();
 	private spellCompartment = new Compartment();
+	private titleCompartment = new Compartment();
 	/** The vim mode last reported for this editor (normal, insert, visual …), or null when vim is off. */
 	vimMode: string | null = null;
 	private dirty = false;
@@ -78,6 +80,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			this.bracketCompartment.of(bracketExtensions(cfg('autoPairBrackets', false))),
 			this.livePreviewCompartment.of(cfg('livePreview', true) ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
 			this.spellCompartment.of(this.spellExtension()),
+			this.titleCompartment.of(cfg('inlineTitle', true) ? inlineTitle(this.titleHandlers) : []),
 			EditorView.domEventHandlers({ contextmenu: (e) => { this.showEditorMenu(e); return true; } }),
 			baseExtensions({
 				spellcheck: cfg('spellcheck', true),
@@ -215,8 +218,11 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			this.vimCompartment.reconfigure(cfg('vimMode') ? vim() : []),
 			this.bracketCompartment.reconfigure(bracketExtensions(cfg('autoPairBrackets'))),
 			this.livePreviewCompartment.reconfigure(this.app.vault.getConfig('livePreview') !== false ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
+			this.titleCompartment.reconfigure(this.app.vault.getConfig('inlineTitle') !== false ? inlineTitle(this.titleHandlers) : []),
 			this.spellCompartment.reconfigure(this.spellExtension()),
 		] });
+		this.showTitle();
+		if (this.mode === 'preview') void this.renderPreview();
 		this.watchVim();
 	}
 
@@ -232,6 +238,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		const text = typeof content === 'string' ? content : await this.app.vault.read(file);
 		this.loading = true;
 		this.editor.cm.setState(this.makeState(text));
+		this.showTitle();
 		this.watchVim();
 		this.loading = false;
 		this.lastSaved = text;
@@ -324,6 +331,44 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		return this.setMode(this.mode === 'source' ? 'preview' : 'source');
 	}
 
+	/** The note's name above its text: renaming the file when edited (inline-title.ts). */
+	private readonly titleHandlers: TitleHandlers = {
+		rename: async (name) => {
+			const file = this.file;
+			if (!file) return false;
+			if (/[\\/:]/.test(name)) { new Notice('A note name cannot contain / \\ or :'); return false; }
+			const to = file.parent && !file.parent.isRoot() ? `${file.parent.path}/${name}.md` : `${name}.md`;
+			if (this.app.vault.getAbstractFileByPath(to)) { new Notice(`There is already a note called “${name}” here.`); return false; }
+			try {
+				await this.app.fileManager.renameFile(file, to);
+				return true;
+			} catch (e) {
+				new Notice(e instanceof Error ? e.message : String(e));
+				return false;
+			}
+		},
+		toText: () => {
+			const cm = this.editor.cm;
+			if (this.mode === 'preview') return;
+			cm.dispatch({ selection: { anchor: 0 }, scrollIntoView: true });
+			cm.focus();
+		},
+	};
+
+	/** Show (or hide) the title for the open note. */
+	private showTitle(): void {
+		const on = this.app.vault.getConfig('inlineTitle') !== false;
+		this.editor.cm.dispatch({ effects: setTitle.of(on && this.file ? this.file.basename : null) });
+		// Measure the title now, so clicks and right-clicks just after opening land on the right line.
+		this.editor.cm.requestMeasure();
+	}
+
+	override onRename(file: TFile): void {
+		super.onRename(file);
+		this.showTitle();
+		if (this.mode === 'preview') void this.renderPreview();
+	}
+
 	async renderPreview(): Promise<void> {
 		this.renderChild?.unload();
 		this.renderChild = new Component();
@@ -331,6 +376,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		const scroll = this.previewEl.scrollTop;
 		this.previewEl.empty();
 		const inner = this.previewEl.createDiv({ cls: 'markdown-preview-sizer' });
+		if (this.file && this.app.vault.getConfig('inlineTitle') !== false) inner.appendChild(titleElement(this.file.basename, this.titleHandlers));
 		await MarkdownRenderer.render(this.app, this.editor.getValue(), inner, this.file?.path ?? '', this.renderChild);
 		this.previewEl.scrollTop = scroll;
 	}

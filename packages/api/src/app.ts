@@ -356,6 +356,8 @@ export interface AppConfig {
 	vimMode: boolean;
 	/** Show Markdown formatted while writing (raw on the lines being edited). */
 	livePreview: boolean;
+	/** The note's name as an editable title above its text (editing it renames the file). */
+	inlineTitle: boolean;
 	textFont: string;
 	interfaceFont: string;
 	monospaceFont: string;
@@ -410,6 +412,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 	alwaysUpdateLinks: true,
 	vimMode: false,
 	livePreview: true,
+	inlineTitle: true,
 	textFont: '',
 	interfaceFont: '',
 	monospaceFont: '',
@@ -561,7 +564,7 @@ export class App extends Events {
 		this.config[key] = value;
 		this.vault.setConfigValues(this.config);
 		this.applyConfig();
-		if (key === 'vimMode' || key === 'autoPairBrackets' || key === 'livePreview' || key === 'spellcheck') this.workspace.updateOptions();
+		if (key === 'vimMode' || key === 'autoPairBrackets' || key === 'livePreview' || key === 'spellcheck' || key === 'inlineTitle') this.workspace.updateOptions();
 		if ((key === 'spellcheck' || key === 'spellcheckLanguage') && this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage).catch((e: unknown) => console.error(e));
 		if (key === 'spellcheckFootnotes') this.spellchecker.refreshEditors();
 		if (key === 'spellcheckLegal' && this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage, true).catch((e: unknown) => console.error(e));
