@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7.1
+
+- **The note's name is its title.** Each note shows its name as a title above its text. Click it (or press ↑
+  on the first line), type a new name and press Enter, ↓ or click away: the note is renamed and links to it
+  follow. Esc puts the old name back. Names with / \ or : and names already used in the folder are refused.
+  The title is not part of the note's text, so your own headings stay as they are. Reading view shows it
+  too; Settings → Editor → "Note name as title" turns it off.
+
 ## v0.7.0
 
 - **Arrow keys in the Docket**: ↑ from the first result or panel row goes back to the search; with nothing
