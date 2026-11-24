@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Typecheck, unit tests, build and offline audit
+        run: npm test
+      - name: End-to-end smoke test (offscreen)
+        run: |
+          # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox uses.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          npm run smoke
+
+  package:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x64
+            args: --linux AppImage deb pacman --x64
+          - os: ubuntu-24.04-arm
+            name: linux-arm64
+            args: --linux AppImage deb pacman --arm64
+          - os: macos-latest
+            name: macos
+            args: --mac dmg zip --arm64 --x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Packaging tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools
+      - run: npm ci
+      - run: npm run build
+      - name: Package
+        working-directory: packages/app
+        run: npx electron-builder --config electron-builder.json --publish never ${{ matrix.args }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quire-${{ matrix.name }}
+          path: |
+            packages/app/release/*.AppImage
+            packages/app/release/*.deb
+            packages/app/release/*.pacman
+            packages/app/release/*.dmg
+            packages/app/release/*.zip
+          if-no-files-found: error
+
+  release:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Build provenance attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
+      - name: Release notes
+        run: |
+          awk -v tag="${GITHUB_REF_NAME}" '$0 == "## " tag {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
+          cat >> notes.md <<'NOTES'
+
+          ## Downloads
+
+          | System | File |
+          |---|---|
+          | macOS (Apple Silicon) | `Quire-*-mac-arm64.dmg` |
+          | macOS (Intel) | `Quire-*-mac-x64.dmg` |
+          | Linux, any distribution | `Quire-*-linux-x86_64.AppImage` / `…-arm64.AppImage` (make it executable, then run it) |
+          | Arch / Omarchy | `Quire-*-linux-x64.pacman` / `…-aarch64.pacman`: `sudo pacman -U <file>` |
+          | Debian / Ubuntu | `Quire-*-linux-amd64.deb` / `…-arm64.deb`: `sudo apt install ./<file>` |
+
+          **macOS:** the app is not notarised by Apple. After dragging Quire to Applications, run
+          `xattr -dr com.apple.quarantine /Applications/Quire.app` once (or right-click → Open).
+
+          Verify a download with `SHA256SUMS.txt` or `gh attestation verify <file> --repo ${{ github.repository }}`.
+          NOTES
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Quire ${GITHUB_REF_NAME#v}" --notes-file notes.md --verify-tag

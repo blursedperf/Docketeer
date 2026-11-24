@@ -7,6 +7,12 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "electron .",
-    "smoke": "electron . --smoke"
-  }
+    "smoke": "electron . --smoke",
+    "dist": "electron-builder --config electron-builder.json --publish never"
+  },
+  "productName": "Quire",
+  "description": "Offline Markdown notes, extensible with plugins. Ships with AGLC4 Citations.",
+  "author": "blursedperf",
+  "license": "MIT",
+  "homepage": "https://github.com/blursedperf/quire"
 }

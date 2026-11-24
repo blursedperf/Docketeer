@@ -14,13 +14,15 @@
     "test": "npm run typecheck && npm test -w @quire/api && npm test -w quire-plugin-aglc4 && npm run build && node scripts/offline-audit.mjs",
     "audit": "node scripts/offline-audit.mjs",
     "smoke": "npm run build && npm run smoke -w @quire/app",
-    "typecheck": "tsc -p packages/api --noEmit && tsc -p packages/app --noEmit && tsc -p plugins/aglc4 --noEmit"
+    "typecheck": "tsc -p packages/api --noEmit && tsc -p packages/app --noEmit && tsc -p plugins/aglc4 --noEmit",
+    "dist": "npm run build && npm run dist -w @quire/app"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.2.0",
     "@types/markdown-it-footnote": "^3.0.4",
     "@types/node": "^26.6.6",
     "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "jszip": "^3.10.2",
     "typescript": "^7.0.2",

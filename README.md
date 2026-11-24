@@ -9,7 +9,14 @@ The first plugin, **AGLC4 Citations** (`plugins/aglc4`), is a port of
 
 See [PLAN.md](PLAN.md) for the architecture, the plugin API and the roadmap.
 
-## Run it
+## Install
+
+Download from the [releases](../../releases): a `.dmg` for macOS (Apple Silicon or Intel), an AppImage
+for any Linux, a `.pacman` package for Arch/Omarchy or a `.deb` for Debian/Ubuntu. The macOS app is not
+notarised: after copying it to Applications, run `xattr -dr com.apple.quarantine /Applications/Quire.app`
+once.
+
+## Run from source
 
 ```bash
 npm install
@@ -25,7 +32,12 @@ npm run build        # plugins, then the app (packages/app/dist)
 npm test             # typecheck, API tests, AGLC4 tests (565), build, offline audit
 npm run smoke        # boot the app offscreen on a throwaway vault and drive it end to end
 npm run audit        # offline audit only
+npm run dist         # installers for this OS in packages/app/release
 ```
+
+Releases are built by `.github/workflows/release.yml` when a `v*` tag is pushed: tests and the smoke
+test first, then packages on Linux x64, Linux arm64 and macOS, then a GitHub release with checksums and
+build attestations.
 
 `npm run smoke` prints a JSON report (23 checks: vault indexing, editing, links, rename, the AGLC4
 plugin's underlines, fixes, Word/HTML export, footnote pane, page preview, settings, and that requests
