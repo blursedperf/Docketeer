@@ -171,7 +171,8 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 		markdown({ base: markdownLanguage, addKeymap: true, extensions: [frontmatter] }),
 		syntaxHighlighting(quireHighlight),
 		EditorView.lineWrapping,
-		EditorView.contentAttributes.of({ spellcheck: opts.spellcheck ? 'true' : 'false', autocorrect: 'off', autocapitalize: 'off' }),
+		// The browser's spellchecker stays off: it would download dictionaries. Quire's own checks offline.
+		EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' }),
 		inlineMarks,
 		keymap.of([
 			...markdownKeymap,

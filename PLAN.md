@@ -150,10 +150,14 @@ Progress:
 - [x] Live preview (default; Editor settings or "Toggle live preview / source mode"): formatting marks hidden
       and links, bullets, task boxes, quotes and rules drawn, except on the lines being edited and in %% comments.
       Footnote syntax is left as written for the AGLC4 plugin. Tables and code blocks are shown as written.
-- [ ] Offline spellcheck (dictionary licences to check first).
+- [x] Offline spellcheck: nspell (MIT) with SCOWL Hunspell dictionaries for English (Australia, default), British
+      and US English. Licences reviewed: SCOWL's permissive notices, Ispell's BSD licence and WordNet's notice
+      require the notices to ship, so `THIRD_PARTY_NOTICES.txt` (every bundled library and dictionary) is built
+      into the app and shown under Settings → About → Licences. Footnotes are not checked unless turned on.
+
+Phase 3 is complete.
 
 Items:
-- Offline spellcheck with bundled dictionaries.
 - Full-text search pane; backlinks and outgoing links; tags pane; outline pane.
 - `[[` link autocomplete; rename a note updates links to it.
 - Live preview (render Markdown inline outside the cursor line).

@@ -17,6 +17,9 @@
   "license": "MIT",
   "homepage": "https://github.com/blursedperf/quire",
   "devDependencies": {
-    "@phosphor-icons/core": "^2.1.1"
+    "@phosphor-icons/core": "^2.1.1",
+    "dictionary-en": "^4.0.0",
+    "dictionary-en-au": "^3.0.0",
+    "dictionary-en-gb": "^3.0.0"
   }
 }

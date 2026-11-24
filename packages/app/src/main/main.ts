@@ -258,6 +258,18 @@ function registerIpc() {
 	});
 	handle('app:showItemInFolder', async (rel: string) => { shell.showItemInFolder(await resolvePath(rel)); });
 	handle('clipboard:writeText', (text: string) => { clipboard.writeText(String(text)); });
+	handle('clipboard:readText', () => clipboard.readText());
+	// Spelling dictionaries shipped with the app (read on demand; only these languages).
+	handle('spell:dictionary', async (lang: string) => {
+		if (!['en-AU', 'en-GB', 'en-US'].includes(lang)) return null;
+		const dir = path.join(APP_DIR, 'dictionaries', lang);
+		try {
+			return { aff: await fsp.readFile(path.join(dir, 'index.aff'), 'utf8'), dic: await fsp.readFile(path.join(dir, 'index.dic'), 'utf8') };
+		} catch {
+			return null;
+		}
+	});
+	handle('app:notices', () => fsp.readFile(path.join(APP_DIR, 'THIRD_PARTY_NOTICES.txt'), 'utf8').catch(() => ''));
 	ipcMain.on('smoke:report', (_e, report) => { void finishSmoke(report); });
 	// Screenshot mode: the renderer asks for a capture of the window as it is now.
 	ipcMain.handle('smoke:capture', async (_e, name: string) => {

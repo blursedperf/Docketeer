@@ -12,6 +12,7 @@ import { Platform } from './util';
 import { Vault } from './vault';
 import { Workspace } from './workspace';
 import { CustomCss } from './themes/manager';
+import { Spellchecker } from './spellcheck';
 
 // -------------------------------------------------------------------------------------------------
 // Commands and hotkeys
@@ -249,6 +250,10 @@ export interface AppConfig {
 	fontSize: number;
 	readableLineLength: boolean;
 	spellcheck: boolean;
+	/** Dictionary: en-AU, en-GB or en-US. */
+	spellcheckLanguage: string;
+	/** Also check footnotes (off: citations would be flagged throughout). */
+	spellcheckFootnotes: boolean;
 	autoPairBrackets: boolean;
 	newFileLocation: 'root' | 'current' | 'folder';
 	newFileFolderPath: string;
@@ -280,6 +285,8 @@ export const DEFAULT_CONFIG: AppConfig = {
 	fontSize: 16,
 	readableLineLength: true,
 	spellcheck: true,
+	spellcheckLanguage: 'en-AU',
+	spellcheckFootnotes: false,
 	autoPairBrackets: false,
 	newFileLocation: 'current',
 	newFileFolderPath: '',
@@ -312,6 +319,8 @@ export class App extends Events {
 	setting: SettingsModal;
 	/** Appearance: palettes, accent, fonts, icons, CSS themes and snippets. */
 	customCss: CustomCss;
+	/** Offline spellcheck (dictionaries ship with the app). */
+	spellchecker: Spellchecker;
 	statusBarEl: HTMLElement;
 	config: AppConfig = { ...DEFAULT_CONFIG };
 	editorSuggests: EditorSuggest<any>[] = [];
@@ -332,6 +341,7 @@ export class App extends Events {
 		this.plugins = new PluginManager(this);
 		this.setting = new SettingsModal(this);
 		this.customCss = new CustomCss(this);
+		this.spellchecker = new Spellchecker(this);
 	}
 
 	/** The homebase: the folder of notes Quire has open. (The API calls it `vault`, as plugins expect.) */
@@ -355,7 +365,9 @@ export class App extends Events {
 		this.config[key] = value;
 		this.vault.setConfigValues(this.config);
 		this.applyConfig();
-		if (key === 'vimMode' || key === 'autoPairBrackets' || key === 'livePreview') this.workspace.updateOptions();
+		if (key === 'vimMode' || key === 'autoPairBrackets' || key === 'livePreview' || key === 'spellcheck') this.workspace.updateOptions();
+		if ((key === 'spellcheck' || key === 'spellcheckLanguage') && this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage).catch((e: unknown) => console.error(e));
+		if (key === 'spellcheckFootnotes') this.spellchecker.refreshEditors();
 		await this.vault.adapter.write(`${this.vault.configDir}/app.json`, JSON.stringify(this.config, null, '\t'));
 	}
 
@@ -451,6 +463,8 @@ export class App extends Events {
 		}
 		await this.workspace.loadLayout(layout);
 		this.workspace.setLayoutReady();
+		// The dictionary loads in the background; editors are marked when it is ready.
+		if (this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage).catch((e: unknown) => console.error('Spellcheck', e));
 		this.host.app.onBeforeQuit(async () => {
 			this.workspace.trigger('quit');
 			await this.workspace.saveAll();

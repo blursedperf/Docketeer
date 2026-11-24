@@ -5,12 +5,14 @@ import { baseExtensions, bracketExtensions } from './cm-setup';
 import { attachFiles, embedMarkdown, isImage } from './attachments';
 import { imageEmbeds } from './embeds-editor';
 import { livePreview } from './live-preview';
+import { spellcheckExtension, wordAt } from './spellcheck';
+import { Menu } from './ui';
 import { Editor, editorInfoField, type MarkdownFileInfo } from './editor';
 import { TFile, type TAbstractFile } from './files';
 import { MarkdownRenderer } from './markdown-render';
 import { Component } from './component';
 import { setIcon } from './icons';
-import { Notice, type Menu } from './ui';
+import { Notice } from './ui';
 import { debounce } from './util';
 import { FileView, type ViewStateResult } from './view';
 import type { WorkspaceLeaf } from './workspace';
@@ -27,6 +29,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	private vimCompartment = new Compartment();
 	private bracketCompartment = new Compartment();
 	private livePreviewCompartment = new Compartment();
+	private spellCompartment = new Compartment();
 	/** The vim mode last reported for this editor (normal, insert, visual …), or null when vim is off. */
 	vimMode: string | null = null;
 	private dirty = false;
@@ -71,6 +74,8 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			editorInfoField.init(() => this),
 			this.bracketCompartment.of(bracketExtensions(cfg('autoPairBrackets', false))),
 			this.livePreviewCompartment.of(cfg('livePreview', true) ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
+			this.spellCompartment.of(this.spellExtension()),
+			EditorView.domEventHandlers({ contextmenu: (e) => { this.showEditorMenu(e); return true; } }),
 			baseExtensions({
 				spellcheck: cfg('spellcheck', true),
 				closeBrackets: cfg('autoPairBrackets', false),
@@ -124,6 +129,51 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		report(this.vimMode ?? 'normal');
 	}
 
+	private spellExtension() {
+		return this.app.vault.getConfig('spellcheck') !== false ? spellcheckExtension(this.app.spellchecker, () => this.app.vault.getConfig('spellcheckFootnotes') === true) : [];
+	}
+
+	/**
+	 * The editor's right-click menu: spelling suggestions for a marked word, cut, copy, paste, and what
+	 * plugins add through the "editor-menu" event.
+	 */
+	private showEditorMenu(e: MouseEvent): void {
+		e.preventDefault();
+		const cm = this.editor.cm;
+		const pos = cm.posAtCoords({ x: e.clientX, y: e.clientY });
+		const menu = new Menu();
+		const marked = (e.target as HTMLElement).closest('.cm-misspelled');
+		const hit = pos !== null && marked ? wordAt(cm, pos) : null;
+		const sp = this.app.spellchecker;
+		if (hit && !sp.check(hit.word)) {
+			const suggestions = sp.suggest(hit.word);
+			if (suggestions.length === 0) menu.addItem((i) => i.setTitle('No suggestions').setDisabled(true));
+			for (const s of suggestions) {
+				menu.addItem((i) => i.setTitle(s).setSection('spelling').onClick(() => {
+					cm.dispatch({ changes: { from: hit.from, to: hit.to, insert: s }, userEvent: 'input.spelling' });
+				}));
+			}
+			menu.addSeparator();
+			menu.addItem((i) => i.setTitle(`Add "${hit.word}" to dictionary`).setIcon('book-open').onClick(() => { void sp.addWord(hit.word); }));
+			menu.addItem((i) => i.setTitle('Ignore').setIcon('eye-off').onClick(() => sp.ignore(hit.word)));
+			menu.addSeparator();
+		}
+		const sel = cm.state.selection.main;
+		const clip = this.app.host.clipboard;
+		menu.addItem((i) => i.setTitle('Cut').setIcon('scissors').setDisabled(sel.empty).onClick(() => {
+			clip.writeText(cm.state.sliceDoc(sel.from, sel.to));
+			cm.dispatch({ changes: { from: sel.from, to: sel.to }, userEvent: 'delete.cut' });
+		}));
+		menu.addItem((i) => i.setTitle('Copy').setIcon('copy').setDisabled(sel.empty).onClick(() => clip.writeText(cm.state.sliceDoc(sel.from, sel.to))));
+		menu.addItem((i) => i.setTitle('Paste').setIcon('clipboard').onClick(() => {
+			void clip.readText().then((t) => { if (t) cm.dispatch(cm.state.replaceSelection(t)); });
+		}));
+		menu.addItem((i) => i.setTitle('Select all').onClick(() => cm.dispatch({ selection: { anchor: 0, head: cm.state.doc.length } })));
+		menu.addSeparator();
+		this.app.workspace.trigger('editor-menu', menu, this.editor, this);
+		menu.showAtMouseEvent(e);
+	}
+
 	/** Open a link from the editor: notes in Quire; web links are copied, as Quire stays offline. */
 	private followLink(link: { type: 'wiki' | 'url'; target: string }, newLeaf: boolean): void {
 		if (link.type === 'url') {
@@ -160,6 +210,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			this.vimCompartment.reconfigure(cfg('vimMode') ? vim() : []),
 			this.bracketCompartment.reconfigure(bracketExtensions(cfg('autoPairBrackets'))),
 			this.livePreviewCompartment.reconfigure(this.app.vault.getConfig('livePreview') !== false ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
+			this.spellCompartment.reconfigure(this.spellExtension()),
 		] });
 		this.watchVim();
 	}

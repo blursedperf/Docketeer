@@ -6,7 +6,7 @@ import { EditorSelection } from '@codemirror/state';
 import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon, type Hotkey, type Modifier, Platform,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES,
 } from '@quire/api';
 import { FILE_EXPLORER, FileExplorerView, NameModal, freePath } from './explorer';
 import { BACKLINK_VIEW, BacklinksView } from './panes/backlinks';
@@ -145,8 +145,20 @@ class EditorTab extends SettingTab {
 			.addToggle((t) => t.setValue(c.vimMode).onChange((v) => { void this.app.setConfig('vimMode', v); }));
 		new Setting(el).setName('Auto-pair brackets').setDesc('Type the closing bracket or quote with the opening one.')
 			.addToggle((t) => t.setValue(c.autoPairBrackets).onChange((v) => { void this.app.setConfig('autoPairBrackets', v); }));
-		new Setting(el).setName('Spellcheck').setDesc('Not available yet: the spelling dictionaries Electron uses are downloaded from the web, so Quire leaves them off. Offline dictionaries are planned.')
-			.setDisabled(true);
+		new Setting(el).setName('Spelling').setHeading();
+		new Setting(el).setName('Check spelling').setDesc('Mark misspelled words as you write; right-click one for suggestions, to add it to your dictionary, or to ignore it. The dictionaries ship with Quire and checking happens on this computer.')
+			.addToggle((t) => t.setValue(c.spellcheck).onChange((v) => { void this.app.setConfig('spellcheck', v); }));
+		new Setting(el).setName('Language')
+			.addDropdown((d) => d.addOptions(SPELL_LANGUAGES).setValue(c.spellcheckLanguage).onChange((v) => { void this.app.setConfig('spellcheckLanguage', v); }));
+		new Setting(el).setName('Check footnotes').setDesc('Also check footnotes. Off by default: citations (case names, report series, abbreviations) would be marked throughout.')
+			.addToggle((t) => t.setValue(c.spellcheckFootnotes).onChange((v) => { void this.app.setConfig('spellcheckFootnotes', v); }));
+		const words = this.app.spellchecker.personalWords();
+		new Setting(el).setName('Your dictionary').setDesc(`Words you added, one per line (${words.length}). Saved in this homebase (.quire/dictionary.txt).`)
+			.addTextArea((t) => {
+				t.setValue(words.join('\n'));
+				t.inputEl.rows = 5;
+				t.inputEl.addEventListener('change', () => { void this.app.spellchecker.setPersonalWords(t.getValue().split(/\r?\n/)); });
+			});
 	}
 }
 
@@ -418,7 +430,19 @@ class AboutTab extends SettingTab {
 		new Setting(el).setName('Homebase').setDesc(this.app.host.vault?.path ?? '');
 		new Setting(el).setName('Offline').setDesc('Quire makes no network requests. Every request from the app or a plugin is blocked by the app itself, and there are no updates, accounts, telemetry or crash reports.');
 		new Setting(el).setName('Developer tools').setDesc('F12 or Ctrl+Shift+I opens the developer tools, for plugin authors.');
+		new Setting(el).setName('Licences').setDesc('Quire is MIT-licensed. It includes libraries, icons and spelling dictionaries under their own licences.')
+			.addButton((b) => b.setButtonText('Show licences').onClick(() => { void showNotices(this.app); }));
 	}
+}
+
+/** The third-party licence notices shipped with the app. */
+async function showNotices(app: App): Promise<void> {
+	const text = await app.host.app.notices();
+	const modal = new Modal(app);
+	modal.setTitle('Licences');
+	modal.modalEl.addClass('mod-notices');
+	modal.contentEl.createEl('pre', { cls: 'notices-text', text: text || 'The licence notices were not found in this build.' });
+	modal.open();
 }
 
 // -------------------------------------------------------------------------------------------------

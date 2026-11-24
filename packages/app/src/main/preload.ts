@@ -58,8 +58,11 @@ contextBridge.exposeInMainWorld('quire', {
 		showItemInFolder: (p: string) => call('app:showItemInFolder', p),
 		onBeforeQuit: (cb: () => Promise<void>) => { quitHandler = cb; },
 		smokeReport: (report: unknown) => ipcRenderer.send('smoke:report', report),
+		dictionary: (lang: string) => call('spell:dictionary', lang),
+		notices: () => call('app:notices'),
 	},
 	clipboard: {
 		writeText: (text: string) => { void call('clipboard:writeText', text); },
+		readText: () => call('clipboard:readText'),
 	},
 });

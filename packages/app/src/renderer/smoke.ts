@@ -114,6 +114,56 @@ export async function runSmoke(app: App): Promise<void> {
 		return (boxes.length === 3 && welcome && section && self && sized) || `boxes=${boxes.length} welcome=${welcome} section=${section} self=${self} sized=${sized} img=${img?.outerHTML.slice(0, 160)} links=${[...view.previewEl.querySelectorAll('a.internal-link')].map((x) => x.outerHTML).join(' ').slice(0, 300)}`;
 	});
 
+	// Spellcheck (Phase 3).
+	await check('spellcheck marks misspellings offline, skips citations, code and links', async () => {
+		const sp = app.spellchecker;
+		const ready = await until(() => sp.ready, 10000);
+		const file = await vault.create('Spell.md', 'This sentense has a mispelled word.\n\nColour and organise are fine here.\n\nSee the case.[^1]\n\n`codde` and [[Welcom]] and https://exmaple.com/xx\n\n[^1]: Mabo v Queensland (No 2) (1992) 175 CLR 1 teh.\n\n');
+		await workspace.getLeaf(false).openFile(file);
+		const view = workspace.getActiveViewOfType(MarkdownView)!;
+		const cm = view.editor.cm;
+		cm.dispatch({ selection: { anchor: cm.state.doc.length } });
+		await sleep(100);
+		const marked = () => [...document.querySelectorAll('.cm-misspelled')].map((e) => e.textContent);
+		const au = marked().join(',');
+		await app.setConfig('spellcheckLanguage', 'en-US');
+		await until(() => sp.language === 'en-US', 10000);
+		await sleep(100);
+		const us = marked();
+		await app.setConfig('spellcheckLanguage', 'en-AU');
+		await until(() => sp.language === 'en-AU', 10000);
+		await sleep(100);
+		await app.setConfig('spellcheckFootnotes', true);
+		await sleep(100);
+		const withNotes = marked();
+		await app.setConfig('spellcheckFootnotes', false);
+		await sleep(100);
+		const ok = ready && au === 'sentense,mispelled' && us.includes('Colour') && us.includes('organise') && withNotes.includes('teh');
+		return ok || `ready=${ready} au=${au} us=${us.join(',')} footnotes=${withNotes.join(',')}`;
+	});
+	await check('right-click: suggestions replace the word; add to dictionary is saved', async () => {
+		const cm = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		const rightClick = (el: Element) => { const r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 3, clientY: r.top + r.height / 2 })); };
+		const first = [...document.querySelectorAll('.cm-misspelled')].find((e) => e.textContent === 'sentense');
+		if (!first) return 'no mark';
+		rightClick(first);
+		const items = [...document.querySelectorAll<HTMLElement>('.menu .menu-item')];
+		const fix = items.find((i) => i.textContent === 'sentence');
+		fix?.click();
+		await sleep(50);
+		const fixed = cm.state.doc.line(1).text === 'This sentence has a mispelled word.';
+		const second = [...document.querySelectorAll('.cm-misspelled')].find((e) => e.textContent === 'mispelled');
+		if (!second) return `fixed=${fixed}; second mark missing`;
+		rightClick(second);
+		[...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent?.startsWith('Add "mispelled"'))?.click();
+		await sleep(150);
+		const gone = ![...document.querySelectorAll('.cm-misspelled')].some((e) => e.textContent === 'mispelled');
+		const saved = (await vault.adapter.read('.quire/dictionary.txt')).includes('mispelled');
+		const notices = await app.host.app.notices();
+		const licences = notices.includes('SCOWL') && notices.includes('nspell');
+		return (fixed && gone && saved && licences) || `menu=${items.map((i) => i.textContent).join('|')} fixed=${fixed} gone=${gone} saved=${saved} licences=${licences}`;
+	});
+
 	// Live preview (Phase 3).
 	await check('live preview formats away from the cursor, raw on its line', async () => {
 		const file = await vault.create('Live.md', '# Heading\n\nSome **bold** and *em* and `code` and ==hi==.\n\nA [link](Welcome.md) and [[Welcome|home]].\n\n- bullet\n- [ ] task\n\n> quote\n\n---\n\nEnd');
@@ -572,5 +622,16 @@ export async function runShots(app: App): Promise<void> {
 	await shot('20-embeds-editor');
 	const ev = workspace.getActiveViewOfType(MarkdownView);
 	if (ev) { await ev.setMode('preview'); await sleep(600); await shot('21-embeds-reading'); await ev.setMode('source'); }
+	// Spelling: a marked word and its menu.
+	await until(() => app.spellchecker.ready, 10000);
+	const sfile = await app.vault.create('Spelling.md', '# Spelling\n\nThe tribunal recieved the submisions on Tuesday.\n\nColour, organise and judgement are Australian spellings.\n\nCited in a footnote.[^1]\n\n[^1]: Mabo v Queensland (No 2) (1992) 175 CLR 1.\n\n');
+	await workspace.getLeaf(false).openFile(sfile);
+	const scm = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+	scm.dispatch({ selection: { anchor: scm.state.doc.length } });
+	await sleep(300);
+	const mark = [...document.querySelectorAll('.cm-misspelled')].find((e) => e.textContent === 'recieved');
+	if (mark) { const r = mark.getBoundingClientRect(); mark.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 4, clientY: r.bottom })); }
+	await shot('22-spelling');
+	document.querySelector('.menu')?.detach();
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }

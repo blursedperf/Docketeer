@@ -28,6 +28,15 @@
   tick, quotes and rules. The lines holding the cursor or a selection, and `%% comments %%`, show the
   Markdown as written. Footnotes are left as written. Turn it off in Settings → Editor, or with "Toggle
   live preview / source mode".
+- **Spellcheck, offline.** Misspelled words are marked as you write; right-click for suggestions, "Add to
+  dictionary" (saved in `.quire/dictionary.txt`) or "Ignore". English (Australia) by default, or British or
+  US English (Settings → Editor → Spelling). Code, links, web addresses, frontmatter and — unless turned on
+  — footnotes are not checked. The dictionaries ship with Quire; the browser's own spellchecker, which
+  downloads dictionaries, stays off.
+- **Editor menu.** Right-click in a note for spelling, cut, copy, paste and select all; plugins can add
+  items through the `editor-menu` event.
+- **Licences.** Settings → About → Licences shows the licences of every library, icon set and dictionary
+  Quire includes.
 
 ## v0.3.0
 

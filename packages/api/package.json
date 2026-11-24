@@ -22,6 +22,7 @@
     "lucide": "^1.78.0",
     "markdown-it": "^15.0.3",
     "markdown-it-footnote": "^4.0.0",
+    "nspell": "^2.1.5",
     "yaml": "^2.9.1"
   }
 }

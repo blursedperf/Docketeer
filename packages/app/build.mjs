@@ -123,6 +123,36 @@ await writeFile(join(rendererOut, 'index.html'), `<!DOCTYPE html>
 `);
 await cp(join(here, 'src/renderer/app.css'), join(rendererOut, 'app.css'));
 
+// Spelling dictionaries (SCOWL, via wooorm/dictionaries), read by the main process on demand.
+for (const [lang, pkg] of [['en-AU', 'dictionary-en-au'], ['en-GB', 'dictionary-en-gb'], ['en-US', 'dictionary-en']]) {
+	// These packages export only their JS entry, so read the files from the package folder.
+	const src = join(here, '..', '..', 'node_modules', pkg);
+	const out = join(dist, 'dictionaries', lang);
+	await mkdir(out, { recursive: true });
+	for (const f of ['index.aff', 'index.dic', 'license']) await cp(join(src, f), join(out, f));
+}
+
+// Licence notices for everything the app ships, shown under Settings → About.
+const NOTICE_PACKAGES = [
+	'electron', 'codemirror', '@codemirror/state', '@codemirror/view', '@codemirror/language', '@codemirror/commands',
+	'@codemirror/search', '@codemirror/autocomplete', '@codemirror/lang-markdown', '@lezer/common', '@lezer/highlight',
+	'@lezer/lr', '@lezer/markdown', 'style-mod', 'w3c-keyname', 'crelt', '@marijn/find-cluster-break',
+	'@replit/codemirror-vim', '@replit/codemirror-vim-core', 'markdown-it', 'markdown-it-footnote', 'entities', 'linkify-it',
+	'mdurl', 'uc.micro', 'punycode.js', 'argparse', 'yaml', 'lucide', '@phosphor-icons/core', 'nspell', 'is-buffer',
+	'dictionary-en-au', 'dictionary-en-gb', 'dictionary-en', 'docx', 'fflate', 'jszip',
+];
+let notices = 'Quire includes the following software and data. Their licences follow.\n';
+const root = join(here, '..', '..', 'node_modules');
+for (const name of NOTICE_PACKAGES) {
+	const dir = join(root, name);
+	if (!existsSync(dir)) continue;
+	const pkgJson = JSON.parse(await readFile(join(dir, 'package.json'), 'utf8'));
+	const file = (await readdir(dir)).find((f) => /^(licen[cs]e|copying)(\.(md|txt))?$/i.test(f));
+	notices += `\n${'='.repeat(78)}\n${name} ${pkgJson.version ?? ''} (${pkgJson.license ?? 'see below'})\n${'='.repeat(78)}\n\n`;
+	notices += file ? (await readFile(join(dir, file), 'utf8')).trim() + '\n' : `Licence: ${pkgJson.license ?? 'unknown'}\n`;
+}
+await writeFile(join(dist, 'THIRD_PARTY_NOTICES.txt'), notices);
+
 // Built-in plugins.
 const pluginsRoot = join(here, '..', '..', 'plugins');
 for (const name of existsSync(pluginsRoot) ? await readdir(pluginsRoot) : []) {

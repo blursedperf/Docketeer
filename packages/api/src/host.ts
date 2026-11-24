@@ -80,10 +80,14 @@ export interface HostBridge {
 		/** Screenshot mode (--shots), and a capture of the window in smoke modes. */
 		isShots?: boolean;
 		capture?(name: string): Promise<string | null>;
+		/** A spelling dictionary shipped with the app (Hunspell .aff and .dic), or null. */
+		dictionary(lang: string): Promise<{ aff: string; dic: string } | null>;
+		/** Licences of the libraries and dictionaries the app ships. */
+		notices(): Promise<string>;
 		/** Called before the window closes; it waits for the promise (to save open notes). */
 		onBeforeQuit(cb: () => Promise<void>): void;
 	};
-	clipboard: { writeText(text: string): void };
+	clipboard: { writeText(text: string): void; readText(): Promise<string> };
 }
 
 export function getHost(): HostBridge {
