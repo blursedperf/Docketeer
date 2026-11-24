@@ -31,7 +31,9 @@ export function eventString(e: { altKey: boolean; ctrlKey: boolean; metaKey: boo
 	if (e.metaKey) mods.push('Meta');
 	if (e.shiftKey) mods.push('Shift');
 	// With Shift (or Alt on macOS) held, punctuation and digits type another character: use the key itself.
-	const raw = (e.shiftKey || e.altKey) && e.code && CODE_KEYS[e.code] && !/^[a-z0-9]$/i.test(e.key) ? CODE_KEYS[e.code]! : e.key;
+	let raw = (e.shiftKey || e.altKey) && e.code && CODE_KEYS[e.code] && !/^[a-z0-9]$/i.test(e.key) ? CODE_KEYS[e.code]! : e.key;
+	// Option+letter on macOS types a symbol (⌥K is ˚) or starts an accent: use the letter's key.
+	if (e.altKey && e.code && /^Key[A-Z]$/.test(e.code) && !/^[a-z]$/i.test(e.key)) raw = e.code.slice(3);
 	const key = raw.length === 1 ? raw.toUpperCase() : raw;
 	return [...mods.sort(), key].join('+');
 }

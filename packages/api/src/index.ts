@@ -53,6 +53,7 @@ export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, t
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
 export { Spellchecker, SPELL_LANGUAGES, spellRefresh } from './spellcheck';
 export { LEGAL_WORDS } from './legal-words';
+export { VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, mediaKind, isMedia, parseTimestamp, formatTimestamp, timeFromSubpath, timestampLink, SPEEDS, nextSpeed, captionsFor, createPlayer, MediaPlayers, MediaView } from './media';
 export { IMAGE_EXTENSIONS, isImage, attachmentFolder, availablePath, saveAttachment, attachFiles, embedMarkdown } from './attachments';
 
 /** This API's version. */

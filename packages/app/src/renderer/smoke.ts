@@ -20,6 +20,17 @@ async function until(cond: () => boolean | Promise<boolean>, ms = 5000): Promise
 	return false;
 }
 
+/** `seconds` of 8 kHz 16-bit mono silence as a WAV file. */
+function silentWav(seconds: number): ArrayBuffer {
+	const rate = 8000, data = rate * seconds * 2;
+	const wav = new DataView(new ArrayBuffer(44 + data));
+	const ascii = (at: number, s: string) => { for (let i = 0; i < s.length; i++) wav.setUint8(at + i, s.charCodeAt(i)); };
+	ascii(0, 'RIFF'); wav.setUint32(4, 36 + data, true); ascii(8, 'WAVE'); ascii(12, 'fmt ');
+	wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true); wav.setUint32(24, rate, true);
+	wav.setUint32(28, rate * 2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true); ascii(36, 'data'); wav.setUint32(40, data, true);
+	return wav.buffer;
+}
+
 export async function runSmoke(app: App): Promise<void> {
 	const checks: Check[] = [];
 	const notices: string[] = [];
@@ -140,14 +151,9 @@ export async function runSmoke(app: App): Promise<void> {
 		return (saved && linked) || `saved=${saved} linked=${linked}`;
 	});
 	await check('homebase media load and seek; notes are never served', async () => {
-		// 30 s of 8 kHz 16-bit mono silence: big enough (480 kB) that seeking needs ranges.
-		const rate = 8000, seconds = 30, data = rate * seconds * 2;
-		const wav = new DataView(new ArrayBuffer(44 + data));
-		const ascii = (at: number, s: string) => { for (let i = 0; i < s.length; i++) wav.setUint8(at + i, s.charCodeAt(i)); };
-		ascii(0, 'RIFF'); wav.setUint32(4, 36 + data, true); ascii(8, 'WAVE'); ascii(12, 'fmt ');
-		wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true); wav.setUint32(24, rate, true);
-		wav.setUint32(28, rate * 2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true); ascii(36, 'data'); wav.setUint32(40, data, true);
-		const file = await vault.createBinary('attachments/Lecture smoke.wav', wav.buffer);
+		// 30 s of silence: big enough (480 kB) that seeking needs ranges.
+		const seconds = 30;
+		const file = await vault.createBinary('attachments/Lecture smoke.wav', silentWav(seconds));
 		const media = (src: string) => new Promise<HTMLAudioElement | string>((resolve) => {
 			const a = document.createElement('audio');
 			a.preload = 'metadata';
@@ -173,6 +179,62 @@ export async function runSmoke(app: App): Promise<void> {
 		await vault.delete(file);
 		return (duration === seconds && seekable === seconds && seeked && at === 25 && refused)
 			|| `duration=${duration} seekable=${seekable} seeked=${seeked} at=${at} noteRefused=${refused} (${typeof note === 'string' ? note : 'loaded'})`;
+	});
+	await check('lecture recordings: embeds play, timestamp links seek, keys insert and skip', async () => {
+		const rec = await vault.createBinary('attachments/Week 3 smoke.wav', silentWav(60));
+		const note = await vault.create('Week 3 notes.md', '# Week 3\n\n![[Week 3 smoke.wav]]\n\nDuty of care: [[Week 3 smoke.wav#t=0:40|0:40]]\n');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const problems: string[] = [];
+		const audio = () => view.contentEl.querySelector<HTMLAudioElement>('.cm-media-embed audio');
+		if (!(await until(() => !!audio()))) return 'no player in the editor';
+		const first = audio()!;
+		await until(() => first.readyState >= 1, 3000);
+		// Typing elsewhere in the note keeps the same player (it would stop if it were rebuilt).
+		view.editor.replaceRange('Typing. ', { line: 0, ch: 0 });
+		await sleep(50);
+		if (audio() !== first) problems.push('player rebuilt on typing');
+		// A timestamp link seeks the embedded player rather than opening anything.
+		const leaves = () => { let n = 0; workspace.iterateAllLeaves(() => { n++; }); return n; };
+		const before = leaves();
+		await workspace.openLinkText('Week 3 smoke.wav#t=0:40', note.path, false);
+		await until(() => Math.round(first.currentTime) === 40, 2000);
+		if (Math.round(first.currentTime) !== 40) problems.push(`seek: at ${first.currentTime}`);
+		if (leaves() !== before) problems.push('a timestamp link opened a pane');
+		first.pause();
+		// Keys: forward 5 s, then insert a timestamp at the cursor.
+		commands.executeCommandById('media:forward');
+		if (Math.round(first.currentTime) !== 45) problems.push(`forward: at ${first.currentTime}`);
+		view.editor.setCursor({ line: view.editor.lineCount() - 1, ch: 0 });
+		commands.executeCommandById('media:insert-timestamp');
+		if (!view.editor.getValue().includes('[[Week 3 smoke.wav#t=0:45|0:45]]')) problems.push(`no timestamp inserted: ${JSON.stringify(view.editor.getValue())}`);
+		commands.executeCommandById('media:faster');
+		if (first.playbackRate !== 1.25) problems.push(`speed ${first.playbackRate}`);
+		// Reading view shows a player too.
+		await view.setMode('preview');
+		if (!(await until(() => !!view.contentEl.querySelector('.markdown-rendered audio.media-embed')))) problems.push('no player in reading view');
+		await view.setMode('source');
+		// Without a player on screen, a link opens the recording beside the note, at the time.
+		view.editor.setValue('[[Week 3 smoke.wav#t=0:30|0:30]]\n');
+		await sleep(50);
+		if (audio()) problems.push('player left after its embed was removed');
+		await workspace.openLinkText('Week 3 smoke.wav#t=0:30', note.path, false);
+		const media = workspace.getLeavesOfType('media')[0];
+		const el = (media?.view as { mediaEl?: HTMLMediaElement } | undefined)?.mediaEl;
+		if (!media || !el) problems.push('no recording tab');
+		else {
+			await until(() => Math.round(el.currentTime) === 30, 2000);
+			if (Math.round(el.currentTime) !== 30) problems.push(`tab seek: at ${el.currentTime}`);
+			if (leaf.parent === media.parent) problems.push('the recording replaced the note instead of opening beside it');
+			if (!leaf.containerEl.isConnected || (leaf.view as MarkdownView).file !== note) problems.push('the note is no longer open');
+			el.pause();
+			media.detach();
+		}
+		await view.save();
+		await vault.delete(note);
+		await vault.delete(rec);
+		return problems.length === 0 || problems.join('; ');
 	});
 	await check('reading view embeds notes, sections and pictures', async () => {
 		const pic = vault.getFiles().find((f) => f.path.startsWith('attachments/Pasted image'))!;

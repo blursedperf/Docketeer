@@ -1,6 +1,7 @@
 import type { App } from './app';
 import { TFile } from './files';
 import { normalizePath } from './util';
+import { isMedia } from './media';
 
 /** File types drawn as pictures when embedded. */
 export const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif']);
@@ -52,10 +53,10 @@ export async function saveAttachment(app: App, data: ArrayBuffer, name: string, 
 	return app.vault.createBinary(availablePath(app, folder, safeFileName(name)), data);
 }
 
-/** The Markdown that embeds (pictures) or links (anything else) `file` from the note at `sourcePath`. */
+/** The Markdown that embeds (pictures, audio, video) or links (anything else) `file` from the note at `sourcePath`. */
 export function embedMarkdown(app: App, file: TFile, sourcePath: string): string {
 	const link = app.metadataCache.fileToLinktext(file, sourcePath, file.extension === 'md');
-	return isImage(file.name) ? `![[${link}]]` : `[[${link}]]`;
+	return isImage(file.name) || isMedia(file.name) ? `![[${link}]]` : `[[${link}]]`;
 }
 
 /** Save files pasted or dropped into a note; returns the Markdown to insert for them. */

@@ -5,8 +5,9 @@ import { TFile, type TAbstractFile } from './files';
 import { setIcon } from './icons';
 import type { Editor } from './editor';
 import { MarkdownView } from './markdown-view';
+import { AUDIO_EXTENSIONS, MediaView, VIDEO_EXTENSIONS, mediaKind, timeFromSubpath } from './media';
 import { parseLinktext } from './metadata';
-import { Menu } from './ui';
+import { Menu, Notice } from './ui';
 import { debounce } from './util';
 import { EmptyView, FileInfoView, FileView, ItemView, View } from './view';
 
@@ -365,6 +366,7 @@ export class Workspace extends Events {
 		this.registerViewType('empty', (leaf) => new EmptyView(leaf));
 		this.registerViewType('markdown', (leaf) => new MarkdownView(leaf), ['md', 'markdown', 'txt']);
 		this.registerViewType('file-info', (leaf) => new FileInfoView(leaf));
+		this.registerViewType('media', (leaf) => new MediaView(leaf), [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS]);
 		window.addEventListener('resize', () => this.onResized());
 
 		app.vault.on('rename', (file: TAbstractFile) => {
@@ -996,6 +998,11 @@ export class Workspace extends Events {
 	async openLinkText(linktext: string, sourcePath: string, newLeaf?: boolean | PaneType, openViewState?: OpenViewState): Promise<void> {
 		const { path, subpath } = parseLinktext(linktext);
 		let file = this.app.metadataCache.getFirstLinkpathDest(path, sourcePath);
+		if (mediaKind(path)) {
+			if (file) await this.openMedia(file, subpath, newLeaf);
+			else new Notice(`“${path}” is not in this homebase.`);
+			return;
+		}
 		if (!file) {
 			const folder = this.app.fileManager.getNewFileParent(sourcePath);
 			const name = path.endsWith('.md') ? path : `${path}.md`;
@@ -1004,6 +1011,30 @@ export class Workspace extends Events {
 		const leaf = this.getLeaf(newLeaf);
 		await leaf.openFile(file, openViewState);
 		if (subpath && leaf.view instanceof MarkdownView) leaf.view.scrollToSubpath(subpath);
+	}
+
+	/**
+	 * Open a recording from a link. A timestamp (`#t=12:34`) seeks a player already showing it (embedded
+	 * in a note or in a tab); otherwise the recording opens in a tab beside the note, so the note stays
+	 * in view, and plays from there.
+	 */
+	async openMedia(file: TFile, subpath = '', newLeaf?: boolean | PaneType): Promise<void> {
+		const t = timeFromSubpath(subpath);
+		if (t !== null && !newLeaf) {
+			const el = this.app.media.seek(file, t);
+			if (el) {
+				// In a background tab: bring the tab forward, but leave the keyboard in the note.
+				this.iterateAllLeaves((l) => { if (l.containerEl.contains(el)) l.parent?.selectTab(l); });
+				return;
+			}
+		}
+		let leaf = newLeaf ? null : this.getLeavesOfType('media').find((l) => (l.view as MediaView).file === file) ?? null;
+		if (!leaf) {
+			const fromNote = this.activeLeaf?.view instanceof MarkdownView;
+			leaf = this.getLeaf(newLeaf || (fromNote ? 'split' : false));
+		}
+		await leaf.openFile(file, t !== null ? { eState: { subpath } } : {});
+		leaf.parent?.selectTab(leaf);
 	}
 
 	onLayoutReady(cb: () => unknown): void {

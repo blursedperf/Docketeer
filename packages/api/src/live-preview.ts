@@ -9,6 +9,7 @@ import { syntaxTree } from '@codemirror/language';
 import type { EditorState, Extension } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 import { isImage } from './attachments';
+import { isMedia } from './media';
 
 export interface LivePreviewOptions {
 	/** Open a link clicked in the formatted text. */
@@ -139,7 +140,7 @@ function build(view: EditorView): DecorationSet {
 					}
 					case 'Image': {
 						const url = node.node.getChild('URL');
-						if (url && isImage(doc.sliceString(url.from, url.to))) add(node.from, node.to, hide);
+						if (url && (isImage(doc.sliceString(url.from, url.to)) || isMedia(doc.sliceString(url.from, url.to)))) add(node.from, node.to, hide);
 						return false;
 					}
 				}
@@ -160,8 +161,9 @@ function build(view: EditorView): DecorationSet {
 			}
 			const target = m[2]!.trim();
 			if (m[1] === '!') {
-				// A picture shows below the line: hide its embed text.
-				if (isImage(target.replace(/[#^].*$/, ''))) add(start, end, hide);
+				// A picture or a player shows below the line: hide its embed text.
+				const bare = target.replace(/[#^].*$/, '');
+				if (isImage(bare) || isMedia(bare)) add(start, end, hide);
 				continue;
 			}
 			const textFrom = m[3] !== undefined ? start + 2 + m[2]!.length + 1 : start + 2;

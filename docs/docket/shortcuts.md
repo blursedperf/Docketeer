@@ -40,6 +40,18 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 
 Layouts: Layout panel (Mod+6) or `>layout`: Single, Brief + Source, Revision, Exam, and layouts you save.
 
+## Recordings
+
+These act on the recording in use: the one last played or clicked, embedded in a note or in its own tab. They
+work while you type. On macOS, Alt is ⌥ (Option).
+
+| Keys | Action |
+|---|---|
+| Alt+T | Insert a timestamp link at the cursor (`[[Week 3.mp4#t=12:34\|12:34]]`) |
+| Alt+K | Play or pause |
+| Alt+J / Alt+L | Back / forward 5 seconds |
+| Alt+, / Alt+. | Slower / faster (0.5× to 3×) |
+
 ## Locking
 
 | Keys | Action |

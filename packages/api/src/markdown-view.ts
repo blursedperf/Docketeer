@@ -6,7 +6,8 @@ import { EditorView, keymap } from '@codemirror/view';
 import { getCM, vim } from '@replit/codemirror-vim';
 import { baseExtensions, bracketExtensions } from './cm-setup';
 import { attachFiles, embedMarkdown, isImage } from './attachments';
-import { imageEmbeds } from './embeds-editor';
+import { fileEmbeds } from './embeds-editor';
+import { createPlayer, isMedia, timeFromSubpath } from './media';
 import { livePreview } from './live-preview';
 import { type TitleHandlers, inlineTitle, setTitle, titleElement } from './inline-title';
 import { spellcheckExtension, wordAt } from './spellcheck';
@@ -94,11 +95,19 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 					return true;
 				},
 			}),
-			imageEmbeds((target, wiki) => {
+			fileEmbeds((target, wiki) => {
 				const source = this.file?.path ?? '';
-				if (!isImage(target.replace(/[#^].*$/, ''))) return null;
-				const f = wiki ? app.metadataCache.getFirstLinkpathDest(target, source) : app.vault.getFileByPath(resolveRelative(source, target));
-				return f ? app.vault.getResourcePath(f) : null;
+				const bare = target.replace(/[#^].*$/, '');
+				if (!isImage(bare) && !isMedia(bare)) return null;
+				const f = wiki ? app.metadataCache.getFirstLinkpathDest(bare, source) : app.vault.getFileByPath(resolveRelative(source, bare));
+				if (!f) return null;
+				if (isImage(f.name)) return { kind: 'image', src: app.vault.getResourcePath(f) };
+				const start = timeFromSubpath(target.slice(bare.length));
+				return {
+					kind: 'media',
+					key: `${f.path}|${start ?? ''}`,
+					create: (width) => createPlayer(app, f, { start, width }),
+				};
 			}),
 			Prec.highest(keymap.of(app.suggestKeymap())),
 			this.pluginCompartment.of(app.getEditorExtensions()),
@@ -253,6 +262,8 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	override async onClose(): Promise<void> {
 		await this.save();
 		this.renderChild?.unload();
+		// Widgets let go of what they hold (embedded players stop and unregister).
+		this.editor.cm.destroy();
 	}
 
 	/** Write the editor's text to disk if it changed. */
@@ -322,7 +333,11 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		this.modeButton.setAttribute('aria-label', mode === 'source' ? 'Reading view (Ctrl+E)' : 'Edit (Ctrl+E)');
 		setIcon(this.modeButton, mode === 'source' ? 'book-open' : 'pencil');
 		if (mode === 'preview') await this.renderPreview();
-		else this.editor.focus();
+		else {
+			// The hidden reading view lets go of what it holds: its players stop and are no longer in use.
+			this.renderChild?.unload();
+			this.editor.focus();
+		}
 		this.app.workspace.requestSaveLayout();
 		this.app.workspace.trigger('layout-change');
 	}

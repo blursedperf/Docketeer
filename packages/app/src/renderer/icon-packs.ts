@@ -37,6 +37,7 @@ export const LUCIDE_TO_PHOSPHOR: Record<string, string> = {
 	pencil: 'pencil-simple', pin: 'push-pin', play: 'play', plus: 'plus', 'plus-circle': 'plus-circle', printer: 'printer',
 	quote: 'quotes', 'redo': 'arrow-clockwise', 'redo-2': 'arrow-u-up-right', 'refresh-ccw': 'arrow-counter-clockwise',
 	'refresh-cw': 'arrow-clockwise', 'rotate-ccw': 'arrow-counter-clockwise', 'rotate-cw': 'arrow-clockwise', save: 'floppy-disk',
+	'fast-forward': 'fast-forward', 'music': 'music-note', 'rewind': 'rewind', 'video': 'video-camera',
 	scale: 'scales', scissors: 'scissors', search: 'magnifying-glass', send: 'paper-plane-tilt', 'separator-horizontal': 'rows',
 	'separator-vertical': 'columns', settings: 'gear-six', 'settings-2': 'sliders-horizontal', share: 'share-network',
 	'share-2': 'share-network', shield: 'shield', 'shield-check': 'shield-check', sidebar: 'sidebar-simple', sliders: 'sliders',

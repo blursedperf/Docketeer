@@ -7,6 +7,7 @@ import type { Component } from './component';
 import { TFile } from './files';
 import { splitFrontMatter, parseFrontMatter, parseMetadata } from './metadata';
 import { isImage } from './attachments';
+import { createPlayer, isMedia, timeFromSubpath } from './media';
 
 export interface MarkdownPostProcessorContext {
 	sourcePath: string;
@@ -168,9 +169,14 @@ export class MarkdownRenderer {
 			if (src.startsWith('quire:')) continue;
 			let rel = src;
 			try { rel = decodeURIComponent(src); } catch { /* as written */ }
-			const f = app.vault.getFileByPath(resolveFrom(sourcePath, rel)) ?? app.metadataCache.getFirstLinkpathDest(rel, sourcePath);
+			const bare = isMedia(rel) ? rel.replace(/#.*$/, '') : rel;
+			const f = app.vault.getFileByPath(resolveFrom(sourcePath, bare)) ?? app.metadataCache.getFirstLinkpathDest(bare, sourcePath);
 			if (f && isImage(f.name)) img.src = app.vault.getResourcePath(f);
-			else img.replaceWith(document.createTextNode(img.alt || src));
+			else if (f && isMedia(f.name)) {
+				const { el, dispose } = createPlayer(app, f, { start: timeFromSubpath(/#.*$/.exec(rel)?.[0] ?? '') });
+				component.register(dispose);
+				img.replaceWith(el);
+			} else img.replaceWith(document.createTextNode(img.alt || src));
 		}
 		for (const a of Array.from(wrap.querySelectorAll<HTMLAnchorElement>('a:not(.internal-link)'))) {
 			const href = a.getAttribute('href') ?? '';
@@ -224,6 +230,13 @@ async function renderEmbed(app: App, a: HTMLAnchorElement, dest: TFile, target: 
 		if (size) img.style.width = `${size[1]}px`;
 		img.className = 'image-embed';
 		a.replaceWith(img);
+		return;
+	}
+	if (isMedia(dest.name)) {
+		const size = /^(\d+)(?:x\d+)?$/.exec(alias.trim());
+		const { el, dispose } = createPlayer(app, dest, { start: timeFromSubpath(target.slice(target.search(/[#^]|$/))), width: size ? Number(size[1]) : null });
+		component.register(dispose);
+		a.replaceWith(el);
 		return;
 	}
 	const box = document.createElement('div');

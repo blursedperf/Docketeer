@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Lecture recordings in your notes.** Embed a recording with `![[Week 3.mp4]]` (or drop the file in) and it
+  plays below the line, in the editor and in reading view, and keeps playing while you type. Video, and audio
+  such as M4A, MP3 and WAV, are supported. Add `#t=12:34` to start there, or `|480` for a width.
+  - **Timestamps.** Alt+T inserts a link to the moment you are at, like `[[Week 3.mp4#t=12:34|12:34]]`.
+    Clicking it jumps the player there. If the recording is not on screen it opens in a tab beside the note,
+    so the note stays in view.
+  - **Keys that work while you type**: Alt+K play or pause, Alt+J / Alt+L back or forward 5 seconds,
+    Alt+, / Alt+. slower or faster. They act on the recording you last played or clicked.
+  - **Captions**: a `.vtt` file with the same name beside a video is shown as its captions.
+  - Opening a recording on its own shows it in a tab, which remembers where you were.
+  - Links to a recording that is not in the homebase say so instead of making an empty note.
+- **Fixed**: on macOS, shortcuts with ⌥ and a letter never matched, because ⌥ types a symbol (⌥K is ˚).
+- Leaving reading view stops what it was playing; closing a note releases its editor.
 - **PDFs, audio and video from the homebase can be loaded by the app.** The internal `quire://app/vault/`
   address, which served only pictures, now also serves PDFs, video (MP4, WebM, Ogg, QuickTime), audio (MP3,
   M4A, AAC, Ogg/Opus, WAV, FLAC) and WebVTT captions. Files are streamed from disk rather than read into

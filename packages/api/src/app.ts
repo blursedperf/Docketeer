@@ -10,6 +10,7 @@ import { type KeyContext, eventString, formatHotkey as formatHotkeyFor, hotkeySt
 import { DocketRegistry } from './docket-registry';
 import { SearchService } from './search-service';
 import { LockService } from './lock/service';
+import { MediaPlayers } from './media';
 import type { TFile } from './files';
 import { SettingsModal } from './settings-modal';
 import { Modal, Notice, topModal } from './ui';
@@ -453,6 +454,8 @@ export class App extends Events {
 	spellchecker: Spellchecker;
 	/** Docket panels, search providers and result actions (core and plugins). */
 	docket: DocketRegistry;
+	/** Audio and video players on screen, and the one in use. */
+	readonly media = new MediaPlayers();
 	/** The in-memory search index and the record of what is used (for ranking). */
 	search: SearchService;
 	/** True while the Docket is open (for shortcuts that only work there). */
