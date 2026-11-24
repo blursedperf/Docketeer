@@ -169,6 +169,25 @@ export async function runSmoke(app: App): Promise<void> {
 		const ok = ready && au === 'sentense,mispelled' && us.includes('Colour') && us.includes('organise') && withNotes.includes('teh');
 		return ok || `ready=${ready} au=${au} us=${us.join(',')} footnotes=${withNotes.join(',')}`;
 	});
+	await check('legal terms are accepted, and marked again when turned off', async () => {
+		const sp = app.spellchecker;
+		const file = await vault.create('Legal.md', 'The obiter dicta, eg on extinguishment, are not justiciable.\n\n');
+		await workspace.getLeaf(false).openFile(file);
+		const cm = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		cm.dispatch({ selection: { anchor: cm.state.doc.length } });
+		await sleep(100);
+		const marked = () => [...document.querySelectorAll('.cm-misspelled')].map((e) => e.textContent).join(',');
+		const on = marked();
+		await app.setConfig('spellcheckLegal', false);
+		await until(() => marked() !== '', 10000);
+		const off = marked();
+		await app.setConfig('spellcheckLegal', true);
+		await until(() => marked() === '', 10000);
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Spell.md')!);
+		await sleep(100);
+		void sp;
+		return (on === '' && off.includes('obiter') && off.includes('extinguishment') && off.includes('eg')) || `on=${on} off=${off}`;
+	});
 	await check('right-click: suggestions replace the word; add to dictionary is saved', async () => {
 		const cm = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
 		const rightClick = (el: Element) => { const r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 3, clientY: r.top + r.height / 2 })); };

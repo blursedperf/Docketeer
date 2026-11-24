@@ -150,6 +150,8 @@ class EditorTab extends SettingTab {
 			.addToggle((t) => t.setValue(c.spellcheck).onChange((v) => { void this.app.setConfig('spellcheck', v); }));
 		new Setting(el).setName('Language')
 			.addDropdown((d) => d.addOptions(SPELL_LANGUAGES).setValue(c.spellcheckLanguage).onChange((v) => { void this.app.setConfig('spellcheckLanguage', v); }));
+		new Setting(el).setName('Legal terms').setDesc('Accept Latin legal terms (obiter, ratio decidendi, certiorari …), AGLC abbreviations (eg, ie, cf, ibid, sch, reg) and legal words general dictionaries lack (extinguishment, justiciable, estoppel …).')
+			.addToggle((t) => t.setValue(c.spellcheckLegal).onChange((v) => { void this.app.setConfig('spellcheckLegal', v); }));
 		new Setting(el).setName('Check footnotes').setDesc('Also check footnotes. Off by default: citations (case names, report series, abbreviations) would be marked throughout.')
 			.addToggle((t) => t.setValue(c.spellcheckFootnotes).onChange((v) => { void this.app.setConfig('spellcheckFootnotes', v); }));
 		const words = this.app.spellchecker.personalWords();

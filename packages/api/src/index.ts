@@ -42,6 +42,7 @@ export { SettingsModal } from './settings-modal';
 export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
 export { Spellchecker, SPELL_LANGUAGES, spellRefresh } from './spellcheck';
+export { LEGAL_WORDS } from './legal-words';
 export { IMAGE_EXTENSIONS, isImage, attachmentFolder, availablePath, saveAttachment, attachFiles, embedMarkdown } from './attachments';
 
 /** This API's version. */

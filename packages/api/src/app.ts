@@ -254,6 +254,8 @@ export interface AppConfig {
 	spellcheckLanguage: string;
 	/** Also check footnotes (off: citations would be flagged throughout). */
 	spellcheckFootnotes: boolean;
+	/** Accept legal terms: Latin, AGLC abbreviations, legal vocabulary. */
+	spellcheckLegal: boolean;
 	autoPairBrackets: boolean;
 	newFileLocation: 'root' | 'current' | 'folder';
 	newFileFolderPath: string;
@@ -287,6 +289,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 	spellcheck: true,
 	spellcheckLanguage: 'en-AU',
 	spellcheckFootnotes: false,
+	spellcheckLegal: true,
 	autoPairBrackets: false,
 	newFileLocation: 'current',
 	newFileFolderPath: '',
@@ -368,6 +371,7 @@ export class App extends Events {
 		if (key === 'vimMode' || key === 'autoPairBrackets' || key === 'livePreview' || key === 'spellcheck') this.workspace.updateOptions();
 		if ((key === 'spellcheck' || key === 'spellcheckLanguage') && this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage).catch((e: unknown) => console.error(e));
 		if (key === 'spellcheckFootnotes') this.spellchecker.refreshEditors();
+		if (key === 'spellcheckLegal' && this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage, true).catch((e: unknown) => console.error(e));
 		await this.vault.adapter.write(`${this.vault.configDir}/app.json`, JSON.stringify(this.config, null, '\t'));
 	}
 

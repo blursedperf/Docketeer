@@ -10,6 +10,7 @@ import { Decoration, type DecorationSet, type EditorView, ViewPlugin, type ViewU
 import nspell from 'nspell';
 import type { App } from './app';
 import { Events } from './events';
+import { LEGAL_WORDS } from './legal-words';
 
 export const SPELL_LANGUAGES: Record<string, string> = {
 	'en-AU': 'English (Australia)',
@@ -39,14 +40,15 @@ export class Spellchecker extends Events {
 	private get personalPath(): string { return `${this.app.vault.configDir}/dictionary.txt`; }
 
 	/** Load the dictionary for `lang` (and the personal dictionary); editors recheck when done. */
-	load(lang: string): Promise<void> {
-		if (lang === this.loadedLang && this.checker) return Promise.resolve();
+	load(lang: string, force = false): Promise<void> {
+		if (!force && lang === this.loadedLang && this.checker) return Promise.resolve();
 		const run = async () => {
 			const dict = await this.app.host.app.dictionary(lang);
 			if (!dict) throw new Error(`No dictionary for ${lang}`);
 			const checker = nspell(dict.aff, dict.dic);
 			await this.readPersonal();
 			for (const w of this.personal) checker.add(w);
+			if (this.app.vault.getConfig('spellcheckLegal') !== false) for (const w of LEGAL_WORDS) checker.add(w);
 			this.checker = checker;
 			this.loadedLang = lang;
 			this.cache.clear();

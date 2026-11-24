@@ -32,7 +32,9 @@
   dictionary" (saved in `.quire/dictionary.txt`) or "Ignore". English (Australia) by default, or British or
   US English (Settings → Editor → Spelling). Code, links, web addresses, frontmatter and — unless turned on
   — footnotes are not checked. The dictionaries ship with Quire; the browser's own spellchecker, which
-  downloads dictionaries, stays off.
+  downloads dictionaries, stays off. **Legal terms** (on by default) accepts Latin legal terms, AGLC
+  abbreviations (eg, ie, cf, ibid, sch, reg) and legal words general dictionaries lack (extinguishment,
+  justiciable, estoppel …).
 - **Editor menu.** Right-click in a note for spelling, cut, copy, paste and select all; plugins can add
   items through the `editor-menu` event.
 - **Licences.** Settings → About → Licences shows the licences of every library, icon set and dictionary
