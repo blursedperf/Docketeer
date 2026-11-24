@@ -865,3 +865,13 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 	content: "Zoomed"; align-self: center; margin-right: var(--space-2); padding: 0 var(--space-2); border-radius: var(--radius-s);
 	font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--doom-blue-text); background: rgba(var(--doom-blue-rgb), 0.14);
 }
+
+/* First-run hint under the Docket handle. */
+.docket-handle { position: relative; }
+.docket-hint {
+	position: absolute; top: calc(100% + var(--space-2)); left: 50%; transform: translateX(-50%); z-index: 70;
+	display: flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+	font-family: var(--font-chrome); font-size: var(--text-sm); color: var(--text-normal); white-space: nowrap;
+	background: var(--doom-bg-alt); border: var(--border-width) solid var(--doom-blue); border-radius: var(--radius-s); box-shadow: var(--doom-shadow);
+}
+.docket-hint-close { margin-left: var(--space-2); }

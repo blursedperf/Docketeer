@@ -40,3 +40,10 @@ results announced; panels are tabs. With "reduce motion" on, it appears without 
 6. The same note in two panes stays in step as you type, each with its own cursor.
 7. **Mod+6** (Layout): presets (Single, Brief + Source, Revision, Exam), your saved layouts, the open panes,
    and the tiling commands with their keys. The layout is saved with the homebase and comes back on launch.
+
+## Help (Phase 7)
+
+- **`?`** in the Docket is the cheat sheet: the Docket's own keys, the prefixes, then every shortcut by section,
+  generated from the keymap (so it shows your remapped keys). Typing narrows it; Enter runs the command.
+- The first time Quire opens, a hint under the Docket handle says where everything is. It goes for good when
+  dismissed or when the Docket is first opened.

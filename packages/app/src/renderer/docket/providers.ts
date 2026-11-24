@@ -3,7 +3,7 @@
  * full text and ranking by use). Locked notes are left out here and again by the Docket itself.
  */
 import {
-	type App, type Command, type OpenWhere, type SearchResult, MarkdownView, TFile,
+	type App, type Command, type OpenWhere, type SearchResult, MarkdownView, Platform, TFile,
 	formatHotkey, fuzzyScore, getAllTags, wordMatch,
 } from '@quire/api';
 import type { Docket } from './docket';
@@ -256,15 +256,37 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 		}),
 		docket.addSearchProvider({
 			id: 'core:shortcuts', title: 'Shortcuts', prefixes: ['?'], source: 'core',
+			// The cheat sheet: every shortcut from the keymap (as remapped), grouped by section, after the
+			// Docket's own keys and prefixes. Typing narrows it; Enter runs the command.
 			search: ({ text }) => {
 				const out: SearchResult[] = [];
+				const mod = Platform.isMacOS ? '⌘' : 'Ctrl+';
+				const fixed: [string, string, string][] = [
+					['In the Docket', '↑ ↓', 'Move through results'],
+					['In the Docket', '↵', 'Open here'],
+					['In the Docket', `${mod}↵`, 'Open to the right'],
+					['In the Docket', Platform.isMacOS ? '⌥↵' : 'Alt+↵', 'Open below'],
+					['In the Docket', Platform.isMacOS ? '⇧↵' : 'Shift+↵', 'Insert as a link at the cursor'],
+					['In the Docket', `→ or ${mod}.`, 'More actions'],
+					['In the Docket', 'Tab', 'Input, results or panel, panel tabs'],
+					['In the Docket', 'Esc', 'Back one step, or close'],
+					['Prefixes', '>', 'Commands'],
+					['Prefixes', '#', 'Folders and tags'],
+					['Prefixes', '/', 'Headings in this note'],
+					['Prefixes', '@', 'Authorities in this note'],
+					['Prefixes', '?', 'This cheat sheet'],
+				];
+				fixed.forEach(([type, keys, title], i) => {
+					const s = text ? best(text, [title, keys]) : 1000 - i;
+					if (s !== null) out.push({ id: `fixed:${i}`, type, title, icon: 'keyboard', score: s, hint: keys });
+				});
 				for (const c of commands.listCommands()) {
 					const keys = commands.hotkeysFor(c);
 					if (!keys.length) continue;
 					const s = text ? best(text, [c.name, keys.map(formatHotkey).join(' '), c.section]) : -c.name.charCodeAt(0) / 1000;
 					if (s === null) continue;
 					out.push({
-						id: c.id, type: 'Shortcuts', title: c.name, detail: c.section, icon: 'keyboard', score: s,
+						id: c.id, type: c.section ?? 'Other', title: c.name, icon: c.icon ?? 'keyboard', score: s,
 						hint: keys.map(formatHotkey).join('  '),
 						open: () => { commands.executeCommand(c); },
 					});

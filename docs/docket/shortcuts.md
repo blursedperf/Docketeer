@@ -1,6 +1,6 @@
 # Shortcuts
 
-Generated from the keymap in later phases (the `?` prefix in the Docket already lists the live ones).
+The live list, generated from the keymap with your changes, is in the Docket: type `?`.
 Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings → Hotkeys.
 
 ## Docket (with the Docket setting on)

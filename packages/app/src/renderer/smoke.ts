@@ -40,6 +40,15 @@ export async function runSmoke(app: App): Promise<void> {
 		return JSON.stringify(metadataCache.getFileCache(f)?.frontmatter) === '{"tags":["test"]}' || JSON.stringify(metadataCache.getFileCache(f));
 	});
 	await check('links resolved', () => metadataCache.resolvedLinks['Welcome.md']?.['Second note.md'] === 1 || JSON.stringify(metadataCache.resolvedLinks));
+	await check('first run: the Docket hint shows once, and goes when the Docket opens', async () => {
+		const shown = !!document.querySelector('.docket-hint');
+		const ui = (app as unknown as { docketUI?: { open(): number; close(hide?: boolean): void } }).docketUI;
+		ui?.open();
+		ui?.close(true);
+		await sleep(50);
+		const gone = !document.querySelector('.docket-hint') && app.config.docketHintSeen === true;
+		return (shown && gone) || `shown=${shown} gone=${gone}`;
+	});
 	await check('no sidebars or ribbon: the Docket is the way in', () => {
 		const hidden = !document.querySelector('.workspace-ribbon, .mod-sidedock, .workspace-sidedock-resize-handle');
 		const handle = !!document.querySelector('.docket-handle');
@@ -617,6 +626,8 @@ export async function runShots(app: App): Promise<void> {
 	await sleep(1200);
 	document.querySelectorAll('.notice').forEach((n) => n.detach());
 	await app.setConfig('theme', 'dark');
+	await shot('00-first-run-hint');
+	(app as unknown as { docketUI: { dismissHint(): void } }).docketUI.dismissHint();
 	await shot('01-main-crisp-dark');
 	for (const p of ['doom-one', 'dracula', 'tokyo-night', 'gruvbox', 'retro-terminal', 'cyberpunk']) {
 		await app.setConfig('darkPalette', p.replace(/^doom-/, ''));
@@ -764,6 +775,9 @@ export async function runShots(app: App): Promise<void> {
 	docket.open({ panel: 'core:layout' });
 	await sleep(150);
 	await shot('34-docket-layout');
+	docket.close(true);
+	docket.open({ query: '?' });
+	await shot('35-docket-cheat-sheet');
 	docket.close(true);
 	workspace.mergeAllPanes();
 	await app.setConfig('docket', false);
@@ -1238,6 +1252,145 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const tagged = titles();
 		press('Escape'); press('Escape'); press('Escape');
 		return (offered && created && tagged.includes('Renamed note')) || `offered=${offered} created=${created} tagged=${tagged.join('|')}`;
+	});
+
+	await check('journey (keyboard only): brief a case, cite it in an essay, side by side, find every note citing it', async () => {
+		const steps: string[] = [];
+		const choose = (title: string) => { const i = titles().indexOf(title); if (i < 0) return false; for (let k = 0; k < i; k++) press('ArrowDown'); press('Enter'); return true; };
+		const typeInEditor = (text: string) => { const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm; ed.dispatch(ed.state.replaceSelection(text), { userEvent: 'input' }); return ed; };
+		// 1. A case brief, created from the Docket.
+		press('p', { ctrl: true });
+		await type('Journey brief');
+		if (!choose('Create note “Journey brief”')) steps.push('create brief');
+		await sleep(200);
+		typeInEditor('---\ntype: case-brief\n---\n# Example v Commonwealth\n\n## Facts\n\nA duty question.\n');
+		press('p', { ctrl: true });
+		press('2', { ctrl: true });
+		await sleep(80);
+		if (!focusRow('Held')) steps.push('brief fields');
+		press('Enter');
+		await sleep(50);
+		if (!workspace.getActiveViewOfType(MarkdownView)!.editor.getValue().includes('## Held')) steps.push('add Held');
+		// 2. An essay citing it, with an AGLC footnote from the Cite panel.
+		press('p', { ctrl: true });
+		await type('Journey essay');
+		if (!choose('Create note “Journey essay”')) steps.push('create essay');
+		await sleep(200);
+		const essayEd = typeInEditor('The duty was settled.');
+		press('p', { ctrl: true });
+		press('4', { ctrl: true });
+		await sleep(80);
+		focusRow('Case (reported)');
+		press('Enter');
+		await sleep(80);
+		const set = (name: string, v: string) => { const i = document.querySelector<HTMLInputElement>(`.docket-form [name="${name}"]`)!; i.value = v; i.dispatchEvent(new Event('input')); };
+		set('name', 'Example v Commonwealth'); set('year', '1999'); set('volume', '200'); set('report', 'CLR'); set('page', '10'); set('pinpoint', '12');
+		document.querySelector<HTMLInputElement>('.docket-form [name="pinpoint"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+		await sleep(100);
+		if (!/settled\.\[\^1\][\s\S]*\[\^1\]: \*Example v Commonwealth\* \(1999\) 200 CLR 10, 12\./.test(essayEd.state.doc.toString())) steps.push('footnote');
+		// 3. The brief beside the essay.
+		press('\\', { ctrl: true });
+		await sleep(150);
+		press('p', { ctrl: true });
+		await type('Journey brief');
+		press('Enter');
+		await sleep(200);
+		const shown = workspace.rootTabs().map((t) => (t.activeLeaf?.view as MarkdownView | undefined)?.file?.basename).sort().join('|');
+		if (shown !== 'Journey brief|Journey essay') steps.push(`side by side (${shown})`);
+		// 4. Every note citing the case, from the essay's Authorities.
+		press('ArrowLeft', { ctrl: true, alt: true });
+		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		ed.dispatch({ selection: { anchor: 0 } });
+		press('p', { ctrl: true });
+		press('1', { ctrl: true });
+		await sleep(120);
+		focusRow('Example v Commonwealth');
+		press('ArrowRight');
+		await sleep(30);
+		if (!choose('Every note citing this')) steps.push('citing action');
+		await sleep(300);
+		const citing = titles().sort().join('|');
+		if (!citing.includes('Journey brief') || !citing.includes('Journey essay')) steps.push(`citing (${citing})`);
+		press('Escape'); press('Escape'); press('Escape');
+		// 5. Locking the homebase comes with the locking phase: the Homebase panel says so.
+		for (const t of [...workspace.rootTabs()].slice(1)) for (const l of [...t.children]) l.detach();
+		for (const n of ['Journey brief', 'Journey essay']) { const f = vault.getMarkdownFiles().find((x) => x.basename === n); if (f) await vault.trash(f, true); }
+		await sleep(100);
+		return steps.length === 0 || steps.join('; ');
+	});
+
+	await check('cheat sheet: "?" lists the Docket keys, prefixes and every shortcut by section', async () => {
+		press('p', { ctrl: true });
+		await type('?');
+		const groups = [...document.querySelectorAll('.docket-group')].map((g) => g.getAttribute('aria-label'));
+		const docketKeys = titles().includes('Open to the right');
+		const split = [...document.querySelectorAll('.docket-option')].some((o) => o.textContent?.includes('Split right') && /\\/.test(o.querySelector('.docket-option-hint')?.textContent ?? ''));
+		press('Escape'); press('Escape');
+		return (groups[0] === 'In the Docket' && groups[1] === 'Prefixes' && groups.includes('Layout') && docketKeys && split) || `groups=${groups.join('|')} keys=${docketKeys} split=${split}`;
+	});
+
+	await check('security: locked notes stay out of search, authorities, links and Units', async () => {
+		const essayNote = vault.getFileByPath('AGLC4 example essay.md')!;
+		const realLocked = app.isLocked.bind(app);
+		app.isLocked = (f) => f === essayNote || realLocked(f);
+		try {
+			const other = vault.getFileByPath('Welcome.md')!;
+			await workspace.getLeaf(false).openFile(other);
+			await sleep(100);
+			const seen: string[] = [];
+			for (const q of ['AGLC4 example', 'native title', 'extinguishment', '@mabo', '#a']) {
+				press('p', { ctrl: true });
+				await type(q);
+				if ([...document.querySelectorAll('.docket-option')].some((o) => /AGLC4 example essay/.test(o.textContent ?? ''))) seen.push(q);
+				press('Escape'); press('Escape');
+			}
+			press('p', { ctrl: true });
+			press('3', { ctrl: true });
+			await sleep(80);
+			if (rowsText().includes('AGLC4 example essay')) seen.push('Units');
+			press('Escape');
+			// Opened directly, a locked note's panels say so instead of showing it.
+			await workspace.getLeaf(false).openFile(essayNote);
+			await sleep(100);
+			press('p', { ctrl: true });
+			press('1', { ctrl: true });
+			await sleep(80);
+			const lockedMsg = document.querySelector('.docket-panel .docket-empty')?.textContent ?? '';
+			press('Escape');
+			return (seen.length === 0 && /locked/.test(lockedMsg)) || `seen in: ${seen.join(', ')} panel="${lockedMsg}"`;
+		} finally {
+			app.isLocked = realLocked;
+		}
+	});
+
+	await check('security: a search that is typed is never logged', async () => {
+		press('p', { ctrl: true });
+		await type('QUIRE-QUERY-5521');
+		await type('>QUIRE-QUERY-5521');
+		press('Escape'); press('Escape');
+		return true; // the main process checks every console message at the end (logsClean)
+	});
+
+	await check('accessibility: the Docket\'s roles, names, live region and reduced motion', async () => {
+		press('p', { ctrl: true });
+		await type('welcome');
+		const dock = document.querySelector('.docket')!;
+		const problems: string[] = [];
+		if (dock.getAttribute('role') !== 'dialog' || !dock.getAttribute('aria-label')) problems.push('dialog');
+		const input = document.querySelector('.docket-input')!;
+		const list = document.getElementById(input.getAttribute('aria-controls') ?? '');
+		if (input.getAttribute('role') !== 'combobox' || list?.getAttribute('role') !== 'listbox') problems.push('combobox/listbox');
+		if (!document.getElementById(input.getAttribute('aria-activedescendant') ?? '')) problems.push('active option');
+		if ([...document.querySelectorAll('.docket-option')].some((o) => o.getAttribute('role') !== 'option')) problems.push('options');
+		if (!document.querySelector('.docket [role=status][aria-live]')?.textContent) problems.push('live region');
+		const tabs = [...document.querySelectorAll('.docket-tabs [role=tab]')];
+		if (document.querySelector('.docket-tabs')?.getAttribute('role') !== 'tablist' || tabs.filter((t) => t.getAttribute('aria-selected') === 'true').length !== 1) problems.push('tabs');
+		const unnamed = [...dock.querySelectorAll('button, [role=button], input, select')].filter((b) => !(b.getAttribute('aria-label') || b.textContent?.trim() || b.getAttribute('placeholder')));
+		if (unnamed.length) problems.push(`${unnamed.length} unnamed controls`);
+		press('Escape'); press('Escape');
+		const reduced = [...document.styleSheets].some((sh) => { try { return [...sh.cssRules].some((r) => r instanceof CSSMediaRule && /prefers-reduced-motion/.test(r.conditionText) && /docket/.test(r.cssText)); } catch { return false; } });
+		if (!reduced) problems.push('reduced motion');
+		return problems.length === 0 || problems.join(', ');
 	});
 
 	await check('docket: can be taken down and built again (plugins and tests)', async () => {

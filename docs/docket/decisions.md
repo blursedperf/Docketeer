@@ -243,3 +243,25 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 70. **The quick switcher could create a note**; the Docket now offers "Create note “…”" when no note has exactly
     that name. "#" folder results open Units at that folder; tag results list the notes with that tag
     (including nested tags).
+
+## Phase 7
+
+71. **Cheat sheet**: the `?` prefix lists "In the Docket" keys, the prefixes, then every command with a shortcut
+    grouped by its section, from the live keymap (remapped keys included).
+72. **First-run hint**: "Press Mod+P for everything …" under the Docket handle, shown until dismissed or the
+    Docket is first opened (`docketHintSeen` in app.json), then never again.
+73. **Keyboard-only journeys** are one smoke check: create a case brief from the Docket, add a missing brief
+    field from the Outline panel, create an essay and cite the case with an AGLC footnote from the Cite panel,
+    split and show the brief beside the essay, and list every note citing the case from Authorities.
+    **Locking the homebase** (the plan's fifth journey) waits for the locking phase.
+74. **Security checks**: the smoke homebase holds a private phrase, and the test types a private search; the
+    main process fails the run if any console message contains either, or the note's path (`logsClean`). A
+    check locks a note (through `app.isLocked`, as the locking phase will) and confirms it is absent from name,
+    full-text, heading, `@` and `#` results and from Units, and that its own panels say it is locked. The
+    no-network audit and the run-time request blocking are unchanged.
+75. **Accessibility checks** (automated): the Docket is a labelled dialog; the input a combobox controlling a
+    listbox with a valid active option; options have the option role; tabs are a tablist with one selected; a
+    live region announces counts; every control has a name; a reduced-motion rule covers the Docket's animation.
+    **A screen-reader pass by a person is still to do** (the plan asks for it; it cannot be automated here).
+76. **Budgets with 10,000 notes** (`npm run bench`, this machine): the Docket opens in about 2 ms, keystrokes
+    take a median of 6 ms (90 % under 12 ms, worst 14 ms), a split about 9 ms; CI reports the same checks.

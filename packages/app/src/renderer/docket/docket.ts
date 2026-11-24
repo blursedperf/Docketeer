@@ -99,6 +99,7 @@ export class Docket {
 		this.liveEl = this.el.createDiv({ cls: 'sr-only', attr: { 'aria-live': 'polite', role: 'status' } });
 
 		container.prepend(this.handleEl, this.el);
+		if (!app.config.docketHintSeen) this.showHint();
 		container.addClass('has-docket');
 		this.panelId = String(app.config.docketPanel || 'core:outline');
 		this.applyMode();
@@ -114,6 +115,28 @@ export class Docket {
 	}
 
 	get isOpen(): boolean { return this.opened; }
+
+	private hintEl: HTMLElement | null = null;
+
+	/** Once, on first run: where everything is now. Gone for good when dismissed or the Docket is opened. */
+	private showHint(): void {
+		const hint = this.handleEl.createDiv({ cls: 'docket-hint', attr: { role: 'status' } });
+		hint.createSpan({ text: 'Press ' });
+		hint.createEl('kbd', { cls: 'docket-handle-key', text: this.shortcutText() || 'the Docket key' });
+		hint.createSpan({ text: ' for everything: notes, search, commands and panels. ' });
+		hint.createEl('kbd', { cls: 'docket-handle-key', text: '?' });
+		hint.createSpan({ text: ' in it lists every shortcut.' });
+		const close = hint.createEl('button', { cls: 'clickable-icon docket-hint-close', attr: { type: 'button', 'aria-label': 'Dismiss' } });
+		setIcon(close, 'x');
+		close.addEventListener('click', (e) => { e.stopPropagation(); this.dismissHint(); });
+		this.hintEl = hint;
+	}
+
+	dismissHint(): void {
+		this.hintEl?.remove();
+		this.hintEl = null;
+		if (!this.app.config.docketHintSeen) void this.app.setConfig('docketHintSeen', true);
+	}
 	get mode(): 'peek' | 'pinned' { return this.app.config.docketMode === 'pinned' ? 'pinned' : 'peek'; }
 
 	destroy(): void {
@@ -144,6 +167,7 @@ export class Docket {
 	/** Open, with the cursor in the input. Returns how long it took (ms), for the budget check. */
 	open(opts: { panel?: string; query?: string } = {}): number {
 		const t0 = performance.now();
+		if (this.hintEl) this.dismissHint();
 		if (!this.opened) this.saveFocus();
 		let panel = opts.panel;
 		this.panelFocus = undefined;

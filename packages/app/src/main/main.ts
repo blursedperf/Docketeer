@@ -452,6 +452,9 @@ function createWindow() {
 // Smoke test: boot offscreen on a copy of a test vault, let the renderer run its checks, then exit.
 
 const smokeConsole: { level: string; message: string }[] = [];
+/** Text that must never be logged: in a test note, and typed as a search by the smoke test. */
+const PRIVATE_MARKER = 'QUIRE-PRIVATE-7731';
+const PRIVATE_QUERY = 'QUIRE-QUERY-5521';
 
 async function finishSmoke(report: Record<string, unknown>) {
 	let exitCode = report.ok ? 0 : 1;
@@ -469,7 +472,11 @@ async function finishSmoke(report: Record<string, unknown>) {
 			shot = null;
 		}
 		const errors = smokeConsole.filter((m) => m.level === 'error' || m.level === '3');
-		const out = { ...report, mainFetchBlocked, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot, screenshotError };
+		// Logs never carry note text, note paths or what was searched for (docs/docket/PLAN.md, security).
+		const leaks = smokeConsole.filter((m) => [PRIVATE_MARKER, 'Folder/Inside', PRIVATE_QUERY].some((s) => m.message.includes(s)));
+		const logsClean = SHOTS || BENCH ? null : leaks.length === 0;
+		if (logsClean === false) exitCode = 1;
+		const out = { ...report, mainFetchBlocked, logsClean, logLeaks: leaks.length, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot, screenshotError };
 		if (!mainFetchBlocked) exitCode = 1;
 		console.log(`QUIRE_SMOKE ${JSON.stringify(out, null, 2)}`);
 	} catch (e) {
@@ -510,7 +517,8 @@ async function smokeVault(): Promise<string> {
 	await fsp.writeFile(path.join(dir, 'Welcome.md'), '# Welcome\n\nA note with a [[Second note]] link.[^1]\n\n[^1]: A footnote.\n');
 	await fsp.writeFile(path.join(dir, 'Second note.md'), '---\ntags: [test]\n---\n\n# Second\n\nBack to [[Welcome]].\n');
 	await fsp.mkdir(path.join(dir, 'Folder'));
-	await fsp.writeFile(path.join(dir, 'Folder', 'Inside.md'), 'Inside a folder.\n');
+	// A private phrase: the smoke test fails if it, or this note's path, ever reaches a log.
+	await fsp.writeFile(path.join(dir, 'Folder', 'Inside.md'), `Inside a folder. ${PRIVATE_MARKER}\n`);
 	return dir;
 }
 

@@ -363,6 +363,8 @@ export interface AppConfig {
 	docketHeight: number;
 	/** The last panel shown. */
 	docketPanel: string;
+	/** The first-run hint ("Press Mod+P for everything") was seen. */
+	docketHintSeen: boolean;
 	/** Notes pinned in the Units panel (paths). */
 	pinnedNotes: string[];
 	/** Where archived notes go (keeping their folders). */
@@ -404,6 +406,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 	docketMode: 'peek',
 	docketHeight: 0.35,
 	docketPanel: 'core:outline',
+	docketHintSeen: false,
 	pinnedNotes: [],
 	archiveFolder: 'Archive',
 	citationStyle: 'aglc4',
