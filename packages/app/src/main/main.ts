@@ -107,14 +107,23 @@ async function tree(absDir: string, out: (Stat & { path: string })[] = []): Prom
 	return out;
 }
 
+let writeCount = 0;
+
 async function atomicWrite(abs: string, data: string | Buffer, append = false) {
 	await fsp.mkdir(path.dirname(abs), { recursive: true });
 	if (append) {
 		await fsp.appendFile(abs, data);
 	} else {
-		const tmp = path.join(path.dirname(abs), `.${path.basename(abs)}.${process.pid}.quire-tmp`);
-		await fsp.writeFile(tmp, data);
-		await fsp.rename(tmp, abs);
+		// A temporary name of its own per write: two saves of the same file at once (two settings changed
+		// together) must not share one, or the second rename finds it gone. The last write wins, whole.
+		const tmp = path.join(path.dirname(abs), `.${path.basename(abs)}.${process.pid}.${++writeCount}.quire-tmp`);
+		try {
+			await fsp.writeFile(tmp, data);
+			await fsp.rename(tmp, abs);
+		} catch (e) {
+			await fsp.rm(tmp, { force: true }).catch(() => undefined);
+			throw e;
+		}
 	}
 	return (await statOf(abs))!;
 }

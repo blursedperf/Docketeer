@@ -10,7 +10,7 @@ import {
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
-import { NameModal, freePath, promptRename } from './dialogs';
+import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
 import { LinkSuggest } from './link-suggest';
 
 /** Pick a folder (for "Move file"). */
@@ -436,11 +436,12 @@ export function registerCore(app: App): { reveal(): void } {
 	add({
 		id: 'app:new-note', name: 'Create new note', icon: 'square-pen', section: 'Notes', aliases: ['New note', 'New file'],
 		hotkeys: [{ modifiers: ['Mod'], key: 'n' }],
-		run: async (ctx) => {
+		// The name first, and where (the open note's folder unless a folder was given): no "Untitled" to rename.
+		run: (ctx) => {
 			const folder = ctx.args.folder instanceof TFolder ? ctx.args.folder : app.fileManager.getNewFileParent(workspace.getActiveFile()?.path ?? '');
-			const file = await vault.create(freePath(app, folder, 'Untitled', '.md'), '');
-			await workspace.getLeaf(false).openFile(file);
-			promptRename(app, file);
+			if (typeof ctx.args.name === 'string') return createNote(app, folder, ctx.args.name);
+			new NewNoteModal(app, folder, notePlaces(app, String(app.config.archiveFolder || 'Archive'))).open();
+			return undefined;
 		},
 	});
 	add({

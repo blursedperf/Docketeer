@@ -110,6 +110,8 @@ export class Docket {
 		this.el.addEventListener('focusin', () => { app.docketOpen = true; });
 		this.el.addEventListener('focusout', () => window.setTimeout(() => this.onFocusOut(), 0));
 		this.resizeEl.addEventListener('mousedown', (e) => this.startResize(e));
+		document.addEventListener('mousedown', this.onOutsideMouseDown, true);
+		this.detach.push(() => document.removeEventListener('mousedown', this.onOutsideMouseDown, true));
 		const ref = app.docket.on('changed', () => { if (this.opened) this.renderTabs(); });
 		this.detach.push(() => app.docket.offref(ref));
 	}
@@ -233,19 +235,40 @@ export class Docket {
 	}
 
 	private onFocusOut(): void {
-		const inside = this.el.contains(document.activeElement);
+		const active = document.activeElement;
+		const inside = this.el.contains(active);
+		// Focus can drop to the page when the Docket redraws the row that had it (clicking a panel tab or a
+		// panel row redraws them). That is not leaving: keep the keyboard in the Docket.
+		if (!inside && this.opened && (!active || active === document.body) && !topModal() && !document.querySelector('.menu')) {
+			this.focusZone('input');
+			return;
+		}
 		this.app.docketOpen = inside;
 		if (inside || !this.opened || this.mode !== 'peek') return;
-		// Peek keeps the keyboard until dismissed: leaving it (a click elsewhere) dismisses it. A dialog or
-		// menu opened from it (a confirmation) is not leaving.
+		// Peek keeps the keyboard until dismissed: moving focus elsewhere (into the note, say) dismisses it.
+		// A dialog or menu opened from it (a confirmation) is not leaving.
 		if (topModal() || document.querySelector('.menu')) return;
+		this.dismissPeek();
+	}
+
+	private dismissPeek(): void {
 		this.opened = false;
 		this.shownPanel?.hide?.();
 		this.shownPanel = null;
 		this.el.setAttribute('hidden', '');
 		this.el.removeClass('is-open');
 		this.handleEl.removeClass('is-open');
+		this.app.docketOpen = false;
 	}
+
+	/** A click outside the Docket dismisses it in peek mode, even on something that cannot take focus. */
+	private onOutsideMouseDown = (e: MouseEvent): void => {
+		if (!this.opened || this.mode !== 'peek') return;
+		const t = e.target as Node | null;
+		if (!t || this.el.contains(t) || this.handleEl.contains(t)) return;
+		if (topModal() || (t instanceof Element && t.closest('.menu, .modal-container, .notice-container'))) return;
+		this.dismissPeek();
+	};
 
 	// -----------------------------------------------------------------------------------------------
 	// Mode and height
@@ -359,7 +382,7 @@ export class Docket {
 			if (p.icon) setIcon(tab.createSpan({ cls: 'docket-tab-icon' }), p.icon);
 			tab.createSpan({ text: p.title });
 			tab.toggleClass('is-active', active);
-			tab.addEventListener('click', () => this.showPanel(p.id));
+			tab.addEventListener('click', () => { this.showPanel(p.id); this.focusZone('tabs'); });
 			if (active) this.panelEl.setAttribute('aria-labelledby', tab.id);
 		});
 	}

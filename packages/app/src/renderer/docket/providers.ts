@@ -8,6 +8,7 @@ import {
 } from '@quire/api';
 import type { Docket } from './docket';
 import { revealInUnits } from './panels/units';
+import { createNote, notePlaces, placeName } from '../dialogs';
 
 /** The best score of `q` against any of `texts` (the first counts most); word-wise for commands and settings. */
 function best(q: string, texts: (string | undefined)[], match: (q: string, t: string) => number | null = fuzzyScore): number | null {
@@ -94,7 +95,19 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 		return out.sort((a, b) => a.title.localeCompare(b.title));
 	};
 
+	// "Create note" → : the other places it could go.
+	const createElsewhere = docket.addResultAction({
+		id: 'core:create-in', title: 'Create it in another subject or topic…', icon: 'folder-input', source: 'core',
+		appliesTo: (r) => r.id.startsWith('create:'),
+		run: (r) => {
+			const name = r.id.slice('create:'.length);
+			ui.open();
+			ui.showActionList(`Create “${name}” in`, notePlaces(app, String(app.config.archiveFolder || 'Archive')).map((f) => ({ title: placeName(f), icon: f.isRoot() ? 'house' : 'folder', run: () => createNote(app, f, name) })));
+		},
+	});
+
 	const removers = [
+		createElsewhere,
 		docket.addSearchProvider({
 			id: 'core:commands', title: 'Commands', prefixes: ['', '>'], source: 'core',
 			search: ({ text, prefix }) => {
@@ -136,13 +149,12 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 				}
 				// No note by exactly that name: offer to create it (what the quick switcher did).
 				if ((!only || only === 'Notes') && !/[\\/:]/.test(text) && !vault.getMarkdownFiles().some((f) => f.basename.toLowerCase() === text.toLowerCase())) {
+					const parent = app.fileManager.getNewFileParent(activePath());
 					results.push({
-						id: `create:${text}`, type: 'Notes', title: `Create note “${text}”`, icon: 'file-plus', score: -1e6,
+						id: `create:${text}`, type: 'Notes', title: `Create note “${text}”`, detail: `in ${placeName(parent)} · → to choose another place`, icon: 'file-plus', score: -1e6,
 						open: async (where) => {
-							const parent = app.fileManager.getNewFileParent(activePath());
-							const path = parent.isRoot() ? `${text}.md` : `${parent.path}/${text}.md`;
-							const file = await vault.create(path, '');
-							await openFileIn(app, file, where);
+							const file = await createNote(app, parent, text);
+							if (file && where !== 'current') await openFileIn(app, file, where);
 						},
 					});
 				}

@@ -63,3 +63,60 @@ export function promptRename(app: App, file: TAbstractFile): void {
 		app.fileManager.renameFile(file, to).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
 	}).open();
 }
+
+/** "Torts / Duty" for a folder; "Top level" for the homebase itself. */
+export function placeName(folder: TFolder): string {
+	return folder.isRoot() ? 'Top level' : folder.path.split('/').join(' / ');
+}
+
+/** Folders a note can be created in, top level first, then A–Z (numbers in order), without the archive. */
+export function notePlaces(app: App, archive: string): TFolder[] {
+	const folders = app.vault.getAllFolders(true).filter((f) => f.isRoot() || !(f.path === archive || f.path.startsWith(`${archive}/`)) && !f.name.startsWith('.'));
+	return folders.sort((a, b) => (a.isRoot() ? -1 : b.isRoot() ? 1 : a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' })));
+}
+
+/** Make the note `name` in `folder` (or open it, if it is already there) and put the cursor in it. */
+export async function createNote(app: App, folder: TFolder, name: string, where: 'current' | 'tab' = 'current'): Promise<TFile | null> {
+	const clean = name.trim().replace(/\.md$/i, '');
+	if (!clean) return null;
+	if (/[\\/:]/.test(clean)) { new Notice('A name cannot contain / \\ or :'); return null; }
+	const path = folder.isRoot() ? `${clean}.md` : `${folder.path}/${clean}.md`;
+	const existing = app.vault.getFileByPath(path);
+	const file = existing ?? await app.vault.create(path, '');
+	if (existing) new Notice(`“${clean}” is already there: opened it.`);
+	await app.workspace.getLeaf(where === 'tab' ? 'tab' : false).openFile(file);
+	return file;
+}
+
+/**
+ * New note: the name first, and where it goes (the open note's folder unless another is given). Enter
+ * creates it; Tab reaches the place; Esc cancels.
+ */
+export class NewNoteModal extends Modal {
+	private name = '';
+	constructor(app: App, private folder: TFolder, private places: TFolder[]) {
+		super(app);
+		this.setTitle('New note');
+	}
+	override onOpen(): void {
+		const submit = async () => {
+			if (!this.name.trim()) return;
+			this.close();
+			await createNote(this.app, this.folder, this.name);
+		};
+		new Setting(this.contentEl).setName('Name').addText((t) => {
+			t.setPlaceholder('Smith v Jones brief').onChange((v) => { this.name = v; });
+			t.inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); void submit(); } });
+			window.setTimeout(() => t.inputEl.focus(), 0);
+		});
+		new Setting(this.contentEl).setName('In').setDesc('Subject or topic (a folder in this homebase).').addDropdown((d) => {
+			for (const f of this.places) d.addOption(f.path, placeName(f));
+			d.setValue(this.folder.path).onChange((v) => { this.folder = this.places.find((f) => f.path === v) ?? this.folder; });
+			d.selectEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); void submit(); } });
+		});
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()))
+			.addButton((b) => b.setButtonText('Create').setCta().onClick(() => { void submit(); }));
+	}
+	override onClose(): void { this.contentEl.empty(); }
+}

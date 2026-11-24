@@ -757,7 +757,15 @@ export async function runShots(app: App): Promise<void> {
 	(document.activeElement as HTMLElement | null)?.blur();
 	await shot('30-docket-cite');
 	document.querySelector('.docket-form')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+	await app.vault.createFolder('Torts/Negligence').catch(() => undefined);
+	await app.vault.create('Torts/Negligence/Week 2 duty.md', '').catch(() => undefined);
+	await app.vault.create('Torts/Negligence/Week 10 breach.md', '').catch(() => undefined);
+	(app.workspace as unknown as { getActiveFile(): unknown });
 	dp.showPanel('core:units');
+	await sleep(150);
+	[...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((r) => r.textContent?.startsWith('Torts'))?.click();
+	await sleep(100);
+	[...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((r) => r.textContent?.startsWith('Negligence'))?.click();
 	await sleep(150);
 	await shot('31-docket-units');
 	dp.showPanel('core:homebase');
@@ -1040,6 +1048,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	const essayFile = vault.getFileByPath('AGLC4 example essay.md');
 	const openEssay = async () => { if (essayFile) await workspace.getLeaf(false).openFile(essayFile); await sleep(150); const v = workspace.getActiveViewOfType(MarkdownView)!; if (v.getMode() !== 'source') await v.setMode('source'); return v.editor.cm; };
 	const rowsText = () => [...document.querySelectorAll('.docket-panel .docket-item .docket-option-title')].map((e) => e.textContent ?? '');
+	const focusEditorOrBody = () => { const v = workspace.getActiveViewOfType(MarkdownView); if (v) v.editor.cm.focus(); else (document.activeElement as HTMLElement | null)?.blur(); };
 	const focusRow = (title: string) => { const r = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((x) => x.querySelector('.docket-option-title')?.textContent === title); r?.focus(); return r; };
 
 	await check('authorities: cases and legislation in the essay, Enter goes to the next place', async () => {
@@ -1317,6 +1326,109 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		for (const n of ['Journey brief', 'Journey essay']) { const f = vault.getMarkdownFiles().find((x) => x.basename === n); if (f) await vault.trash(f, true); }
 		await sleep(100);
 		return steps.length === 0 || steps.join('; ');
+	});
+
+	await check('mouse: clicking panel tabs and rows keeps the Docket open; clicking outside closes it (peek)', async () => {
+		// As a real click: mousedown focuses the element, then click runs it.
+		const click = async (el: HTMLElement | null | undefined) => { if (!el) return false; el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); el.focus(); el.click(); el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); await sleep(60); return true; };
+		const docketOpen = () => !!document.querySelector('.docket.is-open');
+		press('p', { ctrl: true });
+		await sleep(30);
+		const tabs = () => [...document.querySelectorAll<HTMLElement>('.docket-tab')];
+		await click(tabs()[2]); // Units
+		const afterTab = docketOpen() && !!document.querySelector('.docket-tab.is-active')?.textContent?.includes('Units');
+		await click(tabs()[0]); // Authorities
+		await click(tabs()[2]); // Units again
+		const afterTabs = docketOpen();
+		const folder = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((r) => r.querySelector('.docket-option-title')?.textContent === 'Folder');
+		await click(folder); // redraws the panel
+		const afterRow = docketOpen();
+		await click(document.querySelector<HTMLElement>('.status-bar'));
+		const outsideStatus = !docketOpen();
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		const wv = workspace.getActiveViewOfType(MarkdownView);
+		if (wv && wv.getMode() !== 'source') await wv.setMode('source');
+		await sleep(100);
+		press('p', { ctrl: true });
+		await sleep(30);
+		const cmContent = wv?.editor.cm.contentDOM ?? null;
+		const openBefore = docketOpen();
+		await click(cmContent);
+		const outsideNote = !docketOpen();
+		if (docketOpen()) (app as unknown as { docketUI: { close(h?: boolean): void } }).docketUI.close(true);
+		return (afterTab && afterTabs && afterRow && outsideStatus && outsideNote) || `tab=${afterTab} tabs=${afterTabs} row=${afterRow} status=${outsideStatus} note=${outsideNote} openBefore=${openBefore} editor=${!!cmContent}`;
+	});
+
+	await check('notes: Ctrl+N asks for the name and the place first; no "Untitled"', async () => {
+		await vault.createFolder('Torts').catch(() => undefined);
+		focusEditorOrBody();
+		press('n', { ctrl: true });
+		await sleep(80);
+		const modal = topModal();
+		const input = document.querySelector<HTMLInputElement>('.modal input[type="text"], .modal input:not([type])');
+		const select = document.querySelector<HTMLSelectElement>('.modal select');
+		if (!modal || !input || !select) { modal?.close(); return `modal=${!!modal} input=${!!input} select=${!!select}`; }
+		input.value = 'Duty of care'; input.dispatchEvent(new Event('input'));
+		select.value = 'Torts'; select.dispatchEvent(new Event('change'));
+		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+		await sleep(200);
+		const made = vault.getFileByPath('Torts/Duty of care.md');
+		const open = workspace.getActiveFile() === made;
+		const untitled = vault.getMarkdownFiles().some((f) => /^Untitled/.test(f.basename));
+		return (!!made && open && !untitled) || `made=${!!made} open=${open} untitled=${untitled}`;
+	});
+
+	await check('units: N and T on a row, "+ New note" in opened folders, A–Z with numbers in order', async () => {
+		await vault.create('Torts/Week 10.md', '');
+		await vault.create('Torts/Week 2.md', '');
+		press('p', { ctrl: true });
+		press('3', { ctrl: true });
+		await sleep(100);
+		const help = !!document.querySelector('.docket-panel .docket-help');
+		const rows = rowsText();
+		const order = rows.indexOf('Week 2') >= 0 && rows.indexOf('Week 2') < rows.indexOf('Week 10');
+		const plusRow = rows.includes('New note in Torts');
+		const noLabels = ![...document.querySelectorAll('.docket-panel .docket-folder .docket-option-detail')].length;
+		const torts = focusRow('Torts');
+		torts?.dispatchEvent(new KeyboardEvent('keydown', { key: 't', bubbles: true, cancelable: true }));
+		await sleep(80);
+		const topicModal = topModal();
+		const ti = document.querySelector<HTMLInputElement>('.modal input');
+		if (ti) { ti.value = 'Negligence'; ti.dispatchEvent(new Event('input')); ti.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); }
+		await sleep(200);
+		const topic = !!vault.getFolderByPath('Torts/Negligence');
+		press('p', { ctrl: true });
+		press('3', { ctrl: true });
+		await sleep(100);
+		focusRow('Negligence')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true, cancelable: true }));
+		await sleep(80);
+		const sel = document.querySelector<HTMLSelectElement>('.modal select')?.value;
+		topModal()?.close();
+		return (help && order && plusRow && noLabels && !!topicModal && topic && sel === 'Torts/Negligence') || `help=${help} order=${order} plus=${plusRow} noLabels=${noLabels} topicModal=${!!topicModal} topic=${topic} preselected=${sel}`;
+	});
+
+	await check('search: "Create note" says where, and → puts it somewhere else', async () => {
+		press('p', { ctrl: true });
+		await type('Remedies overview');
+		const createRow = [...document.querySelectorAll('.docket-option')].find((o) => o.textContent?.includes('Create note “Remedies overview”'));
+		const where = createRow?.querySelector('.docket-option-detail')?.textContent ?? '';
+		const i = titles().indexOf('Create note “Remedies overview”');
+		for (let k = 0; k < i; k++) press('ArrowDown');
+		press('ArrowRight');
+		await sleep(30);
+		const j = titles().indexOf('Create it in another subject or topic…');
+		for (let k = 0; k < j; k++) press('ArrowDown');
+		press('Enter');
+		await sleep(80);
+		const places = titles();
+		const t = places.indexOf('Torts / Negligence');
+		for (let k = 0; k < t; k++) press('ArrowDown');
+		press('Enter');
+		await sleep(200);
+		const made = !!vault.getFileByPath('Torts/Negligence/Remedies overview.md');
+		press('Escape'); press('Escape');
+		for (const p of ['Torts/Negligence/Remedies overview.md', 'Torts/Week 10.md', 'Torts/Week 2.md', 'Torts/Duty of care.md']) { const f = vault.getFileByPath(p); if (f) await vault.trash(f, true); }
+		return (/^in /.test(where) && places.includes('Top level') && made) || `where=${where} places=${places.slice(0, 5).join('|')} made=${made}`;
 	});
 
 	await check('cheat sheet: "?" lists the Docket keys, prefixes and every shortcut by section', async () => {

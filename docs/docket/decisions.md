@@ -265,3 +265,20 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     **A screen-reader pass by a person is still to do** (the plan asks for it; it cannot be automated here).
 76. **Budgets with 10,000 notes** (`npm run bench`, this machine): the Docket opens in about 2 ms, keystrokes
     take a median of 6 ms (90 % under 12 ms, worst 14 ms), a split about 9 ms; CI reports the same checks.
+
+## After 0.5.0: Units and note creation (user feedback)
+
+78. **Names first.** "New note" (Mod+N, Units, N on a row) opens one dialog: the name, then the place (a
+    subject or topic; the open note's folder unless another was chosen). Enter creates it. No "Untitled" note
+    to rename afterwards. A note that already exists by that name is opened instead.
+79. **Creating in a chosen place**: N on any Units row makes a note in that folder (a note row: its folder),
+    T a topic there (at the top: a subject); every opened folder ends with "+ New note in …"; "+ New subject"
+    closes the list. "Create note “X”" in search says where it will go, and → lists every other place.
+80. **Subjects and topics are explained once** at the top of Units (with the keys); folder rows show an arrow
+    (open or closed) and their note count instead of a "Subject"/"Topic" label on every row. The attachments
+    folder is not listed (it holds pasted files, not notes).
+81. **Sorting stays A–Z** (the user's choice), now ignoring case and with numbers in order ("Week 2" before
+    "Week 10"); folders before notes.
+82. **Fixed: two saves of the same file at once** (two settings changed together) shared a temporary file
+    name, so one failed and could lose a change. Each write now has its own.
+77. **Mouse clicks inside the Docket keep it open** (fixed after 0.5.0): clicking a panel tab or a row that redraws the panel removed the clicked element, focus fell to the page, and peek mode took that for leaving. Focus dropping to the page now returns to the Docket's input; a click outside (on anything, focusable or not) still dismisses it in peek mode.
