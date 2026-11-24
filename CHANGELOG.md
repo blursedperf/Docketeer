@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.8.0
 
 - **PDFs open in Quire.** Judgments, readings and slides open in a tab: pages appear as you scroll, with text you
   can select and copy, zoom and *Fit the width*, and a page box that takes the printed page (`iv`, `112`) as well
@@ -28,14 +28,11 @@
   - Links to a recording that is not in the homebase say so instead of making an empty note.
 - **Fixed**: on macOS, shortcuts with ⌥ and a letter never matched, because ⌥ types a symbol (⌥K is ˚).
 - Leaving reading view stops what it was playing; closing a note releases its editor.
-- **PDFs, audio and video from the homebase can be loaded by the app.** The internal `quire://app/vault/`
-  address, which served only pictures, now also serves PDFs, video (MP4, WebM, Ogg, QuickTime), audio (MP3,
-  M4A, AAC, Ogg/Opus, WAV, FLAC) and WebVTT captions. Files are streamed from disk rather than read into
-  memory, and byte ranges are honoured, so long lecture recordings open at once and can be seeked. Notes,
-  HTML and scripts are still refused. Nothing shows these files yet: embeds and the PDF view build on this.
-- Tests: `@quire/app` has unit tests (types served, Range parsing, 206/416 answers); the smoke test plays a
-  recording from the homebase, seeks it, checks a note cannot be loaded as media, and fails if no byte-range
-  answer was sent.
+- **Recordings stream from disk.** Video and audio in the homebase are read as they are needed rather
+  than all at once, so a long lecture recording opens at once and can be skipped through. Notes, HTML and
+  scripts are never served as files.
+- **Plugin API**: `app.media` (the players on screen and the one in use), `MediaView`, `createPlayer`,
+  `timestampLink` and the timestamp helpers; `workspace.openBeside` opens a source beside the note.
 
 ## v0.7.1
 
