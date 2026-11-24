@@ -313,6 +313,16 @@ export class Menu extends Component {
 		this.dom = createDiv({ cls: 'menu' });
 	}
 
+	/** The items added so far (for offering a menu's actions elsewhere, such as in the Docket). */
+	listItems(): { title: string; icon: string | null; warning: boolean; run(): void }[] {
+		return this._items.filter((i): i is MenuItem => i !== 'separator' && !i.disabled).map((i) => ({
+			title: i.dom.querySelector('.menu-item-title')?.textContent ?? '',
+			icon: (i.dom.querySelector('.menu-item-icon') as HTMLElement | null)?.dataset.icon ?? null,
+			warning: i.dom.classList.contains('is-warning'),
+			run: () => i.dom.click(),
+		}));
+	}
+
 	addItem(cb: (item: MenuItem) => unknown): this {
 		const item = new MenuItem(this);
 		cb(item);

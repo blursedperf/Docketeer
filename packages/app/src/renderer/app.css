@@ -926,3 +926,25 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 .docket-option.mod-more { min-height: 0; }
 .docket-option.mod-more .docket-option-title { font-size: var(--text-xs); color: var(--text-muted); }
 .docket-option.mod-more.is-selected .docket-option-title { color: inherit; }
+
+/* Docket panels (Phase 4). */
+.docket-section { display: flex; flex-direction: column; margin-bottom: var(--space-2); }
+.docket-item { padding-left: calc(var(--space-3) + var(--outline-level, 0) * var(--space-4)); }
+.docket-option-title.is-italic { font-style: italic; }
+.docket-badge { flex-shrink: 0; font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
+.docket-item.is-unconfirmed .docket-badge { color: var(--doom-orange, var(--text-muted)); }
+.docket-item.is-missing { color: var(--text-muted); }
+.docket-item.is-focus { background: rgba(var(--doom-blue-rgb), 0.1); }
+.docket-item.is-command .docket-option-title { color: var(--text-muted); }
+.docket-filter { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1) var(--space-2) var(--space-2); }
+.docket-item.docket-chip { width: auto; min-height: 0; padding: 0 var(--space-2); border: var(--border-width) solid var(--doom-border-subtle); border-left-width: var(--border-width); font-size: var(--text-sm); }
+.docket-item.docket-chip.is-active { color: var(--doom-blue-text); border-color: var(--doom-blue); }
+.docket-form { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-1) var(--space-2); }
+.docket-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2) var(--space-3); }
+.docket-field { display: flex; flex-direction: column; gap: var(--space-1); }
+.docket-field-label { font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-muted); }
+.docket-preview { padding: var(--space-2) var(--space-3); border-left: 2px solid var(--doom-blue); background: var(--doom-base0); }
+.docket-preview-kind { font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
+.docket-preview-text { font-family: var(--font-text); }
+.docket-preview-missing { font-size: var(--text-xs); color: var(--doom-orange, var(--text-muted)); }
+.docket-preview-missing.is-flash { font-weight: var(--font-bold); }

@@ -41,6 +41,9 @@ export { type KeyContext, hotkeyString, eventString, parseHotkey, reservedFor } 
 export { parsePrefix, caseNameAt, inFootnote, contextPanel, groupResults, mergeResults, clampHeight, DOCKET_PREFIXES } from './docket-logic';
 export { SearchIndex, tokenize, type TextHit, type NameHit, type HeadingHit, type RankContext, type IndexedHeading } from './search-index';
 export { SearchService } from './search-service';
+export { findAuthorities, nextOccurrence, normaliseName, JURISDICTIONS, type Authority, type AuthorityKind, type AuthorityDecisions, type Jurisdiction, type Occurrence } from './authorities';
+export { outlineHeadings, moveSection, shiftLevel, isCaseBrief, addBriefField, BRIEF_FIELDS, type OutlineHeading } from './outline-edit';
+export { CITATION_STYLES, AGLC4, planCitation, footnoteChanges, noteFootnotes, type CitationStyle, type FieldDef, type Source, type SourceKind, type SourceKindDef } from './cite';
 export { Usage, frecency, type UsageEntry } from './usage';
 export { DocketRegistry, type DocketPanel, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';

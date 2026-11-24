@@ -5,7 +5,7 @@
  */
 import { EditorView } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
-import { type App, MarkdownView, type TFile, saveAttachment, topModal } from '@quire/api';
+import { type App, MarkdownView, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 
 interface Check { name: string; ok: boolean; detail?: string; }
 
@@ -737,6 +737,28 @@ export async function runShots(app: App): Promise<void> {
 	(docket as unknown as { showAll(type: string): void }).showAll('In notes');
 	await shot('28-docket-full-text');
 	docket.close(true);
+	type Panels = { showPanel(id: string): void; refreshPanel(i?: number): Promise<void> };
+	const dp = docket as unknown as Panels;
+	if (ecm) { ecm.dispatch({ selection: { anchor: 0 } }); ecm.focus(); }
+	docket.open({ panel: 'core:authorities' });
+	await sleep(200);
+	await shot('29-docket-authorities-all');
+	dp.showPanel('core:cite');
+	await sleep(100);
+	[...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((r) => r.textContent?.includes('Case (reported)'))?.click();
+	await sleep(150);
+	const setField = (name: string, v: string) => { const i = document.querySelector<HTMLInputElement>(`.docket-form [name="${name}"]`); if (i) { i.value = v; i.dispatchEvent(new Event('input')); } };
+	setField('name', 'Example v Commonwealth'); setField('year', '1999'); setField('volume', '200'); setField('report', 'CLR'); setField('page', '10'); setField('short', 'Example'); setField('pinpoint', '15');
+	(document.activeElement as HTMLElement | null)?.blur();
+	await shot('30-docket-cite');
+	document.querySelector('.docket-form')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+	dp.showPanel('core:units');
+	await sleep(150);
+	await shot('31-docket-units');
+	dp.showPanel('core:homebase');
+	await sleep(150);
+	await shot('32-docket-homebase');
+	docket.close(true);
 	await app.setConfig('docket', false);
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }
@@ -891,7 +913,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		ui()!.open();
 		await sleep(30);
 		const auth = document.querySelector('.docket-tab.is-active')?.textContent ?? '';
-		const name = document.querySelector('.docket-selected-name')?.textContent ?? '';
+		const name = document.querySelector('.docket-item.is-focus .docket-option-title')?.textContent ?? '';
 		ui()!.close(true);
 		const fn = text.search(/^\[\^\d+\]:/m);
 		ed.dispatch({ selection: { anchor: fn + 6 } });
@@ -990,6 +1012,179 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		for (let i = 0; i < 5; i++) app.search.usage.record('note', welcome.path);
 		const used = app.search.usage.score('note', welcome.path) > 0;
 		return (settings.some((t) => /vim/i.test(t ?? '')) && used) || `settings=${settings.join('|')} used=${used}`;
+	});
+
+	// ---- Phase 4: the panels ------------------------------------------------------------------------
+	const essayFile = vault.getFileByPath('AGLC4 example essay.md');
+	const openEssay = async () => { if (essayFile) await workspace.getLeaf(false).openFile(essayFile); await sleep(150); const v = workspace.getActiveViewOfType(MarkdownView)!; if (v.getMode() !== 'source') await v.setMode('source'); return v.editor.cm; };
+	const rowsText = () => [...document.querySelectorAll('.docket-panel .docket-item .docket-option-title')].map((e) => e.textContent ?? '');
+	const focusRow = (title: string) => { const r = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((x) => x.querySelector('.docket-option-title')?.textContent === title); r?.focus(); return r; };
+
+	await check('authorities: cases and legislation in the essay, Enter goes to the next place', async () => {
+		const ed = await openEssay();
+		ed.dispatch({ selection: { anchor: 0 } });
+		ed.focus();
+		press('p', { ctrl: true });
+		press('1', { ctrl: true });
+		await sleep(150);
+		const groups = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
+		const r = focusRow(rowsText().find((t) => t.startsWith('Mabo v Queensland')) ?? '');
+		const chips = document.querySelectorAll('.docket-panel .docket-chip').length;
+		press('Enter');
+		await sleep(50);
+		const sel = ed.state.sliceDoc(ed.state.selection.main.from, ed.state.selection.main.to);
+		return (groups.includes('Cases') && groups.includes('Legislation') && !!r && chips > 1 && sel.startsWith('Mabo')) || `groups=${groups.join('|')} row=${!!r} chips=${chips} sel=${sel}`;
+	});
+
+	await check('authorities: → lists every note citing it; "@" searches them', async () => {
+		await openEssay();
+		press('p', { ctrl: true });
+		press('1', { ctrl: true });
+		await sleep(150);
+		focusRow(rowsText().find((t) => t.startsWith('Mabo v Queensland')) ?? '');
+		press('ArrowRight');
+		await sleep(30);
+		const acts = titles();
+		const every = acts.indexOf('Every note citing this');
+		for (let i = 0; i < every; i++) press('ArrowDown');
+		press('Enter');
+		await sleep(300);
+		const list = titles();
+		press('Escape'); press('Escape');
+		await type('@mabo');
+		const at = titles();
+		press('Escape'); press('Escape');
+		return (every >= 0 && list.includes('AGLC4 example essay') && at.some((t) => t?.startsWith('Mabo'))) || `actions=${acts.join('|')} list=${list.join('|')} at=${at.join('|')}`;
+	});
+
+	await check('outline: Alt+↓ moves a section, Alt+→ demotes it, case brief fields can be added', async () => {
+		const brief = await vault.create('Brief test.md', '---\ntype: case-brief\n---\n# Test v Test\n\n## Facts\n\nF.\n\n## Held\n\nH.\n');
+		await workspace.getLeaf(false).openFile(brief);
+		await sleep(150);
+		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		ed.focus();
+		press('p', { ctrl: true });
+		press('2', { ctrl: true });
+		await sleep(100);
+		const fields = rowsText().slice(0, 5).join('|');
+		focusRow('Facts');
+		const facts = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-outline-item')].find((x) => x.textContent?.includes('Facts'))!;
+		facts.focus();
+		facts.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true, bubbles: true, cancelable: true }));
+		await sleep(100);
+		const moved = /## Held[\s\S]*## Facts/.test(ed.state.doc.toString());
+		const again = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-outline-item')].find((x) => x.textContent?.includes('Facts'))!;
+		again.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true }));
+		await sleep(100);
+		const demoted = ed.state.doc.toString().includes('### Facts');
+		focusRow('Ratio');
+		press('Enter');
+		await sleep(50);
+		const added = ed.state.doc.toString().includes('## Ratio');
+		return (fields === 'Facts|Issues|Held|Ratio|Obiter' && moved && demoted && added) || `fields=${fields} moved=${moved} demoted=${demoted} added=${added}`;
+	});
+
+	await check('cite: build a case citation, insert it as a footnote, then Ibid', async () => {
+		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		const end = ed.state.doc.toString().indexOf('F.') + 2;
+		ed.dispatch({ selection: { anchor: end } });
+		ed.focus();
+		const fill = async () => {
+			press('p', { ctrl: true });
+			press('4', { ctrl: true });
+			await sleep(80);
+			focusRow('Case (reported)');
+			press('Enter');
+			await sleep(80);
+			const set = (name: string, v: string) => { const i = document.querySelector<HTMLInputElement>(`.docket-form [name="${name}"]`)!; i.value = v; i.dispatchEvent(new Event('input')); };
+			set('name', 'Example v Commonwealth'); set('year', '1999'); set('volume', '200'); set('report', 'CLR'); set('page', '10'); set('pinpoint', '15');
+			const preview = document.querySelector('.docket-preview-text')?.textContent ?? '';
+			document.querySelector<HTMLInputElement>('.docket-form [name="pinpoint"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+			await sleep(80);
+			return preview;
+		};
+		const p1 = await fill();
+		const after1 = ed.state.doc.toString();
+		// Straight after the first footnote's reference (the Alt+↓ check put Held first, so not "H.").
+		ed.dispatch({ selection: { anchor: after1.indexOf('[^1]') + 4 } });
+		ed.focus();
+		const p2 = await fill();
+		const text = ed.state.doc.toString();
+		const ok = p1 === 'Example v Commonwealth (1999) 200 CLR 10, 15.' && /\[\^1\]: \*Example v Commonwealth\* \(1999\) 200 CLR 10, 15\./.test(text) && /\[\^2\]: Ibid 15\./.test(text) && p2 === 'Ibid 15.';
+		return ok || `p1=${p1} p2=${p2} text=${JSON.stringify(text.slice(-160))}`;
+	});
+
+	await check('units: pin, archive and folders from the keyboard', async () => {
+		const brief = vault.getFileByPath('Brief test.md')!;
+		commands.executeCommandById('app:toggle-pin-note', { file: brief });
+		await sleep(50);
+		press('p', { ctrl: true });
+		press('3', { ctrl: true });
+		await sleep(100);
+		const sections = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
+		const folder = focusRow('Folder');
+		press('Enter');
+		await sleep(80);
+		const expanded = rowsText().includes('Inside');
+		press('Escape'); press('Escape');
+		commands.executeCommandById('app:archive-note', { file: brief });
+		await sleep(150);
+		const archived = !!vault.getFileByPath('Archive/Brief test.md');
+		const pinFollowed = (app.config.pinnedNotes ?? []).includes('Archive/Brief test.md');
+		commands.executeCommandById('app:toggle-pin-note', { file: vault.getFileByPath('Archive/Brief test.md')! });
+		return (sections.includes('Pinned') && !!folder && expanded && archived && pinFollowed) || `sections=${sections.join('|')} folder=${!!folder} expanded=${expanded} archived=${archived} pin=${pinFollowed}`;
+	});
+
+	await check('homebase: export asks first and redacts', async () => {
+		await openEssay();
+		press('p', { ctrl: true });
+		press('5', { ctrl: true });
+		await sleep(80);
+		const lock = rowsText().includes('Not locked');
+		focusRow(rowsText().find((t) => t.startsWith('Export')) ?? '');
+		press('Enter');
+		await sleep(80);
+		const modal = topModal();
+		const area = document.querySelector<HTMLTextAreaElement>('.modal textarea');
+		if (area) { area.value = 'Queensland'; area.dispatchEvent(new Event('input')); }
+		[...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((b) => b.textContent === 'Export')?.click();
+		await sleep(300);
+		const out = vault.getFileByPath('Exports/AGLC4 example essay.md');
+		const text = out ? await vault.read(out) : '';
+		if (out) await vault.trash(out, true);
+		return (lock && !!modal && !!out && text.includes('█') && !/Queensland/i.test(text)) || `lock=${lock} modal=${!!modal} out=${!!out}`;
+	});
+
+	await check('layout: open panes listed; Enter moves to one', async () => {
+		const first = workspace.activeLeaf!;
+		await workspace.duplicateLeaf(first, 'vertical');
+		await sleep(80);
+		press('p', { ctrl: true });
+		press('6', { ctrl: true });
+		await sleep(80);
+		const panes = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent).filter((t) => t?.startsWith('Pane')).length;
+		const rows = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')];
+		const other = rows.find((r) => !r.classList.contains('is-focus') && r.querySelector('.docket-badge') === null);
+		other?.focus();
+		press('Enter');
+		await sleep(50);
+		// The split took the keyboard; Enter on the other pane's row goes back to the first.
+		const moved = workspace.activeLeaf === first;
+		const extra: WorkspaceLeaf[] = [];
+		workspace.iterateRootLeaves((l) => { if (l !== first) extra.push(l); });
+		for (const l of extra) l.detach();
+		await sleep(50);
+		return (panes >= 2 && moved) || `panes=${panes} moved=${moved}`;
+	});
+
+	await check('note actions include links and the plugins\' file actions', async () => {
+		press('p', { ctrl: true });
+		await type('aglc4 example');
+		press('ArrowRight');
+		await sleep(30);
+		const acts = titles();
+		press('Escape'); press('Escape'); press('Escape');
+		return (acts.includes('Notes linking here') && acts.some((t) => /Word/.test(t ?? '')) && acts.includes('Pin to Units')) || acts.join('|');
 	});
 
 	await check('docket: turning it off removes it and gives Mod+P back to the palette', async () => {

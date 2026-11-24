@@ -174,3 +174,35 @@ Raised by the inventory:
    `registerDocketPanel` (keeps the core general for the later lawyers' app; Cite already lives in the plugin)?
 8. **Naming**: "Vault" panel, or "Homebase" to match the rest of the app?
 9. **macOS signing**: still pending your Apple Developer account (separate from this plan).
+
+## 9. Parity status at Checkpoint 4
+
+Every row of the parity table (§6), and where it is now reachable from the Docket by keyboard alone.
+✓ done · ◐ done with a gap noted · → later phase (named).
+
+| Existing feature | Status | In the Docket |
+|---|---|---|
+| File tree, open, new note/folder | ✓ | Units (Mod+3): subjects → topics → notes; Enter opens, Mod/Alt+Enter splits; "New subject", "New note"; → on a folder: new note / new topic here |
+| Rename, move, copy, delete, show in folder | ✓ | → on any note (search results, Units, Links lists) and on folders; also commands (`>rename` …) |
+| Drag to move, drag into editor to link | ✓ | "Move to…" action; Shift+Enter inserts `[[link]]` at the cursor |
+| Plugin file actions (version history, export, import Word) | ✓ | → on a note lists every plugin `file-menu` item (e.g. "Export to Word with AGLC4 footnotes") |
+| Full-text search | ✓ | Docket input: "In notes" group, matched words marked (Phase 3) |
+| Tags | ✓ | `#` prefix (tags and folders); Enter opens the tag search |
+| Backlinks, unlinked mentions | ◐ | → "Notes linking here" on any note lists each linking line. Unlinked mentions (with "Link" button) stay in the Backlinks sidebar until Phase 6 decides: a "Mentions" action is the planned home |
+| Outgoing links | ✓ | → "Links from this note"; Outline panel "Links" row; unresolved links create the note on Enter |
+| Outline | ✓ | Outline (Mod+2): jump, Alt+↑/↓ move section, Alt+←/→ promote/demote, case-brief fields (add missing) |
+| Page preview | ✓ | Cite panel → "Page preview" (opens the AGLC4 view, which can be tiled) |
+| Version history | ✓ | Homebase panel → "Version history of this note"; → on a note (plugin action) |
+| AGLC4 problems list, fixes | ✓ | Cite panel → "List citation problems", "Fix all fixable problems", "Tidy footnotes" |
+| Cite a kind of source, next element | ✓ | Cite panel: builder for cases (reported, MNC), legislation, articles, books; full / Ibid / (n X) chosen automatically. The plugin's as-you-type suggestions stay via "Insert a footnote" |
+| Bibliography, export Word/HTML | ✓ | Cite panel → "Insert a bibliography"; plugin exports via → on a note; Homebase → "Export…" (Markdown/HTML, confirm, redaction) |
+| Command palette | ✓ | `>` prefix, shortcuts shown (Phase 2) |
+| Quick switcher | ✓ | Docket input, ranked by use (Phase 3) |
+| Settings search | ✓ | "Settings" group in the Docket (Phase 3) |
+| Ribbon buttons | ✓ | Every ribbon button is a command (`>`); the ribbon goes in Phase 6 |
+| Toggle sidebars | → Phase 6 | Retired with the sidebars (kept for the Classic sidebars setting) |
+| Splits, tabs | ◐ | Layout (Mod+6): open panes, Enter moves between them, → split or close. Keyboard focus/move/resize, presets, reopen closed tab: Phase 5 |
+| Open another homebase | ✓ | Homebase panel; command |
+| Status bar | ✓ | Unchanged (not a sidebar) |
+| Authorities (new) | ✓ | Authorities (Mod+1): cases, legislation (with sections), secondary sources; counts; Enter → next place; → every note citing it, cite it, confirm, merge; jurisdiction filter; `@` prefix |
+| Homebase / lock (new) | → Locking phase | Homebase (Mod+5) shows "Not locked"; locking and encryption are their own phase (decision 10) |

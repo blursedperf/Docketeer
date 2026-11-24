@@ -124,3 +124,38 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     without copying them to lowercase again; built icons are reused; the first result is selected without
     forcing a layout; tag counts are cached until a note changes; and full text starts at **three
     characters** (two match nearly every note). Locally: median 5 ms, worst 11.5 ms a keystroke.
+
+## Phase 4
+
+38. **Authorities detection is in core** (`packages/api/src/authorities.ts`), pattern-based and original
+    rather than a port of the AGLC4 plugin's grammar (that grammar classifies footnote text as you type; this
+    finds names in running text and footnotes). Cases: "X v Y" with any medium neutral or report citation
+    after it; legislation: a title ending in Act, Regulations, Rules, Code, Ordinance or Constitution, with year,
+    jurisdiction and sections; secondary sources: journal articles and books in footnotes. Short titles
+    defined with ('…') count later uses as occurrences. Jurisdiction comes from the court or report series.
+    A case or Act found without a citation (or year and jurisdiction) is **unconfirmed**.
+39. **Confirm and merge decisions** are kept in `.quire/authorities.json` by authority key (kind and name),
+    not by note, so they apply in every note. No note text or paths are stored.
+40. **"Every note citing this"** uses the index's candidates (notes containing all words of the name), then
+    detects authorities in just those, a hundred at a time so the window stays responsive.
+41. **Citation formatting is a core module per edition** (`packages/api/src/cite/`): a `CitationStyle`
+    interface and `AGLC4`. Kinds so far: reported case, medium neutral citation, legislation, journal article,
+    book. Ibid / "(n X)" / full is decided from the note's footnotes (Ibid when the previous footnote cites only
+    this source, following earlier Ibids back; "(n X)" when cited earlier). Legislation's later references use
+    the (short) title without "(n X)". All test expectations are marked `// VERIFY against AGLC`; nothing is
+    copied from the guide. The AGLC4 plugin keeps its own grammar and as-you-type suggestions; the Cite panel
+    lists its tools.
+42. **New footnotes** take the next free number, the reference at the cursor and the definition after the
+    note's last footnote. The plugin's "Tidy footnotes" renumbers when references are out of order.
+43. **Outline edits** move or re-level whole sections (with their subheadings) as one undo step. A note is a
+    case brief when `type: case-brief`, a `case-brief` tag, or three of the five field headings.
+44. **Units**: pinned notes are `pinnedNotes` in app.json (paths, followed on rename, dropped on delete);
+    "Archive note" moves a note to `Archive/<its path>` (`archiveFolder` setting), listed last in Units. The
+    words "Subject" and "Topic" live in one place (`UNIT_LABELS`) for clients and matters later.
+45. **Export** (Homebase panel) writes Markdown or HTML to `Exports/` in the homebase after a dialog that says
+    exactly what will be written, with options to drop comments and properties and to black out listed names
+    or phrases (█). Nothing leaves the computer.
+46. **Panel items have actions**: → or Mod+. on a row opens its actions in the Docket (Esc or ← returns);
+    panels can show a list of results ("Notes citing …", "Links to …") the same way. Note actions everywhere
+    include the plugins' `file-menu` items, read through a new `Menu.listItems()`.
+47. **Inside panel forms** (Cite), Tab moves between fields and arrows edit text; Esc goes back a step.

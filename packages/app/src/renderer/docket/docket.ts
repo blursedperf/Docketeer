@@ -7,8 +7,10 @@ import type { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import {
 	type App, type DocketPanel, type OpenWhere, type SearchResult,
-	MarkdownView, Notice, Platform, clampHeight, contextPanel, formatHotkey, groupResults, mergeResults, parsePrefix, setIcon, topModal,
+	MarkdownView, Notice, Platform, TFile, clampHeight, contextPanel, formatHotkey, groupResults, mergeResults, parsePrefix, setIcon, topModal,
 } from '@quire/api';
+
+import { noteActions } from './actions';
 
 type Zone = 'input' | 'results' | 'panel' | 'tabs';
 type Where = OpenWhere | 'insert';
@@ -17,7 +19,7 @@ type Where = OpenWhere | 'insert';
 const EMPTY: Record<string, string> = {
 	'': 'No matches.',
 	'>': 'No commands match.',
-	'@': 'Authorities arrive with the Authorities panel.',
+	'@': 'No authorities in this note match.',
 	'#': 'No folders or tags match.',
 	'/': 'No headings in this note match.',
 	'?': 'No shortcuts match.',
@@ -25,7 +27,7 @@ const EMPTY: Record<string, string> = {
 
 const PREFIX_LABEL: Record<string, string> = { '': 'All', '>': 'Commands', '@': 'Authorities', '#': 'Folders & tags', '/': 'Headings', '?': 'Shortcuts' };
 
-interface ActionItem { title: string; icon?: string; run: () => unknown }
+export interface ActionItem { title: string; icon?: string; run: () => unknown }
 
 export class Docket {
 	readonly el: HTMLElement;
@@ -52,6 +54,8 @@ export class Docket {
 	private seq = 0;
 	/** "Show all" of one group. */
 	private only: string | null = null;
+	/** A list a panel or action asked to show ("Notes citing Mabo"); Esc returns. */
+	private custom: { title: string; items: SearchResult[] } | null = null;
 	private detach: (() => void)[] = [];
 
 	constructor(private app: App) {
@@ -159,6 +163,7 @@ export class Docket {
 		this.handleEl.addClass('is-open');
 		this.inputEl.value = opts.query ?? '';
 		this.only = null;
+		this.custom = null;
 		this.actions = null;
 		this.actionsOf = null;
 		this.renderTabs();
@@ -284,8 +289,35 @@ export class Docket {
 		this.inputEl.value = '';
 		this.actions = null;
 		this.actionsOf = null;
+		this.custom = null;
 		this.renderTabs();
 		void this.update();
+	}
+
+	/** The editor the Docket was opened from (for panels that insert or jump), if it is still open. */
+	get targetEditor(): EditorView | null {
+		const cm = this.saved?.cm;
+		return cm?.dom.isConnected ? cm : null;
+	}
+
+	/** Show a list of results under a title (typing filters it); Esc returns to where it was. */
+	showList(title: string, items: SearchResult[]): void {
+		if (!this.opened) this.open();
+		this.custom = { title, items };
+		this.actions = null;
+		this.actionsOf = null;
+		this.inputEl.value = '';
+		void this.update();
+		this.focusZone('input');
+	}
+
+	/** Show a list of actions (for a panel item); Esc or ← returns to the panel. */
+	showActionList(title: string, actions: ActionItem[]): void {
+		if (!actions.length) return;
+		this.actions = actions;
+		this.actionsOf = { id: 'docket:panel', type: '', title };
+		this.renderActions();
+		this.focusZone('input');
 	}
 
 	private renderTabs(): void {
@@ -305,17 +337,28 @@ export class Docket {
 		});
 	}
 
-	private renderPanel(): void {
+	private renderPanel(): Promise<void> {
 		const panel = this.app.docket.panels.get(this.panelId) ?? null;
 		if (this.shownPanel && this.shownPanel !== panel) this.shownPanel.hide?.();
 		this.shownPanel = panel;
 		this.panelEl.empty();
-		if (!panel) { this.panelEl.createDiv({ cls: 'docket-empty', text: 'No panels.' }); return; }
+		if (!panel) { this.panelEl.createDiv({ cls: 'docket-empty', text: 'No panels.' }); return Promise.resolve(); }
 		try {
-			void Promise.resolve(panel.render(this.panelEl, { focus: this.panelFocus })).catch(() => console.error(`Docket panel ${panel.id} failed`));
+			return Promise.resolve(panel.render(this.panelEl, { focus: this.panelFocus })).catch(() => console.error(`Docket panel ${panel.id} failed`));
 		} catch {
 			console.error(`Docket panel ${panel.id} failed`);
+			return Promise.resolve();
 		}
+	}
+
+	/** Draw the panel again (after a change it made), keeping the keyboard on the same row. */
+	async refreshPanel(focusIndex?: number): Promise<void> {
+		const rows = () => Array.from(this.panelEl.querySelectorAll<HTMLElement>('[data-docket-item]'));
+		const at = focusIndex ?? rows().indexOf(document.activeElement as HTMLElement);
+		const wasPanel = this.panelEl.contains(document.activeElement);
+		await this.renderPanel();
+		const list = rows();
+		if ((wasPanel || focusIndex !== undefined) && list.length) list[Math.max(0, Math.min(list.length - 1, at))]!.focus();
 	}
 
 	// -----------------------------------------------------------------------------------------------
@@ -327,13 +370,22 @@ export class Docket {
 		this.prefixEl.setText(this.only ?? PREFIX_LABEL[q.prefix] ?? '');
 		this.prefixEl.toggleClass('is-filtered', q.prefix !== '' || !!this.only);
 		if (this.actions) { this.renderActions(); return; }
+		if (this.custom) {
+			const words = this.inputEl.value.toLowerCase().split(/\s+/).filter(Boolean);
+			this.items = this.custom.items.filter((r) => words.every((w) => `${r.title} ${r.detail ?? ''}`.toLowerCase().includes(w)));
+			this.prefixEl.setText(this.custom.title);
+			this.prefixEl.addClass('is-filtered');
+			this.selected = 0;
+			this.renderResults([{ type: this.custom.title, items: this.items, total: this.items.length }], '');
+			return;
+		}
 		if (!q.prefix && !q.text) {
 			this.resultsEl.setAttribute('hidden', '');
 			this.panelEl.removeAttribute('hidden');
 			this.inputEl.setAttribute('aria-expanded', 'false');
 			this.inputEl.removeAttribute('aria-activedescendant');
 			this.items = [];
-			this.renderPanel();
+			await this.renderPanel();
 			return;
 		}
 		const seq = ++this.seq;
@@ -474,6 +526,8 @@ export class Docket {
 			list.push({ title: 'Open to the right', icon: 'separator-vertical', run: () => r.open!('right') });
 			list.push({ title: 'Open below', icon: 'separator-horizontal', run: () => r.open!('below') });
 		}
+		// A note: everything that can be done to it (file commands, links, plugins' file actions).
+		if (r.file instanceof TFile) list.push(...noteActions(this.app, this, r.file).filter((a) => !/^Open( to the right| below)?$/.test(a.title)));
 		if (r.insert?.()) list.push({ title: 'Insert as a link', icon: 'link', run: () => { const cm = this.saved?.cm; const t = r.insert!(); if (cm && t) { cm.dispatch(cm.state.replaceSelection(t)); cm.focus(); } } });
 		for (const a of this.app.docket.actionsFor(r)) list.push({ title: a.title, icon: a.icon, run: () => a.run(r) });
 		if (!list.length) return false;
@@ -502,6 +556,12 @@ export class Docket {
 
 	private leaveActions(): void {
 		const of = this.actionsOf;
+		if (of?.id === 'docket:panel') {
+			this.actions = null;
+			this.actionsOf = null;
+			void this.update().then(() => this.focusZone('panel'));
+			return;
+		}
 		this.actions = null;
 		this.actionsOf = null;
 		void this.update().then(() => this.select(Math.max(0, this.items.findIndex((r) => r.id === of?.id && r.type === of?.type))));
@@ -542,10 +602,17 @@ export class Docket {
 				if (this.actions) this.leaveActions();
 				else if (zone !== 'input') this.focusZone('input');
 				else if (this.only) { this.only = null; void this.update(); }
+				else if (this.custom) { this.custom = null; this.inputEl.value = ''; void this.update(); }
 				else if (this.inputEl.value) { this.inputEl.value = ''; void this.update(); }
 				else this.close();
 				return;
 			case 'Tab': {
+				// In a panel form, Tab moves between its fields; only past the first or last does it leave.
+				if (zone === 'panel') {
+					const fields = Array.from(this.panelEl.querySelectorAll<HTMLElement>('input, select, textarea, button, [tabindex="0"]')).filter((x) => x.offsetParent !== null);
+					const at = fields.indexOf(document.activeElement as HTMLElement);
+					if (at >= 0 && fields.length > 1 && (e.shiftKey ? at > 0 : at < fields.length - 1) && document.activeElement?.closest('[data-docket-form]')) return;
+				}
 				handled();
 				const zs = this.zones();
 				const i = zs.indexOf(zone === 'results' || zone === 'panel' ? zs[1]! : zone);
@@ -555,6 +622,8 @@ export class Docket {
 			case 'ArrowDown':
 			case 'ArrowUp': {
 				const step = e.key === 'ArrowDown' ? 1 : -1;
+				if (zone === 'panel' && /^(INPUT|SELECT|TEXTAREA)$/.test((document.activeElement as HTMLElement | null)?.tagName ?? '')) return;
+				if (zone === 'panel' && e.altKey) return; // panels use Alt+arrows (moving sections)
 				if (e.altKey && mod) return; // resize: a command
 				if (listy && !this.resultsEl.hasAttribute('hidden')) { handled(); this.select(this.selected + step); return; }
 				if (zone === 'panel' || (zone === 'input' && step === 1 && !this.panelEl.hasAttribute('hidden'))) {
@@ -568,6 +637,11 @@ export class Docket {
 			}
 			case 'ArrowRight':
 			case 'ArrowLeft':
+				if (zone === 'panel') {
+					const el = document.activeElement as HTMLElement | null;
+					if (e.key === 'ArrowRight' && !e.altKey && el?.dataset.docketActions !== undefined) { handled(); el.dispatchEvent(new CustomEvent('docket-actions')); }
+					return;
+				}
 				if (zone === 'tabs') {
 					handled();
 					const tabs = Array.from(this.tabsEl.querySelectorAll<HTMLElement>('.docket-tab'));
@@ -584,6 +658,7 @@ export class Docket {
 				return;
 			case '.':
 				if (mod && listy) { handled(); this.showActions(); }
+				else if (mod && zone === 'panel' && (document.activeElement as HTMLElement | null)?.dataset.docketActions !== undefined) { handled(); document.activeElement!.dispatchEvent(new CustomEvent('docket-actions')); }
 				return;
 			case 'Enter':
 				if (listy && !this.resultsEl.hasAttribute('hidden')) { handled(); this.choose(this.whereFor(e)); return; }

@@ -360,6 +360,12 @@ export interface AppConfig {
 	docketHeight: number;
 	/** The last panel shown. */
 	docketPanel: string;
+	/** Notes pinned in the Units panel (paths). */
+	pinnedNotes: string[];
+	/** Where archived notes go (keeping their folders). */
+	archiveFolder: string;
+	/** Citation style for the Cite panel. */
+	citationStyle: string;
 	[key: string]: unknown;
 }
 
@@ -393,6 +399,9 @@ export const DEFAULT_CONFIG: AppConfig = {
 	docketMode: 'peek',
 	docketHeight: 0.35,
 	docketPanel: 'core:outline',
+	pinnedNotes: [],
+	archiveFolder: 'Archive',
+	citationStyle: 'aglc4',
 };
 
 /** The running app: everything a plugin reaches through `this.app`. */

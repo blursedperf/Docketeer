@@ -7,6 +7,7 @@ import type { App, Hotkey } from '@quire/api';
 import { Docket } from './docket';
 import { registerCorePanels } from './panels';
 import { registerCoreProviders } from './providers';
+import { registerNoteCommands } from './actions';
 
 const MOD_P: Hotkey = { modifiers: ['Mod'], key: 'p' };
 
@@ -33,6 +34,8 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 			run: () => docket?.showPanelNumber(n),
 		});
 	}
+
+	registerNoteCommands(app);
 
 	const apply = () => {
 		const palette = app.commands.findCommand('app:command-palette');
