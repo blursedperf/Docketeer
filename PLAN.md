@@ -125,6 +125,15 @@ Known gaps, deliberately left for later phases:
 - The AGLC4 user guide in `plugins/aglc4/docs/` still says "Obsidian" in places.
 - No packaged installers yet (run from source with `npm start`).
 
+### Status (later on 2026-11-24)
+
+- Done: homebase naming, theming (palettes, accent, fonts, density, icon sets, CSS themes and snippets),
+  Phosphor icons. See docs/theming.md and docs/design/.
+- Next: the polish plan in docs/design/polish-plan.md (tokens, header bands, explorer grid, rows,
+  settings control column).
+- The AGLC4 plugin's own text still says "vault" in a few settings (history and export folders); it is
+  left as written in the plugin to keep the port to the import line.
+
 ### Phase 3 — Everyday parity
 - Offline spellcheck with bundled dictionaries.
 - Full-text search pane; backlinks and outgoing links; tags pane; outline pane.

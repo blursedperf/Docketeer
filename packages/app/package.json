@@ -8,11 +8,15 @@
     "build": "node build.mjs",
     "start": "electron .",
     "smoke": "electron . --smoke",
-    "dist": "electron-builder --config electron-builder.json --publish never"
+    "dist": "electron-builder --config electron-builder.json --publish never",
+    "shots": "electron . --shots"
   },
   "productName": "Quire",
   "description": "Offline Markdown notes, extensible with plugins. Ships with AGLC4 Citations.",
   "author": "blursedperf",
   "license": "MIT",
-  "homepage": "https://github.com/blursedperf/quire"
+  "homepage": "https://github.com/blursedperf/quire",
+  "devDependencies": {
+    "@phosphor-icons/core": "^2.1.1"
+  }
 }

@@ -15,7 +15,8 @@
     "audit": "node scripts/offline-audit.mjs",
     "smoke": "npm run build && npm run smoke -w @quire/app",
     "typecheck": "tsc -p packages/api --noEmit && tsc -p packages/app --noEmit && tsc -p plugins/aglc4 --noEmit",
-    "dist": "npm run build && npm run dist -w @quire/app"
+    "dist": "npm run build && npm run dist -w @quire/app",
+    "shots": "npm run build && npm run shots -w @quire/app"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.2.0",

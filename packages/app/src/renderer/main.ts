@@ -14,9 +14,10 @@ import * as cmMarkdown from '@codemirror/lang-markdown';
 import * as lezerCommon from '@lezer/common';
 import * as lezerHighlight from '@lezer/highlight';
 import * as lezerMarkdown from '@lezer/markdown';
-import { App, getHost, setIcon } from '@quire/api';
+import { App, getHost, setIcon, setIconPack } from '@quire/api';
 import { registerCore } from './core';
-import { runSmoke } from './smoke';
+import { registerBundledIconPacks } from './icon-packs';
+import { runShots, runSmoke } from './smoke';
 
 (globalThis as Record<string, unknown>).__quireModules = {
 	'@quire/api': api,
@@ -32,6 +33,9 @@ import { runSmoke } from './smoke';
 	'@lezer/markdown': lezerMarkdown,
 };
 
+registerBundledIconPacks();
+setIconPack('phosphor');
+
 async function welcome() {
 	const host = getHost();
 	document.title = 'Quire';
@@ -44,13 +48,13 @@ async function welcome() {
 	box.createEl('h1', { text: 'Quire' });
 	box.createEl('p', { cls: 'welcome-tagline', text: 'Notes in plain Markdown files, on your computer. Nothing goes online.' });
 	const actions = box.createDiv({ cls: 'welcome-actions' });
-	const b1 = actions.createEl('button', { cls: 'mod-cta', text: 'Open a folder as a vault' });
+	const b1 = actions.createEl('button', { cls: 'mod-cta', text: 'Open a folder as a homebase' });
 	b1.addEventListener('click', () => { void host.app.chooseVault(false); });
-	const b2 = actions.createEl('button', { text: 'Create a new vault' });
+	const b2 = actions.createEl('button', { text: 'Create a new homebase' });
 	b2.addEventListener('click', () => { void host.app.chooseVault(true); });
 	const recent = await host.app.recentVaults();
 	if (recent.length) {
-		box.createEl('h2', { text: 'Recent vaults' });
+		box.createEl('h2', { text: 'Recent homebases' });
 		const list = box.createDiv({ cls: 'welcome-recent' });
 		for (const r of recent) {
 			const item = list.createDiv({ cls: 'welcome-recent-item' });
@@ -73,7 +77,8 @@ async function start() {
 	const core = registerCore(app);
 	await app.start();
 	core.reveal();
-	if (host.app.isSmoke) await runSmoke(app);
+	if (host.app.isShots) await runShots(app);
+	else if (host.app.isSmoke) await runSmoke(app);
 }
 
 start().catch((e: unknown) => {

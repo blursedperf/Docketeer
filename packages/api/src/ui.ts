@@ -511,6 +511,18 @@ export class DropdownComponent extends ValueComponent<string> {
 	setDisabled(d: boolean): this { this.disabled = d; this.selectEl.disabled = d; return this; }
 }
 
+export class ColorComponent extends ValueComponent<string> {
+	colorPickerEl: HTMLInputElement;
+	constructor(containerEl: HTMLElement) {
+		super();
+		this.colorPickerEl = containerEl.createEl('input', { cls: 'color-picker', attr: { type: 'color' } });
+		this.colorPickerEl.addEventListener('input', () => this.changed());
+	}
+	getValue(): string { return this.colorPickerEl.value; }
+	setValue(v: string): this { if (/^#[0-9a-f]{6}$/i.test(v)) this.colorPickerEl.value = v; return this; }
+	setDisabled(d: boolean): this { this.disabled = d; this.colorPickerEl.disabled = d; return this; }
+}
+
 /** One row of a settings page: a name, a description and controls. */
 export class Setting {
 	settingEl: HTMLElement;
@@ -551,6 +563,7 @@ export class Setting {
 	addTextArea(cb: (c: TextAreaComponent) => unknown): this { return this.add(new TextAreaComponent(this.controlEl), cb); }
 	addSlider(cb: (c: SliderComponent) => unknown): this { return this.add(new SliderComponent(this.controlEl), cb); }
 	addDropdown(cb: (c: DropdownComponent) => unknown): this { return this.add(new DropdownComponent(this.controlEl), cb); }
+	addColorPicker(cb: (c: ColorComponent) => unknown): this { return this.add(new ColorComponent(this.controlEl), cb); }
 }
 
 /** A page of the settings dialog. */

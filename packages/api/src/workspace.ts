@@ -351,7 +351,7 @@ export class Workspace extends Events {
 			setIcon(b, icon);
 			b.addEventListener('click', () => this.app.commands.executeCommandById(command));
 		};
-		bottomButton('folder-open', 'Open another vault', 'app:open-vault');
+		bottomButton('folder-open', 'Open another homebase', 'app:open-homebase');
 		bottomButton('settings', 'Settings', 'app:open-settings');
 
 		this.leftSplit = new WorkspaceSidedock(this, 'left');

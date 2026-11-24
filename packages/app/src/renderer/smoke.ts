@@ -152,6 +152,76 @@ export async function runSmoke(app: App): Promise<void> {
 		return ok;
 	});
 
+	// Theming.
+	const cssVar = (name: string) => getComputedStyle(document.body).getPropertyValue(name).trim();
+	await check('homebase is the vault', () => app.homebase === app.vault);
+	await check('icons drawn from Phosphor by default', () => {
+		const svg = document.querySelector('.workspace-ribbon .svg-icon');
+		return svg?.getAttribute('viewBox') === '0 0 256 256' || `${svg?.getAttribute('class')} ${svg?.getAttribute('viewBox')}`;
+	});
+	await check('icon set switch redraws icons on screen', async () => {
+		await app.setConfig('iconSet', 'lucide');
+		const lucide = document.querySelector('.workspace-ribbon .svg-icon')?.getAttribute('viewBox');
+		await app.setConfig('iconWeight', 'bold');
+		await app.setConfig('iconSet', 'phosphor');
+		const back = document.querySelector('.workspace-ribbon .svg-icon')?.getAttribute('viewBox');
+		await app.setConfig('iconWeight', 'regular');
+		return (lucide === '0 0 24 24' && back === '0 0 256 256') || `${lucide} / ${back}`;
+	});
+	await check('palettes: 16 built in, switching applies', async () => {
+		if (app.customCss.getPalettes().length !== 16) return `${app.customCss.getPalettes().length} palettes`;
+		await app.setConfig('theme', 'dark');
+		await app.setConfig('darkPalette', 'dracula');
+		const bg = cssVar('--doom-bg');
+		const primary = cssVar('--background-primary');
+		await app.setConfig('darkPalette', 'crisp-dark');
+		return (bg === '#282a36' && primary === '#282a36') || `${bg} ${primary}`;
+	});
+	await check('light mode uses the light palette', async () => {
+		await app.setConfig('theme', 'light');
+		await app.setConfig('lightPalette', 'solarized-light');
+		const ok = document.body.hasClass('theme-light') && cssVar('--doom-bg') === '#fdf6e3';
+		await app.setConfig('lightPalette', 'crisp-light');
+		await app.setConfig('theme', 'dark');
+		return ok || cssVar('--doom-bg');
+	});
+	await check('accent colour override', async () => {
+		await app.setConfig('accentColor', '#ff8800');
+		const ok = cssVar('--doom-blue') === '#ff8800' && cssVar('--interactive-accent') === '#ff8800';
+		await app.setConfig('accentColor', '');
+		return ok || `${cssVar('--doom-blue')} ${cssVar('--interactive-accent')}`;
+	});
+	await check('CSS snippet applies; one that loads from the web is refused', async () => {
+		const css = app.customCss;
+		await vault.adapter.write(`${css.snippetsFolder}/wide.css`, 'body { --smoke-snippet: 1; }');
+		await vault.adapter.write(`${css.snippetsFolder}/remote.css`, 'body { background: url(https://example.com/x.png); }');
+		await css.load();
+		await css.setSnippetEnabled('wide', true);
+		await css.setSnippetEnabled('remote', true);
+		const applied = cssVar('--smoke-snippet') === '1';
+		const refused = css.refusal('snippet', 'remote')?.join(', ') ?? 'not refused';
+		const loaded = !!document.querySelector('style[data-snippet="remote"]');
+		await css.setSnippetEnabled('wide', false);
+		await css.setSnippetEnabled('remote', false);
+		return (applied && !loaded && refused.includes('url(https')) || `applied=${applied} loaded=${loaded} refused=${refused}`;
+	});
+	await check('CSS theme from a starter template', async () => {
+		const css = app.customCss;
+		const name = await css.createThemeTemplate();
+		await vault.adapter.write(`${css.themesFolder}/${name}/theme.css`, 'body.theme-dark { --doom-bg: #010203; }');
+		await css.load();
+		await css.setTheme(name);
+		const ok = cssVar('--doom-bg') === '#010203';
+		await css.setTheme('');
+		return ok || cssVar('--doom-bg');
+	});
+	await check('density changes spacing', async () => {
+		await app.setConfig('density', 'compact');
+		const compact = cssVar('--row-pad-y');
+		await app.setConfig('density', 'comfortable');
+		return compact === '2px' || compact;
+	});
+
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
 		try {
@@ -166,4 +236,64 @@ export async function runSmoke(app: App): Promise<void> {
 	await sleep(800);
 	const ok = checks.every((c) => c.ok);
 	app.host.app.smokeReport?.({ ok, checks, notices });
+}
+
+/**
+ * Screenshot tour (npm run shots): the main surfaces in several palettes, densities and icon sets,
+ * for design review. Files go to QUIRE_SMOKE_OUT.
+ */
+export async function runShots(app: App): Promise<void> {
+	const shot = async (name: string) => { await sleep(350); await app.host.app.capture?.(name); };
+	const { workspace, commands } = app;
+	commands.executeCommandById('aglc-citations:create-example-essay');
+	await until(() => workspace.getActiveFile()?.basename === 'AGLC4 example essay', 8000);
+	commands.executeCommandById('aglc-citations:page-preview');
+	await until(() => document.querySelectorAll('.aglc-pv-page').length > 1, 15000);
+	await sleep(1200);
+	document.querySelectorAll('.notice').forEach((n) => n.detach());
+	await app.setConfig('theme', 'dark');
+	await shot('01-main-crisp-dark');
+	for (const p of ['doom-one', 'dracula', 'tokyo-night', 'gruvbox', 'retro-terminal', 'cyberpunk']) {
+		await app.setConfig('darkPalette', p.replace(/^doom-/, ''));
+		await shot(`02-palette-${p}`);
+	}
+	await app.setConfig('darkPalette', 'crisp-dark');
+	await app.setConfig('theme', 'light');
+	for (const p of ['crisp-light', 'solarized-light', 'nord-light', 'gruvbox-light']) {
+		await app.setConfig('lightPalette', p);
+		await shot(`03-palette-${p}`);
+	}
+	await app.setConfig('lightPalette', 'crisp-light');
+	await app.setConfig('theme', 'dark');
+	for (const d of ['compact', 'spacious'] as const) {
+		await app.setConfig('density', d);
+		await shot(`04-density-${d}`);
+	}
+	await app.setConfig('density', 'comfortable');
+	await app.setConfig('iconSet', 'lucide');
+	await shot('05-icons-lucide');
+	await app.setConfig('iconSet', 'phosphor');
+	await app.setConfig('iconWeight', 'light');
+	await shot('05-icons-phosphor-light');
+	await app.setConfig('iconWeight', 'regular');
+	const view = workspace.getActiveViewOfType(MarkdownView);
+	if (view) { await view.setMode('preview'); await shot('06-reading-view'); await view.setMode('source'); }
+	commands.executeCommandById('app:command-palette');
+	await shot('07-command-palette');
+	topModal()?.close();
+	commands.executeCommandById('app:quick-switcher');
+	await shot('08-quick-switcher');
+	topModal()?.close();
+	const item = document.querySelector<HTMLElement>('.nav-file-title');
+	item?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 160, clientY: 220 }));
+	await shot('09-context-menu');
+	document.querySelector('.menu')?.detach();
+	app.setting.openTabById('appearance');
+	await shot('10-settings-appearance');
+	const scroller = document.querySelector('.vertical-tab-content-container');
+	if (scroller) { scroller.scrollTop = scroller.scrollHeight; await shot('11-settings-appearance-end'); }
+	app.setting.openTabById('aglc-citations');
+	await shot('12-settings-plugin');
+	app.setting.close();
+	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }

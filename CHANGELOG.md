@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **Homebase.** The folder of notes is now called a homebase everywhere in the app (welcome screen,
+  commands, settings, dialogs). `--homebase=<folder>` opens one directly. The plugin API keeps
+  `app.vault`, with `app.homebase` as an alias.
+- **Theming.** Settings → Appearance: 16 palettes for dark and light mode (from DoomEsque), accent colour,
+  interface/text/monospace fonts, text size, density (compact, comfortable, spacious), icon set and
+  weight, installed CSS themes (`.quire/themes/`) with a starter template, and CSS snippets
+  (`.quire/snippets/`). Themes and snippets that would load anything from outside the app are refused.
+  Plugin API: `app.customCss`, `Plugin.registerPalette`, `ColorComponent` / `Setting.addColorPicker`.
+- **Icons.** Phosphor (MIT) replaces Lucide as the default icon set, in four weights; Lucide stays as an
+  option and as the fallback. Plugins still use Lucide names. See docs/design/icons.md.
+- **Design.** A polish plan for spacing and alignment (docs/design/polish-plan.md), and `npm run shots`
+  to capture every surface for review.
+
 ## v0.1.0
 
 First release of Quire: Markdown notes in plain files, entirely offline, extensible with plugins.

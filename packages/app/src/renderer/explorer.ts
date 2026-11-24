@@ -51,7 +51,7 @@ export function freePath(app: { vault: { getAbstractFileByPath(p: string): TAbst
 	}
 }
 
-/** The vault's files and folders, in the left sidebar. */
+/** The homebase's files and folders, in the left sidebar. */
 export class FileExplorerView extends ItemView {
 	private treeEl!: HTMLElement;
 	private expanded = new Set<string>();

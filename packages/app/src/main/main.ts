@@ -1,5 +1,5 @@
 /**
- * Quire main process: windows, vault file access (refused outside the vault), file watching, and the
+ * Quire main process: windows, homebase file access (refused outside the homebase), file watching, and the
  * offline guarantees — every network request is cancelled, navigation and new windows are refused, and
  * no permission is ever granted.
  */
@@ -12,7 +12,8 @@ import * as path from 'node:path';
 const APP_DIR = __dirname; // dist/
 const RENDERER_DIR = path.join(APP_DIR, 'renderer');
 const BUILTIN_PLUGINS = path.join(APP_DIR, 'plugins');
-const SMOKE = process.argv.includes('--smoke');
+const SHOTS = process.argv.includes('--shots');
+const SMOKE = process.argv.includes('--smoke') || SHOTS;
 const ALLOWED_SCHEMES = ['quire:', 'devtools:', 'data:', 'blob:', 'chrome-extension:'];
 
 // -------------------------------------------------------------------------------------------------
@@ -67,12 +68,12 @@ async function resolvePath(rel: unknown): Promise<string> {
 	if (!vaultRoot || !vaultReal) throw new Error('No vault is open');
 	if (typeof rel !== 'string' || rel.includes('\0')) throw new Error('Invalid path');
 	const abs = path.resolve(vaultRoot, rel.replace(/^[/\\]+/, ''));
-	if (!inside(vaultRoot, abs)) throw new Error(`Path outside the vault: ${rel}`);
+	if (!inside(vaultRoot, abs)) throw new Error(`Path outside the homebase: ${rel}`);
 	// The nearest existing ancestor must really be inside the vault.
 	let probe = abs;
 	while (!existsSync(probe) && probe !== vaultRoot) probe = path.dirname(probe);
 	const real = await fsp.realpath(probe);
-	if (!inside(vaultReal, real)) throw new Error(`Path outside the vault: ${rel}`);
+	if (!inside(vaultReal, real)) throw new Error(`Path outside the homebase: ${rel}`);
 	return abs;
 }
 
@@ -142,7 +143,7 @@ function startWatching() {
 		});
 		watcher.on('error', (e) => console.error('Watcher error', e));
 	} catch (e) {
-		console.error('Could not watch the vault', e);
+		console.error('Could not watch the homebase', e);
 	}
 }
 
@@ -175,6 +176,7 @@ function registerIpc() {
 			appVersion: app.getVersion(),
 			vault: vaultRoot ? { path: vaultRoot, name: path.basename(vaultRoot) } : null,
 			isSmoke: SMOKE,
+			isShots: SHOTS,
 		};
 	});
 	handle('fs:tree', async (rel: string) => tree(await resolvePath(rel)));
@@ -199,7 +201,7 @@ function registerIpc() {
 	handle('fs:remove', async (rel: string) => { await fsp.unlink(await resolvePath(rel)); });
 	handle('fs:rmdir', async (rel: string, recursive: boolean) => {
 		const abs = await resolvePath(rel);
-		if (abs === vaultRoot) throw new Error('Cannot remove the vault');
+		if (abs === vaultRoot) throw new Error('Cannot remove the homebase');
 		await fsp.rm(abs, { recursive: !!recursive });
 	});
 	handle('fs:rename', async (from: string, to: string) => {
@@ -215,7 +217,7 @@ function registerIpc() {
 	});
 	handle('fs:trash', async (rel: string) => {
 		const abs = await resolvePath(rel);
-		if (abs === vaultRoot) throw new Error('Cannot remove the vault');
+		if (abs === vaultRoot) throw new Error('Cannot remove the homebase');
 		try { await shell.trashItem(abs); return true; } catch { return false; }
 	});
 
@@ -243,7 +245,7 @@ function registerIpc() {
 	handle('app:setConfig', async (patch: Record<string, unknown>) => { Object.assign(config, patch); await saveConfig(); });
 	handle('app:recent', () => config.recent.filter((r) => existsSync(r.path)));
 	handle('app:chooseVault', async (create: boolean) => {
-		const r = await dialog.showOpenDialog(win!, { title: create ? 'Create a vault in a folder' : 'Open a folder as a vault', properties: ['openDirectory', 'createDirectory'] });
+		const r = await dialog.showOpenDialog(win!, { title: create ? 'Create a homebase in a folder' : 'Open a folder as a homebase', properties: ['openDirectory', 'createDirectory'] });
 		const p = r.filePaths[0];
 		if (r.canceled || !p) return false;
 		await openVaultAndReload(p);
@@ -257,6 +259,15 @@ function registerIpc() {
 	handle('app:showItemInFolder', async (rel: string) => { shell.showItemInFolder(await resolvePath(rel)); });
 	handle('clipboard:writeText', (text: string) => { clipboard.writeText(String(text)); });
 	ipcMain.on('smoke:report', (_e, report) => { void finishSmoke(report); });
+	// Screenshot mode: the renderer asks for a capture of the window as it is now.
+	ipcMain.handle('smoke:capture', async (_e, name: string) => {
+		if (!SMOKE || !win || !/^[a-z0-9-]+$/.test(name)) return null;
+		const dir = process.env.QUIRE_SMOKE_OUT ?? os.tmpdir();
+		await fsp.mkdir(dir, { recursive: true });
+		const file = path.join(dir, `${name}.png`);
+		await fsp.writeFile(file, (await win.webContents.capturePage()).toPNG());
+		return file;
+	});
 }
 
 async function openVaultAndReload(p: string) {
@@ -457,7 +468,8 @@ app.whenReady().then(async () => {
 	registerIpc();
 	csp = await fsp.readFile(path.join(RENDERER_DIR, 'csp.txt'), 'utf8').then((s) => s.trim());
 	await loadConfig();
-	const arg = process.argv.find((a) => a.startsWith('--vault='))?.slice('--vault='.length);
+	// --homebase=<folder> opens a folder directly (--vault= is accepted too).
+	const arg = process.argv.find((a) => /^--(?:homebase|vault)=/.test(a))?.replace(/^--(?:homebase|vault)=/, '');
 	if (SMOKE) await setVault(arg ?? (await smokeVault()));
 	else await setVault(arg ?? config.last);
 	createWindow();

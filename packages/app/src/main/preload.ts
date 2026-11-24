@@ -1,10 +1,10 @@
 /**
- * The only bridge between the page and the system: vault file access (paths are checked in the main
+ * The only bridge between the page and the system: homebase file access (paths are checked in the main
  * process), plugin discovery and a few app actions. No Node APIs reach the page.
  */
 import { contextBridge, ipcRenderer } from 'electron';
 
-const info = ipcRenderer.sendSync('host:info') as { platform: string; appVersion: string; vault: { path: string; name: string } | null; isSmoke: boolean };
+const info = ipcRenderer.sendSync('host:info') as { platform: string; appVersion: string; vault: { path: string; name: string } | null; isSmoke: boolean; isShots: boolean };
 
 const call = <T>(channel: string, ...args: unknown[]): Promise<T> => ipcRenderer.invoke(channel, ...args) as Promise<T>;
 
@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('quire', {
 	},
 	app: {
 		isSmoke: info.isSmoke,
+		isShots: info.isShots,
+		capture: (name: string) => call<string | null>('smoke:capture', name),
 		getConfig: () => call('app:getConfig'),
 		setConfig: (patch: Record<string, unknown>) => call('app:setConfig', patch),
 		recentVaults: () => call('app:recent'),

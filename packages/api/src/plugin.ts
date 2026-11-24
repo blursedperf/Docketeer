@@ -8,6 +8,7 @@ import { registerPostProcessor, type MarkdownPostProcessor } from './markdown-re
 import type { MarkdownView } from './markdown-view';
 import type { PluginSettingTab } from './ui';
 import type { ViewCreator } from './workspace';
+import type { Palette } from './themes/palettes';
 
 export type PluginManifest = PluginManifestData;
 export type Modifier = 'Mod' | 'Ctrl' | 'Meta' | 'Shift' | 'Alt';
@@ -92,6 +93,11 @@ export abstract class Plugin extends Component {
 			suggest.close();
 			this.app.editorSuggests = this.app.editorSuggests.filter((s) => s !== suggest);
 		});
+	}
+
+	/** Add a colour palette to Appearance while the plugin is on. */
+	registerPalette(palette: Palette): void {
+		this.register(this.app.customCss.registerPalette(palette));
 	}
 
 	registerMarkdownPostProcessor(p: MarkdownPostProcessor): MarkdownPostProcessor {

@@ -11,6 +11,7 @@ import { Notice, topModal } from './ui';
 import { Platform } from './util';
 import { Vault } from './vault';
 import { Workspace } from './workspace';
+import { CustomCss } from './themes/manager';
 
 // -------------------------------------------------------------------------------------------------
 // Commands and hotkeys
@@ -223,6 +224,19 @@ export interface AppConfig {
 	alwaysUpdateLinks: boolean;
 	vimMode: boolean;
 	textFont: string;
+	interfaceFont: string;
+	monospaceFont: string;
+	/** Palette ids for dark and light mode. */
+	darkPalette: string;
+	lightPalette: string;
+	/** Accent colour (#rrggbb), or empty for the palette's own. */
+	accentColor: string;
+	iconSet: string;
+	iconWeight: string;
+	density: 'compact' | 'comfortable' | 'spacious';
+	/** Installed CSS theme (folder name in .quire/themes), or empty. */
+	cssTheme: string;
+	enabledSnippets: string[];
 	[key: string]: unknown;
 }
 
@@ -237,6 +251,16 @@ export const DEFAULT_CONFIG: AppConfig = {
 	alwaysUpdateLinks: true,
 	vimMode: false,
 	textFont: '',
+	interfaceFont: '',
+	monospaceFont: '',
+	darkPalette: 'crisp-dark',
+	lightPalette: 'crisp-light',
+	accentColor: '',
+	iconSet: 'phosphor',
+	iconWeight: 'regular',
+	density: 'comfortable',
+	cssTheme: '',
+	enabledSnippets: [],
 };
 
 /** The running app: everything a plugin reaches through `this.app`. */
@@ -249,6 +273,8 @@ export class App extends Events {
 	commands: Commands;
 	plugins: PluginManager;
 	setting: SettingsModal;
+	/** Appearance: palettes, accent, fonts, icons, CSS themes and snippets. */
+	customCss: CustomCss;
 	statusBarEl: HTMLElement;
 	config: AppConfig = { ...DEFAULT_CONFIG };
 	editorSuggests: EditorSuggest<any>[] = [];
@@ -268,7 +294,11 @@ export class App extends Events {
 		this.commands = new Commands(this);
 		this.plugins = new PluginManager(this);
 		this.setting = new SettingsModal(this);
+		this.customCss = new CustomCss(this);
 	}
+
+	/** The homebase: the folder of notes Quire has open. (The API calls it `vault`, as plugins expect.) */
+	get homebase(): Vault { return this.vault; }
 
 	// ---------------------------------------------------------------------------------------------
 	// Config
@@ -292,14 +322,7 @@ export class App extends Events {
 	}
 
 	applyConfig(): void {
-		const dark = this.config.theme === 'dark' || (this.config.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-		document.body.toggleClass('theme-dark', dark);
-		document.body.toggleClass('theme-light', !dark);
-		document.body.toggleClass('is-readable-line-width', this.config.readableLineLength);
-		document.body.style.setProperty('--font-text-size', `${this.config.fontSize}px`);
-		if (this.config.textFont) document.body.style.setProperty('--font-text-override', this.config.textFont);
-		else document.body.style.removeProperty('--font-text-override');
-		this.workspace?.trigger('css-change');
+		this.customCss.apply();
 	}
 
 	isDarkMode(): boolean { return document.body.hasClass('theme-dark'); }
@@ -376,6 +399,7 @@ export class App extends Events {
 		await this.loadConfig();
 		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.applyConfig());
 		await this.vault.load();
+		await this.customCss.load();
 		await this.metadataCache.indexAll();
 		await this.plugins.initialize();
 		let layout: unknown = null;

@@ -10,7 +10,9 @@ export { installDomHelpers, type DomElementInfo } from './dom';
 export { Events, type EventRef } from './events';
 export { Component } from './component';
 export { debounce, normalizePath, Platform, escapeRegExp, fuzzyScore, type Debouncer } from './util';
-export { setIcon, getIcon, addIcon, getIconIds } from './icons';
+export { setIcon, getIcon, addIcon, getIconIds, registerIconPack, getIconPacks, setIconPack, getActiveIconPack, type IconPack, type IconData } from './icons';
+export { CustomCss, cssProblems, accentVars, type Palette } from './themes/manager';
+export { BUILTIN_PALETTES } from './themes/palettes';
 export { TAbstractFile, TFile, TFolder, type FileStats } from './files';
 export { Vault, DataAdapter } from './vault';
 export {
@@ -30,7 +32,7 @@ export { MarkdownRenderer, type MarkdownPostProcessor, type MarkdownPostProcesso
 export { EditorSuggest, type EditorSuggestContext, type EditorSuggestTriggerInfo } from './editor-suggest';
 export {
 	Notice, Modal, topModal, SuggestModal, FuzzySuggestModal, Menu, MenuItem, Setting, SettingTab, PluginSettingTab,
-	ButtonComponent, ExtraButtonComponent, ToggleComponent, TextComponent, SearchComponent, TextAreaComponent, SliderComponent, DropdownComponent,
+	ButtonComponent, ExtraButtonComponent, ToggleComponent, TextComponent, SearchComponent, TextAreaComponent, SliderComponent, DropdownComponent, ColorComponent,
 	type FuzzyMatch, type Instruction, type SettingDefinitionItem,
 } from './ui';
 export { Plugin, type Command, type Hotkey, type Modifier, type PluginManifest } from './plugin';

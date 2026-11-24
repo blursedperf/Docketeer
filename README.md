@@ -1,7 +1,7 @@
 # Quire
 
 A Markdown notes app in the spirit of Obsidian that runs **entirely offline**: a vault is a folder of
-plain `.md` files, and the app cannot reach the network — every request is blocked by the app itself,
+plain `.md` files (a **homebase**), and the app cannot reach the network — every request is blocked by the app itself,
 whatever a plugin tries. Plugins add commands, views, CodeMirror 6 editor extensions, settings and more.
 
 The first plugin, **AGLC4 Citations** (`plugins/aglc4`), is a port of
@@ -20,17 +20,18 @@ once.
 
 ```bash
 npm install
-npm start            # build and open Quire (choose a folder as a vault)
+npm start            # build and open Quire (choose a folder as a homebase)
 ```
 
-Pass `--vault=/path/to/folder` after `npm start --` to open a folder directly.
+Pass `--homebase=/path/to/folder` after `npm start --` to open a folder directly.
 
 ## Develop
 
 ```bash
 npm run build        # plugins, then the app (packages/app/dist)
 npm test             # typecheck, API tests, AGLC4 tests (565), build, offline audit
-npm run smoke        # boot the app offscreen on a throwaway vault and drive it end to end
+npm run smoke        # boot the app offscreen on a throwaway homebase and drive it end to end
+npm run shots        # screenshots of every surface in several palettes, densities and icon sets
 npm run audit        # offline audit only
 npm run dist         # installers for this OS in packages/app/release
 ```
@@ -51,9 +52,16 @@ choose where.
 | `plugins/aglc4` | AGLC4 Citations |
 | `scripts/offline-audit.mjs` | fails the build if anything shipped could reach the network or run generated code |
 
+## Themes
+
+Settings → Appearance has 16 palettes (from DoomEsque), an accent colour, fonts, density and the icon
+set (Phosphor by default). Themes and CSS snippets are files in `<homebase>/.quire/`; see
+[docs/theming.md](docs/theming.md). Design notes: [icon sets](docs/design/icons.md),
+[polish plan](docs/design/polish-plan.md).
+
 ## Writing a plugin
 
-A plugin is a folder in `<vault>/.quire/plugins/<id>/` with `manifest.json`, `main.js` and optionally
+A plugin is a folder in `<homebase>/.quire/plugins/<id>/` with `manifest.json`, `main.js` and optionally
 `styles.css`. `main.js` is an **ES module** whose default export extends `Plugin`:
 
 ```ts
@@ -69,4 +77,5 @@ export default class Hello extends Plugin {
 Bundle with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and `@lezer/*` external:
 the app supplies its own instances at run time through an import map. `plugins/aglc4/esbuild.config.mjs`
 is a working example. The API follows the shape of Obsidian's for the parts it covers, so most plugins
-port by changing `from 'obsidian'` to `from '@quire/api'`.
+port by changing `from 'obsidian'` to `from '@quire/api'`. Quire calls the folder of notes a *homebase*;
+the API keeps the name `app.vault` (with `app.homebase` as an alias) so existing plugins work unchanged.

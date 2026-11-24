@@ -40,7 +40,36 @@ const common = { bundle: true, logLevel: 'warning', sourcemap: 'linked', legalCo
 
 await esbuild.build({ ...common, entryPoints: [join(here, 'src/main/main.ts')], outfile: join(dist, 'main.cjs'), platform: 'node', format: 'cjs', target: 'node22', external: ['electron'] });
 await esbuild.build({ ...common, entryPoints: [join(here, 'src/main/preload.ts')], outfile: join(dist, 'preload.cjs'), platform: 'node', format: 'cjs', target: 'node22', external: ['electron'] });
-await esbuild.build({ ...common, entryPoints: [join(here, 'src/renderer/main.ts')], outfile: join(rendererOut, 'renderer.js'), platform: 'browser', format: 'esm', target: 'chrome130' });
+/** Phosphor icons (MIT) as data: every icon is a single <path>, so one string per weight. */
+const PHOSPHOR_WEIGHTS = ['regular', 'light', 'bold', 'thin'];
+const phosphorIcons = {
+	name: 'phosphor-icons',
+	setup(build) {
+		build.onResolve({ filter: /^virtual:phosphor-icons$/ }, () => ({ path: 'phosphor-icons', namespace: 'virtual' }));
+		build.onLoad({ filter: /.*/, namespace: 'virtual' }, async () => {
+			let pkg = dirname(fileURLToPath(import.meta.resolve('@phosphor-icons/core')));
+			while (!existsSync(join(pkg, 'assets', 'regular'))) {
+				if (dirname(pkg) === pkg) throw new Error('@phosphor-icons/core assets not found');
+				pkg = dirname(pkg);
+			}
+			const root = join(pkg, 'assets');
+			const icons = {};
+			for (const [i, w] of PHOSPHOR_WEIGHTS.entries()) {
+				for (const f of await readdir(join(root, w))) {
+					if (!f.endsWith('.svg')) continue;
+					const svg = await readFile(join(root, w, f), 'utf8');
+					const paths = [...svg.matchAll(/<path d="([^"]+)"/g)];
+					if (paths.length !== 1 || /<(?!path|svg|\/)/.test(svg)) throw new Error(`Unexpected Phosphor SVG: ${w}/${f}`);
+					const name = f.slice(0, -4).replace(new RegExp(`-${w}$`), '');
+					(icons[name] ??= [])[i] = paths[0][1];
+				}
+			}
+			return { contents: JSON.stringify({ weights: PHOSPHOR_WEIGHTS, icons }), loader: 'json' };
+		});
+	},
+};
+
+await esbuild.build({ ...common, entryPoints: [join(here, 'src/renderer/main.ts')], outfile: join(rendererOut, 'renderer.js'), platform: 'browser', format: 'esm', target: 'chrome130', plugins: [phosphorIcons] });
 
 // Shims: the export names of each shared module, read from esbuild's metafile.
 const imports = {};

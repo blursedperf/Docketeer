@@ -4,8 +4,8 @@
  */
 import { EditorSelection } from '@codemirror/state';
 import {
-	type App, type Command, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, Setting, SettingTab, SuggestModal,
-	TFile, TFolder, formatHotkey, fuzzyScore, setIcon,
+	type App, type AppConfig, type Command, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon,
 } from '@quire/api';
 import { FILE_EXPLORER, FileExplorerView, NameModal, freePath } from './explorer';
 
@@ -118,10 +118,6 @@ class EditorTab extends SettingTab {
 		const el = this.containerEl;
 		const c = this.app.config;
 		new Setting(el).setName('Editor').setHeading();
-		new Setting(el).setName('Font size').setDesc('Size of the text in notes, in pixels.')
-			.addSlider((s) => s.setLimits(10, 30, 1).setValue(c.fontSize).onChange((v) => { void this.app.setConfig('fontSize', v); }));
-		new Setting(el).setName('Text font').setDesc('A font installed on this computer, eg "Iosevka" or "Georgia". Leave empty for the default.')
-			.addText((t) => t.setPlaceholder('Default').setValue(c.textFont).onChange((v) => { void this.app.setConfig('textFont', v.trim()); }));
 		new Setting(el).setName('Readable line length').setDesc('Limit the width of the text so lines are easy to read.')
 			.addToggle((t) => t.setValue(c.readableLineLength).onChange((v) => { void this.app.setConfig('readableLineLength', v); }));
 		new Setting(el).setName('Auto-pair brackets').setDesc('Type the closing bracket or quote with the opening one. Applies to notes opened after the change.')
@@ -139,7 +135,7 @@ class FilesTab extends SettingTab {
 		const c = this.app.config;
 		new Setting(el).setName('Files and links').setHeading();
 		new Setting(el).setName('Default location for new notes')
-			.addDropdown((d) => d.addOptions({ root: 'Vault folder', current: 'Same folder as current file', folder: 'In the folder below' })
+			.addDropdown((d) => d.addOptions({ root: 'Homebase folder', current: 'Same folder as current file', folder: 'In the folder below' })
 				.setValue(c.newFileLocation).onChange((v) => { void this.app.setConfig('newFileLocation', v as typeof c.newFileLocation); this.display(); }));
 		if (c.newFileLocation === 'folder') {
 			new Setting(el).setName('Folder for new notes')
@@ -151,14 +147,122 @@ class FilesTab extends SettingTab {
 	override hide(): void { this.containerEl.empty(); }
 }
 
+/** A row of colour chips showing a palette. */
+function swatch(parent: HTMLElement, palette: Palette | null) {
+	const row = parent.createDiv({ cls: 'palette-swatch' });
+	if (!palette) return;
+	for (const k of ['doom-bg', 'doom-base2', 'doom-fg', 'doom-blue', 'doom-magenta', 'doom-violet', 'doom-orange', 'doom-green', 'doom-teal', 'doom-red', 'doom-yellow']) {
+		const chip = row.createSpan({ cls: 'palette-chip', attr: { title: `--${k}` } });
+		chip.setCssStyles({ background: palette.vars[k] ?? 'transparent' });
+	}
+}
+
+const ICON_PREVIEW = ['file-text', 'folder-open', 'search', 'history', 'book-open', 'settings', 'square-pen', 'trash-2', 'terminal', 'zoom-in'];
+
 class AppearanceTab extends SettingTab {
 	override id = 'appearance';
 	override name = 'Appearance';
 	display(): void {
-		new Setting(this.containerEl).setName('Appearance').setHeading();
-		new Setting(this.containerEl).setName('Theme')
-			.addDropdown((d) => d.addOptions({ system: 'Follow the system', light: 'Light', dark: 'Dark' }).setValue(this.app.config.theme)
-				.onChange((v) => { void this.app.setConfig('theme', v as 'system' | 'light' | 'dark'); }));
+		const el = this.containerEl;
+		el.empty();
+		const app = this.app;
+		const c = app.config;
+		const css = app.customCss;
+		const set = <K extends keyof AppConfig>(k: K, v: AppConfig[K], redraw = false) => { void app.setConfig(k, v).then(() => { if (redraw) this.display(); }); };
+
+		new Setting(el).setName('Colours').setHeading();
+		new Setting(el).setName('Mode').setDesc('Light or dark, or follow the system setting.')
+			.addDropdown((d) => d.addOptions({ system: 'Follow the system', light: 'Light', dark: 'Dark' }).setValue(c.theme)
+				.onChange((v) => set('theme', v as AppConfig['theme'])));
+		for (const mode of ['dark', 'light'] as const) {
+			const key = mode === 'dark' ? 'darkPalette' : 'lightPalette';
+			const palettes = css.getPalettes(mode);
+			const s = new Setting(el).setName(mode === 'dark' ? 'Dark palette' : 'Light palette')
+				.setDesc(mode === 'dark' ? 'Colours in dark mode. From the DoomEsque theme (after Doom Emacs themes).' : 'Colours in light mode.')
+				.addDropdown((d) => {
+					for (const p of palettes) d.addOption(p.id, p.name);
+					d.setValue(String(c[key])).onChange((v) => set(key, v, true));
+				});
+			swatch(s.descEl, css.getPalette(String(c[key])));
+		}
+		const accent = new Setting(el).setName('Accent colour')
+			.setDesc(c.accentColor ? `Custom: ${c.accentColor}. Links, the active tab, selections and buttons use it.` : 'The palette\'s own (its blue). Pick a colour to use your own everywhere the accent shows.')
+			.addColorPicker((p) => p.setValue(c.accentColor || (css.getPalette(String(css.isDark() ? c.darkPalette : c.lightPalette))?.vars['doom-blue'] ?? '#60a5fa'))
+				.onChange((v) => set('accentColor', v)));
+		if (c.accentColor) accent.addExtraButton((b) => b.setIcon('rotate-ccw').setTooltip('Use the palette\'s accent').onClick(() => set('accentColor', '', true)));
+
+		new Setting(el).setName('Type and spacing').setHeading();
+		const font = (name: string, desc: string, key: 'interfaceFont' | 'textFont' | 'monospaceFont', placeholder: string) =>
+			new Setting(el).setName(name).setDesc(desc)
+				.addText((t) => t.setPlaceholder(placeholder).setValue(String(c[key] ?? '')).onChange((v) => set(key, v.trim())));
+		font('Interface font', 'Menus, tabs, settings. A font installed on this computer; empty for the default.', 'interfaceFont', 'System default');
+		font('Text font', 'The text of notes.', 'textFont', 'Same as interface');
+		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'JetBrains Mono, Iosevka …');
+		new Setting(el).setName('Text size').setDesc('Size of the text in notes, in pixels.')
+			.addSlider((s) => s.setLimits(10, 30, 1).setValue(c.fontSize).onChange((v) => set('fontSize', v)));
+		new Setting(el).setName('Density').setDesc('How much space the interface leaves around rows, tabs and controls.')
+			.addDropdown((d) => d.addOptions({ compact: 'Compact', comfortable: 'Comfortable', spacious: 'Spacious' }).setValue(c.density)
+				.onChange((v) => set('density', v as AppConfig['density'])));
+
+		new Setting(el).setName('Icons').setHeading();
+		const packs = getIconPacks();
+		const pack = packs.find((p) => p.id === c.iconSet) ?? packs[0]!;
+		const iconRow = new Setting(el).setName('Icon set')
+			.setDesc('Phosphor is the default. Plugins name icons the Lucide way; an icon the set does not have is drawn from Lucide.')
+			.addDropdown((d) => {
+				for (const p of packs) d.addOption(p.id, p.name);
+				d.setValue(pack.id).onChange((v) => set('iconSet', v, true));
+			});
+		if (pack.weights.length > 1) {
+			iconRow.addDropdown((d) => {
+				for (const w of pack.weights) d.addOption(w, w[0]!.toUpperCase() + w.slice(1));
+				d.setValue(pack.weights.includes(c.iconWeight) ? c.iconWeight : pack.weights[0]!).onChange((v) => set('iconWeight', v));
+			});
+		}
+		const preview = iconRow.descEl.createDiv({ cls: 'icon-preview' });
+		for (const n of ICON_PREVIEW) setIcon(preview.createSpan({ cls: 'icon-preview-item', attr: { title: n } }), n);
+
+		new Setting(el).setName('Themes').setHeading();
+		const themeRow = new Setting(el).setName('CSS theme')
+			.setDesc(`A theme is a folder in ${css.themesFolder}/ with a theme.css, loaded over the palettes above. Themes cannot load anything from outside the app.`)
+			.addDropdown((d) => {
+				d.addOption('', css.themes.length ? 'None' : 'None installed');
+				for (const t of css.themes) d.addOption(t, t);
+				d.setValue(css.themes.includes(c.cssTheme) ? c.cssTheme : '').onChange((v) => { void css.setTheme(v).then(() => this.display()); });
+			});
+		const refusedTheme = c.cssTheme ? css.refusal('theme', c.cssTheme) : null;
+		if (refusedTheme) themeRow.descEl.createDiv({ cls: 'mod-warning', text: `Not loaded: it uses ${refusedTheme.join(', ')}.` });
+		new Setting(el).setName('Make your own theme').setDesc('Creates a starter theme.css, with the colour tokens explained, and selects it.')
+			.addButton((b) => b.setButtonText('Create theme').onClick(async () => {
+				const name = await css.createThemeTemplate();
+				await css.setTheme(name);
+				new Notice(`Created ${css.themesFolder}/${name}/theme.css. Edit it, then press Reload.`);
+				this.display();
+			}))
+			.addButton((b) => b.setButtonText('Show folder').onClick(async () => {
+				await app.vault.adapter.mkdir(css.themesFolder);
+				await app.host.app.showItemInFolder(css.themesFolder);
+			}));
+
+		new Setting(el).setName('CSS snippets').setDesc(`Small stylesheets in ${css.snippetsFolder}/, each turned on or off here.`)
+			.setHeading();
+		if (css.snippets.length === 0) el.createDiv({ cls: 'setting-item-description setting-note', text: 'No snippets yet. Add a .css file to the folder, then press Reload.' });
+		for (const name of css.snippets) {
+			const row = new Setting(el).setName(name)
+				.addToggle((t) => t.setValue(css.enabledSnippets().includes(name)).onChange((v) => { void css.setSnippetEnabled(name, v).then(() => this.display()); }));
+			const refused = css.refusal('snippet', name);
+			if (refused) row.setDesc(`Not loaded: it uses ${refused.join(', ')}.`).descEl.addClass('mod-warning');
+		}
+		new Setting(el)
+			.addButton((b) => b.setButtonText('Show snippets folder').onClick(async () => {
+				await app.vault.adapter.mkdir(css.snippetsFolder);
+				await app.host.app.showItemInFolder(css.snippetsFolder);
+			}))
+			.addButton((b) => b.setButtonText('Reload themes and snippets').setCta().onClick(async () => {
+				await css.load();
+				this.display();
+				new Notice('Themes and snippets reloaded.');
+			}));
 	}
 }
 
@@ -171,7 +275,7 @@ class PluginsTab extends SettingTab {
 		new Setting(el).setName('Plugins').setHeading();
 		el.createEl('p', {
 			cls: 'setting-item-description',
-			text: `Plugins run inside Quire with the same offline protections as the app: they cannot reach the network. To add a plugin, put its folder (manifest.json, main.js, styles.css) in ${this.app.vault.configDir}/plugins/ in this vault, then reopen this page.`,
+			text: `Plugins run inside Quire with the same offline protections as the app: they cannot reach the network. To add a plugin, put its folder (manifest.json, main.js, styles.css) in ${this.app.vault.configDir}/plugins/ in this homebase, then reopen this page.`,
 		});
 		const pm = this.app.plugins;
 		const ids = Object.keys(pm.manifests).sort((a, b) => pm.manifests[a]!.name.localeCompare(pm.manifests[b]!.name));
@@ -179,7 +283,7 @@ class PluginsTab extends SettingTab {
 		for (const id of ids) {
 			const m = pm.manifests[id]!;
 			const s = new Setting(el).setName(`${m.name}`)
-				.setDesc(`${m.version}${m.author ? ` · by ${m.author}` : ''} · ${pm.source(id) === 'builtin' ? 'built in' : 'in this vault'}${m.description ? `\n${m.description}` : ''}`);
+				.setDesc(`${m.version}${m.author ? ` · by ${m.author}` : ''} · ${pm.source(id) === 'builtin' ? 'built in' : 'in this homebase'}${m.description ? `\n${m.description}` : ''}`);
 			s.descEl.addClass('mod-pre-wrap');
 			const err = pm.loadError(id);
 			if (err) s.descEl.createDiv({ cls: 'mod-warning', text: `Failed to load: ${err}` });
@@ -204,7 +308,7 @@ class AboutTab extends SettingTab {
 		const el = this.containerEl;
 		new Setting(el).setName('Quire').setHeading();
 		new Setting(el).setName('Version').setDesc(this.app.host.appVersion);
-		new Setting(el).setName('Vault').setDesc(this.app.host.vault?.path ?? '');
+		new Setting(el).setName('Homebase').setDesc(this.app.host.vault?.path ?? '');
 		new Setting(el).setName('Offline').setDesc('Quire makes no network requests. Every request from the app or a plugin is blocked by the app itself, and there are no updates, accounts, telemetry or crash reports.');
 		new Setting(el).setName('Developer tools').setDesc('F12 or Ctrl+Shift+I opens the developer tools, for plugin authors.');
 	}
@@ -265,7 +369,7 @@ export function registerCore(app: App): { reveal(): void } {
 	add({ id: 'app:command-palette', name: 'Command palette: Open', icon: 'terminal', hotkeys: [{ modifiers: ['Mod'], key: 'p' }], callback: () => new CommandPalette(app, recent).open() });
 	add({ id: 'app:quick-switcher', name: 'Quick switcher: Open', icon: 'search', hotkeys: [{ modifiers: ['Mod'], key: 'o' }], callback: () => new QuickSwitcher(app).open() });
 	add({ id: 'app:open-settings', name: 'Open settings', icon: 'settings', hotkeys: [{ modifiers: ['Mod'], key: ',' }], callback: () => app.setting.open() });
-	add({ id: 'app:open-vault', name: 'Open another vault', icon: 'folder-open', callback: () => { void app.host.app.chooseVault(false); } });
+	add({ id: 'app:open-homebase', name: 'Open another homebase', icon: 'folder-open', callback: () => { void app.host.app.chooseVault(false); } });
 	add({
 		id: 'app:new-note', name: 'Create new note', icon: 'square-pen', hotkeys: [{ modifiers: ['Mod'], key: 'n' }],
 		callback: async () => {

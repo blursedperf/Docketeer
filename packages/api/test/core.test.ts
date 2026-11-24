@@ -99,3 +99,30 @@ describe('helpers', () => {
 		expect(fn).toHaveBeenCalledTimes(1);
 	});
 });
+
+import { accentVars, cssProblems } from '../src/themes/manager';
+import { BUILTIN_PALETTES } from '../src/themes/palettes';
+
+describe('themes', () => {
+	it('refuses CSS that loads from outside the app', () => {
+		expect(cssProblems('body { color: red; }')).toEqual([]);
+		expect(cssProblems('body { background: url(data:image/png;base64,AAA); }')).toEqual([]);
+		expect(cssProblems('@import "x.css";')).toContain('@import');
+		expect(cssProblems('body { background: url(https://e.com/a.png) }')).toEqual(['url(https://e.com/a.png)']);
+		expect(cssProblems('@font-face { src: url("fonts/a.woff2") }')).toEqual(['url(fonts/a.woff2)']);
+		expect(cssProblems('/* see https://example.com */ body {}')).toEqual([]);
+		expect(cssProblems('a::after { content: "https://x.y" }')).toEqual(['a web address']);
+	});
+	it('derives accent tokens with readable text on the accent', () => {
+		expect(accentVars('#ffffff')?.['doom-on-accent']).toBe('#0b1018');
+		expect(accentVars('#1b55d6')?.['doom-on-accent']).toBe('#ffffff');
+		expect(accentVars('#f80')?.['doom-blue-rgb']).toBe('255, 136, 0');
+		expect(accentVars('not a colour')).toBeNull();
+	});
+	it('has complete palettes', () => {
+		expect(BUILTIN_PALETTES).toHaveLength(16);
+		const keys = Object.keys(BUILTIN_PALETTES[0]!.vars).sort();
+		for (const p of BUILTIN_PALETTES) expect(Object.keys(p.vars).sort()).toEqual(keys);
+		expect(BUILTIN_PALETTES.filter((p) => p.mode === 'dark')).toHaveLength(9);
+	});
+});

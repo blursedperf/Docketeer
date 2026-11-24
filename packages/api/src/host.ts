@@ -14,7 +14,7 @@ export interface HostEntry extends HostStat {
 }
 
 export interface HostFs {
-	/** Every file and folder under `path` (the whole vault for ""), skipping names that start with ".". */
+	/** Every file and folder under `path` (the whole homebase for ""), skipping names that start with ".". */
 	tree(path: string): Promise<HostEntry[]>;
 	stat(path: string): Promise<HostStat | null>;
 	exists(path: string): Promise<boolean>;
@@ -77,6 +77,9 @@ export interface HostBridge {
 		/** Smoke-test mode: report results and exit. */
 		smokeReport?(report: unknown): void;
 		isSmoke: boolean;
+		/** Screenshot mode (--shots), and a capture of the window in smoke modes. */
+		isShots?: boolean;
+		capture?(name: string): Promise<string | null>;
 		/** Called before the window closes; it waits for the promise (to save open notes). */
 		onBeforeQuit(cb: () => Promise<void>): void;
 	};
