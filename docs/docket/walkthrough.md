@@ -38,7 +38,9 @@ results announced; panels are tabs. With "reduce motion" on, it appears without 
 4. **Mod+Shift+Enter** zooms the pane to fill the window, and back.
 5. **Mod+W** closes a tab (an empty pane closes too); **Mod+Shift+T** brings it back.
 6. The same note in two panes stays in step as you type, each with its own cursor.
-7. **Mod+6** (Layout): presets (Single, Brief + Source, Revision, Exam), your saved layouts, the open panes,
+7. With a mouse, drag a tab along its bar to reorder it, onto another pane to move it there (its edges split
+   it), or to an edge of the window for a pane along that whole side.
+8. **Mod+6** (Layout): presets (Single, Brief + Source, Revision, Exam), your saved layouts, the open panes,
    and the tiling commands with their keys. The layout is saved with the homebase and comes back on launch.
 
 ## Help (Phase 7)

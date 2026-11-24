@@ -159,7 +159,8 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 	};
 }
 
-function countNotes(folder: TFolder): number {
+/** Notes in a folder and every folder inside it. */
+export function countNotes(folder: TFolder): number {
 	let n = 0;
 	for (const c of folder.children) n += c instanceof TFolder ? countNotes(c) : c instanceof TFile && c.extension === 'md' ? 1 : 0;
 	return n;

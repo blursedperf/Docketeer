@@ -308,3 +308,24 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     The Homebase export says the same.
 91. **Fixed while testing**: choosing "Use the recovery key…" reported "not unlocked" to whatever was waiting
     (a note being opened) before the recovery key was typed.
+
+## Dragging tabs (after the locking phase; user request)
+
+92. **Tabs can be dragged** (the plan's optional item, now asked for): along a tab bar to reorder (a marker
+    shows where), onto another pane's tab bar or middle to move there, onto a pane's outer quarter to split it
+    on that side, or to within 24 px of the main area's edge to add a pane along that whole side (the main
+    area becomes a column for top and bottom). A shaded area previews the result. The editor never receives
+    the drop as text. Mod+Alt+Shift+arrows remain the keyboard way; the layout, including the main area's
+    direction, is saved and restored.
+
+## Docket review (before 0.6.0)
+
+93. **Walking through the Docket as a new user** found: typing a subject's name ("torts") offered only to
+    create a note (subjects were only under `#`); notes matched by name were listed again under "In notes"
+    with a blank line; the full command list was one A–Z jumble with plugin commands first; a plugin's ribbon
+    buttons duplicated its own commands; headings said "# in …"; places read "Torts/Negligence".
+94. **Now**: the plain search lists subjects and topics (a name containing what was typed, with their note
+    count including topics; Enter shows them in Units) right after notes; a note appears once; ">" alone
+    shows "Recently used" then commands by section; authorities and note text come before commands (which
+    are a ">" away); ribbon-made commands are dropped when the plugin has the same command (compared without
+    the plugin's name); headings read "in <note>" and places "Torts / Negligence".

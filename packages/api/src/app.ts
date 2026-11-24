@@ -280,6 +280,7 @@ export class PluginManager {
 			plugin.load();
 			// onload may be async; wait for it so its settings are in place before the layout opens.
 			await plugin._onloadPromise;
+			this.dropDuplicateRibbonCommands(id, manifest.name);
 			return true;
 		} catch (e) {
 			console.error(`Plugin ${id} failed to load`, e);
@@ -288,6 +289,19 @@ export class PluginManager {
 			await this.disablePlugin(id);
 			return false;
 		}
+	}
+
+	/**
+	 * Ribbon buttons become commands (there is no ribbon), but most plugins also have a command for the same
+	 * thing, often added later in onload or named a little differently ("Open AGLC4 page preview" and "Open
+	 * page preview"). Keep the plugin's own command.
+	 */
+	private dropDuplicateRibbonCommands(id: string, pluginName: string): void {
+		const nameWords = new Set(pluginName.toLowerCase().split(/\s+/));
+		const norm = (s: string) => s.toLowerCase().replace(/^[^:]*:\s*/, '').split(/\s+/).filter((w) => w && !nameWords.has(w)).join(' ');
+		const own = this.app.commands.listCommands().filter((c) => c.source === `plugin:${id}`);
+		const real = new Set(own.filter((c) => !c.id.startsWith(`${id}:ribbon-`)).map((c) => norm(c.name)));
+		for (const c of own) if (c.id.startsWith(`${id}:ribbon-`) && real.has(norm(c.name))) this.app.commands.removeCommand(c.id);
 	}
 
 	async disablePlugin(id: string): Promise<void> {

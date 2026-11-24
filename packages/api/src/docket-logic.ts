@@ -48,7 +48,7 @@ export function contextPanel(line: string, ch: number): { panel: 'authorities'; 
 }
 
 /** Group heading order for the unprefixed search. Other types follow, alphabetically. */
-const TYPE_ORDER = ['In the Docket', 'Prefixes', 'Docket', 'Notes', 'Headings', 'Commands', 'Authorities', 'In notes', 'Folders', 'Tags', 'Settings', 'Search', 'Edit', 'View', 'Layout', 'Homebase', 'App', 'Shortcuts', 'New note'];
+const TYPE_ORDER = ['In the Docket', 'Prefixes', 'Recently used', 'Notes', 'Folders', 'Headings', 'Authorities', 'In notes', 'Commands', 'Tags', 'Settings', 'Search', 'Docket', 'Edit', 'View', 'Layout', 'Homebase', 'App', 'Shortcuts', 'New note'];
 
 /**
  * Results grouped by type, best first within a group, groups in a fixed order; `perGroup` limits each

@@ -7,7 +7,7 @@ import {
 	formatHotkey, fuzzyScore, getAllTags, wordMatch,
 } from '@quire/api';
 import type { Docket } from './docket';
-import { revealInUnits } from './panels/units';
+import { countNotes, revealInUnits } from './panels/units';
 import { createNote, notePlaces, placeName } from '../dialogs';
 
 /** The best score of `q` against any of `texts` (the first counts most); word-wise for commands and settings. */
@@ -58,7 +58,7 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 	});
 
 	const noteResult = (f: TFile, score: number): SearchResult => ({
-		id: f.path, type: 'Notes', title: f.basename, detail: f.parent && !f.parent.isRoot() ? f.parent.path : undefined,
+		id: f.path, type: 'Notes', title: f.basename, detail: f.parent && !f.parent.isRoot() ? placeName(f.parent) : undefined,
 		icon: 'file-text', file: f, score,
 		open: (where) => openFileIn(app, f, where),
 		insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}]]`,
@@ -117,7 +117,13 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 					if (c.id === 'app:docket' || !commands.isAvailable(c)) continue;
 					const used = search.usage.score('command', c.id, now);
 					if (!text) {
-						if (prefix === '>') out.push(commandResult(c, used * 10 - c.name.charCodeAt(0) / 1000));
+						// The whole list, to browse: recently used first, then by section, A–Z.
+						if (prefix === '>') {
+							const r = commandResult(c, -c.name.toLowerCase().charCodeAt(0) / 1000 - c.name.length / 1e6);
+							r.type = used > 0 ? 'Recently used' : c.section ?? 'Other';
+							if (used > 0) r.score = used;
+							out.push(r);
+						}
 						continue;
 					}
 					const s = best(text, [c.name, ...(c.aliases ?? []), ...(c.keywords ?? []), c.section], wordMatch);
@@ -159,16 +165,36 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 						},
 					});
 				}
+				// Subjects and topics by name (Enter shows them in Units).
+				if (!only || only === 'Folders') {
+					const archive = String(app.config.archiveFolder || 'Archive');
+					const folders: SearchResult[] = [];
+					for (const folder of vault.getAllFolders()) {
+						if (folder.name.startsWith('.') || folder.path === archive || folder.path.startsWith(`${archive}/`)) continue;
+						const s = fuzzyScore(text, folder.name);
+						if (s === null || s < 500) continue; // the name contains what was typed
+						const notes = countNotes(folder);
+						folders.push({
+							id: `folder:${folder.path}`, type: 'Folders', title: folder.name, icon: 'folder',
+							detail: `${folder.parent && !folder.parent.isRoot() ? `in ${placeName(folder.parent)} · ` : ''}${notes} note${notes === 1 ? '' : 's'} · Enter shows it in Units`,
+							score: s, open: () => { revealInUnits(folder.path); ui.showPanel('core:units'); },
+						});
+					}
+					totals.Folders = folders.length;
+					results.push(...folders);
+				}
 				// Full text: every word, as a prefix, anywhere in a note.
 				// From three characters: two match nearly every note, and cost a keystroke's budget for nothing.
 				if (search.isReady && text.length >= 3 && (!only || only === 'In notes')) {
 					const r = search.index.searchText(text, many(only, 'In notes'), ctx);
-					totals['In notes'] = r.total;
+					// A note already listed by its name is not listed again for its text.
+					const named = new Set(results.filter((x) => x.type === 'Notes').map((x) => x.id));
+					totals['In notes'] = Math.max(0, r.total - named.size);
 					for (const h of r.hits) {
 						const f = fileAt(h.path);
-						if (!f) continue;
+						if (!f || named.has(h.path)) continue;
 						results.push({
-							id: `${h.path}:${h.line}`, type: 'In notes', title: f.basename, detail: h.snippet, detailRanges: h.ranges,
+							id: `${h.path}:${h.line}`, type: 'In notes', title: f.basename, detail: h.snippet.trim() || undefined, detailRanges: h.snippet.trim() ? h.ranges : undefined,
 							icon: 'text-search', file: f, score: h.score,
 							open: (where) => openFileAtLine(app, f, h.line, where),
 							insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}]]`,
@@ -184,7 +210,7 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 						if (!f) continue;
 						const title = plainHeading(h.heading.text);
 						results.push({
-							id: `${h.path}#${h.heading.line}`, type: 'Headings', title, detail: `${'#'.repeat(h.heading.level)} in ${f.basename}`,
+							id: `${h.path}#${h.heading.line}`, type: 'Headings', title, detail: `in ${f.basename}`,
 							icon: 'hash', file: f, score: h.score,
 							open: (where) => openFileIn(app, f, where, `#${h.heading.text}`),
 							insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}#${h.heading.text}]]`,

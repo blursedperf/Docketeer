@@ -52,6 +52,14 @@ export class WorkspaceSplit extends WorkspaceItem {
 		super(workspace, `workspace-split mod-${direction} ${cls}`.trim());
 	}
 
+	/** Change between a row and a column (the main area, when a tab is dropped at the window's edge). */
+	setDirection(direction: SplitDirection): void {
+		this.containerEl.removeClass(`mod-${this.direction}`);
+		this.direction = direction;
+		this.containerEl.addClass(`mod-${direction}`);
+		this.render();
+	}
+
 	insertChild(index: number, child: WorkspaceSplit | WorkspaceTabs): void {
 		child.parent = this;
 		this.children.splice(index, 0, child);
@@ -209,7 +217,15 @@ export class WorkspaceLeaf extends Events {
 		super();
 		this.app = workspace.app;
 		this.containerEl = createDiv({ cls: 'workspace-leaf' });
-		this.tabHeaderEl = createDiv({ cls: 'workspace-tab-header', attr: { draggable: 'false' } });
+		this.tabHeaderEl = createDiv({ cls: 'workspace-tab-header', attr: { draggable: 'true' } });
+		// Drag a tab: along a tab bar, onto another pane (its edges split it), or to the window's edges.
+		this.tabHeaderEl.addEventListener('dragstart', (e) => {
+			if (!e.dataTransfer) return;
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('application/x-quire-tab', this.getDisplayText());
+			this.workspace.startTabDrag(this);
+		});
+		this.tabHeaderEl.addEventListener('dragend', () => this.workspace.endTabDrag());
 		this.tabIconEl = this.tabHeaderEl.createDiv({ cls: 'workspace-tab-header-inner-icon' });
 		this.tabTitleEl = this.tabHeaderEl.createDiv({ cls: 'workspace-tab-header-inner-title' });
 		const close = this.tabHeaderEl.createDiv({ cls: 'workspace-tab-header-inner-close-button clickable-icon', attr: { 'aria-label': 'Close' } });
@@ -709,6 +725,163 @@ export class Workspace extends Events {
 		this.requestSaveLayout();
 	}
 
+	// ---------------------------------------------------------------------------------------------
+	// Dragging tabs
+
+	private dragLeaf: WorkspaceLeaf | null = null;
+	private dropTarget: { kind: 'tab'; tabs: WorkspaceTabs; index: number } | { kind: 'pane'; tabs: WorkspaceTabs; side: Direction | 'center' } | { kind: 'window'; side: Direction } | null = null;
+	private overlayEl: HTMLElement | null = null;
+	private markerEl: HTMLElement | null = null;
+	private dragWired = false;
+
+	startTabDrag(leaf: WorkspaceLeaf): void {
+		this.dragLeaf = leaf;
+		document.body.addClass('is-dragging-tab');
+		if (this.dragWired) return;
+		this.dragWired = true;
+		// Capture phase: the editor must not take the drop as text.
+		this.containerEl.addEventListener('dragover', (e) => this.onTabDragOver(e), true);
+		this.containerEl.addEventListener('drop', (e) => this.onTabDrop(e), true);
+		this.containerEl.addEventListener('dragleave', (e) => { if (!this.containerEl.contains(e.relatedTarget as Node | null)) this.showDrop(null); }, true);
+	}
+
+	endTabDrag(): void {
+		this.dragLeaf = null;
+		this.showDrop(null);
+		document.body.removeClass('is-dragging-tab');
+	}
+
+	/** Where a dragged tab would go, for the pointer at (x, y). */
+	private dropAt(x: number, y: number, target: Element | null): typeof this.dropTarget {
+		const root = this.rootSplit.containerEl.getBoundingClientRect();
+		const edge = 24;
+		if (x - root.left < edge) return { kind: 'window', side: 'left' };
+		if (root.right - x < edge) return { kind: 'window', side: 'right' };
+		if (y - root.top < edge) return { kind: 'window', side: 'up' };
+		if (root.bottom - y < edge) return { kind: 'window', side: 'down' };
+		const tabsEl = target?.closest('.workspace-tabs');
+		const tabs = this.rootTabs().find((t) => t.containerEl === tabsEl);
+		if (!tabs) return null;
+		if (target?.closest('.workspace-tab-header-container')) {
+			// Between tabs: before the first tab whose middle is right of the pointer.
+			const index = tabs.children.findIndex((l) => { const r = l.tabHeaderEl.getBoundingClientRect(); return x < r.left + r.width / 2; });
+			return { kind: 'tab', tabs, index: index < 0 ? tabs.children.length : index };
+		}
+		const r = tabs.contentEl.getBoundingClientRect();
+		const fx = (x - r.left) / r.width;
+		const fy = (y - r.top) / r.height;
+		const side: Direction | 'center' = fx < 0.25 ? 'left' : fx > 0.75 ? 'right' : fy < 0.25 ? 'up' : fy > 0.75 ? 'down' : 'center';
+		return { kind: 'pane', tabs, side };
+	}
+
+	private onTabDragOver(e: DragEvent): void {
+		if (!this.dragLeaf) return;
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		this.showDrop(this.dropAt(e.clientX, e.clientY, e.target as Element | null));
+	}
+
+	/** Show where the tab would land: a marker between tabs, or the area it would fill. */
+	private showDrop(t: typeof this.dropTarget): void {
+		this.dropTarget = t;
+		this.overlayEl?.remove();
+		this.markerEl?.remove();
+		this.overlayEl = null;
+		this.markerEl = null;
+		if (!t) return;
+		const host = this.containerEl.getBoundingClientRect();
+		const place = (el: HTMLElement, r: { left: number; top: number; width: number; height: number }) => {
+			el.setCssStyles({ left: `${r.left - host.left}px`, top: `${r.top - host.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+			this.containerEl.appendChild(el);
+		};
+		if (t.kind === 'tab') {
+			const headers = t.tabs.children.map((l) => l.tabHeaderEl.getBoundingClientRect());
+			const bar = t.tabs.headerEl.getBoundingClientRect();
+			const x = t.index < headers.length ? headers[t.index]!.left : headers.length ? headers[headers.length - 1]!.right : bar.left;
+			this.markerEl = createDiv({ cls: 'workspace-tab-drop-marker' });
+			place(this.markerEl, { left: x - 1, top: bar.top, width: 2, height: bar.height });
+			return;
+		}
+		const box = t.kind === 'window' ? this.rootSplit.containerEl.getBoundingClientRect() : t.tabs.containerEl.getBoundingClientRect();
+		const half = (side: Direction | 'center') => {
+			switch (side) {
+				case 'left': return { left: box.left, top: box.top, width: box.width / 2, height: box.height };
+				case 'right': return { left: box.left + box.width / 2, top: box.top, width: box.width / 2, height: box.height };
+				case 'up': return { left: box.left, top: box.top, width: box.width, height: box.height / 2 };
+				case 'down': return { left: box.left, top: box.top + box.height / 2, width: box.width, height: box.height / 2 };
+				default: return { left: box.left, top: box.top, width: box.width, height: box.height };
+			}
+		};
+		this.overlayEl = createDiv({ cls: `workspace-drop-overlay${t.kind === 'window' ? ' mod-window' : ''}` });
+		place(this.overlayEl, half(t.side));
+	}
+
+	private onTabDrop(e: DragEvent): void {
+		const leaf = this.dragLeaf;
+		if (!leaf) return;
+		e.preventDefault();
+		e.stopPropagation();
+		const t = this.dropAt(e.clientX, e.clientY, e.target as Element | null);
+		this.endTabDrag();
+		if (t) this.dropTab(leaf, t);
+	}
+
+	/** Put a tab where it was dropped (also used by tests). */
+	dropTab(leaf: WorkspaceLeaf, t: NonNullable<typeof this.dropTarget>): boolean {
+		const from = leaf.parent;
+		if (!from) return false;
+		if (t.kind === 'tab' || (t.kind === 'pane' && t.side === 'center')) {
+			const to = t.tabs;
+			let index = t.kind === 'tab' ? t.index : to.children.length;
+			if (to === from) {
+				const at = from.children.indexOf(leaf);
+				if (index > at) index--;
+				if (index === at) return false;
+			}
+			from.removeChild(leaf);
+			to.insertChild(Math.min(index, to.children.length), leaf);
+			if (to !== from) this.tidyEmpty(from);
+		} else {
+			// A new pane beside a pane, or along a whole side of the window.
+			if (t.kind === 'pane' && t.tabs === from && from.children.length === 1) return false;
+			const fresh = new WorkspaceTabs(this);
+			const direction: SplitDirection = t.side === 'left' || t.side === 'right' ? 'vertical' : 'horizontal';
+			const before = t.side === 'left' || t.side === 'up';
+			if (t.kind === 'window') {
+				const root = this.rootSplit;
+				if (root.direction !== direction) {
+					// Wrap what is there, so the new pane spans the whole side.
+					const inner = new WorkspaceSplit(this, root.direction);
+					for (const c of [...root.children]) { root.removeChild(c); inner.insertChild(inner.children.length, c); }
+					root.setDirection(direction);
+					root.insertChild(0, inner);
+				}
+				root.insertChild(before ? 0 : root.children.length, fresh);
+			} else {
+				const target = t.tabs;
+				const split = target.parent!;
+				if (split.direction === direction) {
+					split.insertChild(split.children.indexOf(target) + (before ? 0 : 1), fresh);
+				} else {
+					const sub = new WorkspaceSplit(this, direction);
+					split.replaceChild(target, sub);
+					sub.insertChild(0, before ? fresh : target);
+					sub.insertChild(1, before ? target : fresh);
+					target.weight = 1;
+				}
+			}
+			from.removeChild(leaf);
+			fresh.insertChild(0, leaf);
+			this.tidyEmpty(from);
+		}
+		this.setActiveLeaf(leaf, { focus: true });
+		this.onResized();
+		this.trigger('layout-change');
+		this.requestSaveLayout();
+		return true;
+	}
+
 	/** The main area's layout, to save under a name. */
 	getMainLayout(): unknown { return this.serialize(this.rootSplit); }
 
@@ -921,6 +1094,8 @@ export class Workspace extends Events {
 			return null;
 		};
 		if (layout?.main?.type === 'split') {
+			// The main area can be a column too (after a tab was dropped at the top or bottom edge).
+			this.rootSplit.setDirection(layout.main.direction === 'horizontal' ? 'horizontal' : 'vertical');
 			for (const c of layout.main.children ?? []) {
 				const child = await build(c);
 				if (child) this.rootSplit.insertChild(this.rootSplit.children.length, child);

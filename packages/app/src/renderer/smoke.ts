@@ -1461,6 +1461,28 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (/^in /.test(where) && places.includes('Top level') && made) || `where=${where} places=${places.slice(0, 5).join('|')} made=${made}`;
 	});
 
+	await check('search: subjects and topics by name, notes once, commands grouped, no duplicate plugin commands', async () => {
+		await vault.createFolder('Contracts/Formation').catch(() => undefined);
+		await vault.create('Contracts/Formation/Offer and acceptance.md', 'Offer and acceptance.\n').catch(() => undefined);
+		press('p', { ctrl: true });
+		await type('contracts');
+		const firstGroup = document.querySelector('.docket-group')?.getAttribute('aria-label');
+		const folderRow = [...document.querySelectorAll('.docket-group[aria-label="Folders"] .docket-option')].find((o) => o.textContent?.includes('Contracts'));
+		const counted = /1 note/.test(folderRow?.textContent ?? '');
+		await type('offer and');
+		const inNotesDup = [...document.querySelectorAll('.docket-group[aria-label="In notes"] .docket-option-title')].some((e) => e.textContent === 'Offer and acceptance');
+		const named = [...document.querySelectorAll('.docket-group[aria-label="Notes"] .docket-option-title')].some((e) => e.textContent === 'Offer and acceptance');
+		await type('>');
+		const groups = [...document.querySelectorAll('.docket-group')].map((g) => g.getAttribute('aria-label'));
+		press('Escape'); press('Escape');
+		const names = commands.listCommands().map((c) => c.name);
+		const dupPreview = names.filter((n) => /page preview/i.test(n) && /^AGLC4 Citations: /.test(n)).length;
+		const dupHistory = names.filter((n) => n === 'AGLC4 Citations: Show version history').length;
+		for (const p of ['Contracts/Formation/Offer and acceptance.md']) { const f = vault.getFileByPath(p); if (f) await vault.trash(f, true); }
+		return (firstGroup === 'Folders' && counted && named && !inNotesDup && groups.includes('Notes') && groups.includes('Layout') && dupPreview === 1 && dupHistory === 1)
+			|| `first=${firstGroup} counted=${counted} named=${named} inNotesDup=${inNotesDup} groups=${groups.slice(0, 6).join('|')} preview=${dupPreview} history=${dupHistory}`;
+	});
+
 	await check('cheat sheet: "?" lists the Docket keys, prefixes and every shortcut by section', async () => {
 		press('p', { ctrl: true });
 		await type('?');
@@ -1703,6 +1725,58 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 		b.detach();
 		await sleep(50);
 		return (same && own) || `a=${JSON.stringify(ca.state.doc.toString())} b=${JSON.stringify(cb.state.doc.toString())} own=${own}`;
+	});
+
+	await check('tiling: drag tabs along the bar, onto a pane\'s edge or middle, and to the window\'s edges', async () => {
+		await single();
+		const names = ['Welcome.md', 'Renamed note.md', 'Folder/Inside.md'];
+		const leaves: WorkspaceLeaf[] = [];
+		for (const n of names) { const l = workspace.getLeaf('tab'); await l.openFile(vault.getFileByPath(n) ?? vault.getMarkdownFiles()[0]!); leaves.push(l); }
+		await sleep(150);
+		const textBefore = leaves.map((l) => (l.view as MarkdownView).editor?.getValue?.() ?? '');
+		const drag = async (leaf: WorkspaceLeaf, x: number, y: number) => {
+			const dt = new DataTransfer();
+			leaf.tabHeaderEl.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+			const target = document.elementFromPoint(x, y) ?? workspace.containerEl;
+			target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: x, clientY: y, dataTransfer: dt }));
+			const overlay = !!document.querySelector('.workspace-drop-overlay, .workspace-tab-drop-marker');
+			target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, clientX: x, clientY: y, dataTransfer: dt }));
+			leaf.tabHeaderEl.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+			await sleep(80);
+			return overlay;
+		};
+		const titlesOf = (t: WorkspaceLeaf['parent']) => t!.children.map((l) => l.getDisplayText());
+		// 1. Along the bar: the last tab to before the first of these three.
+		const tabs = leaves[0]!.parent!;
+		const first = leaves[0]!.tabHeaderEl.getBoundingClientRect();
+		const shown1 = await drag(leaves[2]!, first.left + 3, first.top + first.height / 2);
+		const order = titlesOf(tabs);
+		const reordered = order.indexOf(leaves[2]!.getDisplayText()) < order.indexOf(leaves[0]!.getDisplayText());
+		// 2. Onto the right edge of the pane: a split.
+		const r = tabs.contentEl.getBoundingClientRect();
+		const panesBefore = workspace.rootTabs().length;
+		const shown2 = await drag(leaves[1]!, r.right - 40, r.top + r.height / 2);
+		const newPane = leaves[1]!.parent!;
+		const nb = newPane.containerEl.getBoundingClientRect();
+		const split = workspace.rootTabs().length === panesBefore + 1 && newPane !== tabs && nb.left >= r.left + r.width / 2 - 2;
+		// 3. Into the middle of the other pane: moves there.
+		const other = leaves[1]!.parent!.contentEl.getBoundingClientRect();
+		await drag(leaves[0]!, other.left + other.width / 2, other.top + other.height / 2);
+		const moved = leaves[0]!.parent === leaves[1]!.parent;
+		// 4. The window's left edge: a new pane down the whole left side.
+		const root = workspace.rootSplit.containerEl.getBoundingClientRect();
+		const shown4 = await drag(leaves[0]!, root.left + 8, root.top + root.height / 2);
+		const leftmost = workspace.rootSplit.children[0] === leaves[0]!.parent;
+		// 5. The window's bottom edge: the main area becomes a column, the new pane across the bottom.
+		await drag(leaves[2]!, root.left + root.width / 2, root.bottom - 8);
+		const bottom = workspace.rootSplit.direction === 'horizontal' && workspace.rootSplit.children[workspace.rootSplit.children.length - 1] === leaves[2]!.parent;
+		const saved = (workspace.getLayout().main as { direction?: string }).direction === 'horizontal';
+		const textAfter = leaves.map((l) => (l.view as MarkdownView).editor?.getValue?.() ?? '');
+		const untouched = textBefore.every((t, i) => t === textAfter[i]);
+		workspace.rootSplit.setDirection('vertical');
+		await single();
+		const ok = shown1 && reordered && shown2 && split && moved && shown4 && leftmost && bottom && saved && untouched;
+		return ok || `marker=${shown1} reordered=${reordered} overlay=${shown2} split=${split} moved=${moved} edgeOverlay=${shown4} leftmost=${leftmost} bottom=${bottom} saved=${saved} untouched=${untouched}`;
 	});
 
 	await check('tiling: presets and saved layouts', async () => {

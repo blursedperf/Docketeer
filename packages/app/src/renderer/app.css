@@ -889,3 +889,12 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 }
 .lock-indicator.is-unlocked { color: var(--doom-orange, var(--text-normal)); }
 .markdown-embed.mod-locked { opacity: 0.8; }
+
+/* Dragging tabs: where the tab will land. */
+.workspace { position: relative; }
+.workspace-drop-overlay { position: absolute; z-index: 60; pointer-events: none; background: rgba(var(--doom-blue-rgb), 0.14); border: 2px solid var(--doom-blue); border-radius: var(--radius-s); }
+.workspace-drop-overlay.mod-window { background: rgba(var(--doom-blue-rgb), 0.2); }
+.workspace-tab-drop-marker { position: absolute; z-index: 61; pointer-events: none; background: var(--doom-blue); }
+body.is-dragging-tab .workspace-tab-header { cursor: grabbing; }
+.workspace-tab-header[draggable="true"] { -webkit-user-drag: element; }
+@media (prefers-reduced-motion: no-preference) { .workspace-drop-overlay { transition: left 80ms, top 80ms, width 80ms, height 80ms; } }
