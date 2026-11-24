@@ -24,7 +24,9 @@ jobs:
         run: |
           # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox uses.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          npm run smoke
+          # Chromium picks its display backend before the app's switches apply: give it a virtual X display.
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run -a npm run smoke
 
   package:
     needs: test
