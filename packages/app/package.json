@@ -6,6 +6,7 @@
   "main": "dist/main.cjs",
   "scripts": {
     "build": "node build.mjs",
+    "test": "vitest run",
     "start": "electron .",
     "smoke": "electron . --smoke",
     "dist": "electron-builder --config electron-builder.json --publish never",

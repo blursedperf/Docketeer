@@ -8,6 +8,7 @@ import { existsSync, watch, type FSWatcher } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { serveVaultFile, vaultType } from './vault-files';
 
 const APP_DIR = __dirname; // dist/
 const RENDERER_DIR = path.join(APP_DIR, 'renderer');
@@ -300,7 +301,7 @@ async function openVaultAndReload(p: string) {
 }
 
 // -------------------------------------------------------------------------------------------------
-// Serving the app, plugins and vault images over quire://app/
+// Serving the app, plugins and homebase files (pictures, PDFs, media: see vault-files.ts) over quire://app/
 
 const MIME: Record<string, string> = {
 	'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -310,6 +311,8 @@ const MIME: Record<string, string> = {
 };
 
 let csp = '';
+/** Byte-range answers from the homebase: the smoke test needs at least one (media seeking depends on them). */
+let partialResponses = 0;
 
 async function serve(abs: string, extraHeaders: Record<string, string> = {}): Promise<Response> {
 	try {
@@ -343,9 +346,12 @@ function registerProtocol() {
 		}
 		if (parts[0] === 'vault') {
 			const rel = parts.slice(1).join('/');
-			if (!MIME[path.extname(rel).toLowerCase()]?.startsWith('image/')) return new Response('Forbidden', { status: 403 });
+			if (!vaultType(rel)) return new Response('Forbidden', { status: 403 });
 			const abs = await resolvePath(rel).catch(() => null);
-			return abs ? serve(abs) : new Response('Not found', { status: 404 });
+			if (!abs) return new Response('Not found', { status: 404 });
+			const res = await serveVaultFile(abs, req);
+			if (SMOKE && res.status === 206) partialResponses++;
+			return res;
 		}
 		const abs = path.join(RENDERER_DIR, ...parts);
 		if (!inside(RENDERER_DIR, abs)) return new Response('Forbidden', { status: 403 });
@@ -491,7 +497,10 @@ async function finishSmoke(report: Record<string, unknown>) {
 		const leaks = smokeConsole.filter((m) => [PRIVATE_MARKER, 'Folder/Inside', PRIVATE_QUERY].some((s) => m.message.includes(s)));
 		const logsClean = SHOTS || BENCH ? null : leaks.length === 0;
 		if (logsClean === false) exitCode = 1;
-		const out = { ...report, mainFetchBlocked, logsClean, logLeaks: leaks.length, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot, screenshotError };
+		// The smoke test plays a recording from the homebase; Chromium asks for it in byte ranges.
+		const mediaRanges = SHOTS || BENCH ? null : partialResponses > 0;
+		if (mediaRanges === false) exitCode = 1;
+		const out = { ...report, mainFetchBlocked, mediaRanges, logsClean, logLeaks: leaks.length, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot, screenshotError };
 		if (!mainFetchBlocked) exitCode = 1;
 		console.log(`QUIRE_SMOKE ${JSON.stringify(out, null, 2)}`);
 	} catch (e) {

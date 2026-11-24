@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **PDFs, audio and video from the homebase can be loaded by the app.** The internal `quire://app/vault/`
+  address, which served only pictures, now also serves PDFs, video (MP4, WebM, Ogg, QuickTime), audio (MP3,
+  M4A, AAC, Ogg/Opus, WAV, FLAC) and WebVTT captions. Files are streamed from disk rather than read into
+  memory, and byte ranges are honoured, so long lecture recordings open at once and can be seeked. Notes,
+  HTML and scripts are still refused. Nothing shows these files yet: embeds and the PDF view build on this.
+- Tests: `@quire/app` has unit tests (types served, Range parsing, 206/416 answers); the smoke test plays a
+  recording from the homebase, seeks it, checks a note cannot be loaded as media, and fails if no byte-range
+  answer was sent.
+
 ## v0.7.1
 
 - **The note's name is its title.** Each note shows its name as a title above its text. Click it (or press ↑

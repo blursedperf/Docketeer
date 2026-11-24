@@ -11,7 +11,7 @@
   "scripts": {
     "build": "npm run build -w quire-plugin-aglc4 && npm run build -w @quire/app",
     "start": "npm run build && npm start -w @quire/app",
-    "test": "npm run typecheck && node scripts/css-lint.mjs && npm test -w @quire/api && npm test -w quire-plugin-aglc4 && npm run build && node scripts/offline-audit.mjs",
+    "test": "npm run typecheck && node scripts/css-lint.mjs && npm test -w @quire/api && npm test -w @quire/app && npm test -w quire-plugin-aglc4 && npm run build && node scripts/offline-audit.mjs",
     "audit": "node scripts/offline-audit.mjs",
     "smoke": "npm run build && npm run smoke -w @quire/app",
     "typecheck": "tsc -p packages/api --noEmit && tsc -p packages/app --noEmit && tsc -p plugins/aglc4 --noEmit",

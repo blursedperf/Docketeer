@@ -139,6 +139,41 @@ export async function runSmoke(app: App): Promise<void> {
 		const linked = view.editor.getValue().includes('[[Lease terms.pdf]]');
 		return (saved && linked) || `saved=${saved} linked=${linked}`;
 	});
+	await check('homebase media load and seek; notes are never served', async () => {
+		// 30 s of 8 kHz 16-bit mono silence: big enough (480 kB) that seeking needs ranges.
+		const rate = 8000, seconds = 30, data = rate * seconds * 2;
+		const wav = new DataView(new ArrayBuffer(44 + data));
+		const ascii = (at: number, s: string) => { for (let i = 0; i < s.length; i++) wav.setUint8(at + i, s.charCodeAt(i)); };
+		ascii(0, 'RIFF'); wav.setUint32(4, 36 + data, true); ascii(8, 'WAVE'); ascii(12, 'fmt ');
+		wav.setUint32(16, 16, true); wav.setUint16(20, 1, true); wav.setUint16(22, 1, true); wav.setUint32(24, rate, true);
+		wav.setUint32(28, rate * 2, true); wav.setUint16(32, 2, true); wav.setUint16(34, 16, true); ascii(36, 'data'); wav.setUint32(40, data, true);
+		const file = await vault.createBinary('attachments/Lecture smoke.wav', wav.buffer);
+		const media = (src: string) => new Promise<HTMLAudioElement | string>((resolve) => {
+			const a = document.createElement('audio');
+			a.preload = 'metadata';
+			a.onloadedmetadata = () => resolve(a);
+			a.onerror = () => resolve(`error ${a.error?.code}`);
+			window.setTimeout(() => resolve('timeout'), 5000);
+			a.src = src;
+		});
+		const a = await media(vault.getResourcePath(file));
+		if (typeof a === 'string') return `audio did not load: ${a}`;
+		const duration = Math.round(a.duration);
+		const seekable = a.seekable.length ? Math.round(a.seekable.end(0)) : 0;
+		const seeked = await new Promise<boolean>((resolve) => {
+			a.onseeked = () => resolve(true);
+			window.setTimeout(() => resolve(false), 5000);
+			a.currentTime = 25;
+		});
+		const at = Math.round(a.currentTime);
+		a.removeAttribute('src');
+		a.load();
+		const note = await media(`quire://app/vault/${encodeURIComponent('Welcome.md')}`);
+		const refused = typeof note === 'string' && note !== 'timeout';
+		await vault.delete(file);
+		return (duration === seconds && seekable === seconds && seeked && at === 25 && refused)
+			|| `duration=${duration} seekable=${seekable} seeked=${seeked} at=${at} noteRefused=${refused} (${typeof note === 'string' ? note : 'loaded'})`;
+	});
 	await check('reading view embeds notes, sections and pictures', async () => {
 		const pic = vault.getFiles().find((f) => f.path.startsWith('attachments/Pasted image'))!;
 		const file = await vault.create('Embeds.md', `# Embeds\n\n![[Welcome]]\n\n![[Renamed note#Second]]\n\n![[${pic.name}|120]]\n\n![[Embeds]]\n`);
