@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.5.1
+
+- **New notes: the name first, and where it goes.** Ctrl+N (⌘N), or "New note" in Units, asks for the name
+  and the subject or topic in one dialog (the open note's folder unless you choose another). No more
+  "Untitled" notes to rename.
+- **Units is easier to follow.** A line at the top explains subjects (your top folders) and topics (folders
+  inside them), with the keys. On any row, **N** makes a new note there and **T** a new topic; each opened
+  folder ends with "+ New note in …", and "+ New subject" closes the list. Folders show an arrow (open or
+  closed) and a note count instead of a label on every row. The attachments folder is no longer listed.
+- **Sorting** is still A–Z, now ignoring capitals and with numbers in order ("Week 2" before "Week 10").
+- **Create a note from search, where you want it**: "Create note “…”" says which folder it goes in, and →
+  lists every other subject and topic. It comes after the other results, so Enter opens the best match.
+- **Fixed**: clicking a panel tab, or a row that redraws the panel, closed the Docket in peek mode. Clicking
+  outside it still closes it, now also on the status bar.
+- **Fixed**: saving the same file twice at the same moment (two settings changed together) could fail and
+  lose one of the changes.
+
 ## v0.5.0
 
 **The Docket replaces the sidebars.** Everything is now reached from the keyboard through one tray that drops
