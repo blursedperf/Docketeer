@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.0
 
 - **Search.** A search pane (Ctrl/Cmd+Shift+F, or the search tab in the left sidebar) finds text in every
   note: all the words, `"exact phrases"`, `-excluded` words, `path:` and `tag:` filters, match case. Results

@@ -46,4 +46,4 @@ export { LEGAL_WORDS } from './legal-words';
 export { IMAGE_EXTENSIONS, isImage, attachmentFolder, availablePath, saveAttachment, attachFiles, embedMarkdown } from './attachments';
 
 /** This API's version. */
-export const apiVersion = '0.3.0';
+export const apiVersion = '0.4.0';
