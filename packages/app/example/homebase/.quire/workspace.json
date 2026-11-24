@@ -1,0 +1,11 @@
+{
+	"main": {
+		"type": "split",
+		"direction": "vertical",
+		"weight": 1,
+		"children": [
+			{ "type": "tabs", "weight": 1, "current": 0, "children": [{ "type": "markdown", "state": { "file": "Start here.md" }, "active": true }] },
+			{ "type": "tabs", "weight": 1, "current": 0, "children": [{ "type": "markdown", "state": { "file": "Torts/Negligence/Duty of care.md" } }] }
+		]
+	}
+}

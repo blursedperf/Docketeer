@@ -52,17 +52,38 @@ async function welcome() {
 	b1.addEventListener('click', () => { void host.app.chooseVault(false); });
 	const b2 = actions.createEl('button', { text: 'Create a new homebase' });
 	b2.addEventListener('click', () => { void host.app.chooseVault(true); });
-	const recent = await host.app.recentVaults();
-	if (recent.length) {
-		box.createEl('h2', { text: 'Recent homebases' });
-		const list = box.createDiv({ cls: 'welcome-recent' });
-		for (const r of recent) {
-			const item = list.createDiv({ cls: 'welcome-recent-item' });
-			item.createDiv({ cls: 'welcome-recent-name', text: r.name });
-			item.createDiv({ cls: 'welcome-recent-path', text: r.path });
-			item.addEventListener('click', () => { void host.app.openVault(r.path); });
-		}
+	if (host.app.openExample) {
+		const b3 = actions.createEl('button', { text: 'Try the example homebase' });
+		b3.setAttr('title', 'Sample law notes, copied into “Quire example” in your Documents');
+		b3.addEventListener('click', () => { void host.app.openExample!().catch((e: unknown) => { status.setText(`Could not open the example homebase: ${e instanceof Error ? e.message : String(e)}`); }); });
 	}
+	const status = box.createEl('p', { cls: 'welcome-status', attr: { role: 'status' } });
+	const recentBox = box.createDiv();
+	const renderRecent = async () => {
+		recentBox.empty();
+		const recent = await host.app.recentVaults();
+		if (!recent.length) return;
+		recentBox.createEl('h2', { text: 'Recent homebases' });
+		const list = recentBox.createDiv({ cls: 'welcome-recent' });
+		for (const r of recent) {
+			const item = list.createDiv({ cls: `welcome-recent-item${r.missing ? ' is-missing' : ''}`, attr: { role: 'button', tabindex: '0' } });
+			const text = item.createDiv({ cls: 'welcome-recent-text' });
+			text.createDiv({ cls: 'welcome-recent-name', text: r.name });
+			text.createDiv({ cls: 'welcome-recent-path', text: r.missing ? `Not found · ${r.path}` : r.path });
+			const open = async () => {
+				if (await host.app.openVault(r.path)) return;
+				status.setText(`The folder for “${r.name}” is not there any more. Remove it from the list with ×.`);
+			};
+			item.addEventListener('click', () => { void open(); });
+			item.addEventListener('keydown', (e) => { if (e.key === 'Enter') void open(); });
+			if (host.app.forgetVault) {
+				const x = item.createEl('button', { cls: 'clickable-icon welcome-recent-remove', attr: { 'aria-label': `Remove ${r.name} from the list (the folder stays)`, title: 'Remove from the list (the folder stays)' } });
+				setIcon(x, 'x');
+				x.addEventListener('click', (e) => { e.stopPropagation(); void host.app.forgetVault!(r.path).then(renderRecent); });
+			}
+		}
+	};
+	await renderRecent();
 }
 
 async function start() {

@@ -111,7 +111,7 @@ export function homebasePanel(app: App, docket: Docket): DocketPanel {
 			cmd('aglc-citations:restore-deleted-note', 'Restore a deleted note');
 			cmd('app:show-in-folder', 'Show this note in the file manager');
 			row(tools, docket, 'Open the homebase folder', () => { void app.host.app.showItemInFolder(''); }, { icon: 'folder-open' });
-			cmd('app:open-homebase', 'Open another homebase');
+			cmd('app:switch-homebase', 'Switch homebase…', 'Recent homebases, another folder, or the example');
 			cmd('app:open-settings', 'Settings');
 		},
 	};

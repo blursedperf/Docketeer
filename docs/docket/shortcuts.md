@@ -7,7 +7,7 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 
 | Keys | Action |
 |---|---|
-| Mod+P | Open or close the Docket |
+| Mod+P | Open or close the Docket (change it under Settings → Hotkeys → Docket key; it applies to every homebase) |
 | Mod+Shift+P | Switch between peek and pinned |
 | Mod+1 … Mod+9 | Show a panel (while the Docket has the keyboard) |
 | Mod+Alt+↓ / ↑ | Taller / shorter |
@@ -60,6 +60,14 @@ work while you type. On macOS, Alt is ⌥ (Option).
 
 Right-click a PDF page for *Quote in note*, *Copy* and *Copy link to this page*. The toolbar has the page (type a printed
 page label such as `iv` or `112`, or a page number), zoom and *Fit the width*.
+
+## Homebases
+
+| Keys | Action |
+|---|---|
+| Mod+Shift+O | Switch homebase: recent homebases, open a folder, create one, or the example homebase |
+
+The homebase's name at the left of the status bar opens the same list.
 
 ## Locking
 

@@ -56,6 +56,8 @@ contextBridge.exposeInMainWorld('quire', {
 		recentVaults: () => call('app:recent'),
 		chooseVault: (create?: boolean) => call('app:chooseVault', !!create),
 		openVault: (p: string) => call('app:openVault', p),
+		forgetVault: (p: string) => call('app:forgetVault', p),
+		openExample: () => call<string>('app:openExample'),
 		showItemInFolder: (p: string) => call('app:showItemInFolder', p),
 		onBeforeQuit: (cb: () => Promise<void>) => { quitHandler = cb; },
 		smokeReport: (report: unknown) => ipcRenderer.send('smoke:report', report),

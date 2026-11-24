@@ -362,6 +362,9 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 }
 .status-bar-item { display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-2); white-space: nowrap; border-left: var(--border-width) solid var(--doom-hairline); color: inherit; font-weight: var(--font-normal); }
 .status-bar-item:empty { display: none; }
+/* The homebase's name sits by the mode badge at the left; the rest of the items stay at the right. */
+.status-bar-badge:has(+ .mod-homebase) { margin-right: 0; }
+.status-bar-item.mod-homebase { margin-right: auto; border-left: none; color: var(--text-muted); }
 .status-bar-item.mod-clickable { cursor: var(--cursor); }
 .status-bar-item.mod-clickable:hover { background: var(--doom-base2); color: var(--doom-blue-text); }
 .status-bar-item .svg-icon { width: var(--icon-sm); height: var(--icon-sm); }
@@ -680,7 +683,12 @@ input.settings-search { margin: var(--space-2) var(--space-2) 0; }
 .welcome-tagline { margin: 0 0 var(--space-6); color: var(--text-muted); }
 .welcome-actions { display: flex; justify-content: center; gap: var(--space-3); }
 .welcome-recent { text-align: left; border: var(--border-width) solid var(--doom-border-subtle); border-radius: var(--radius-s); overflow: hidden; }
-.welcome-recent-item { padding: var(--space-2) var(--space-3); border-top: var(--border-width) solid var(--doom-hairline); cursor: var(--cursor); }
+.welcome-recent-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-top: var(--border-width) solid var(--doom-hairline); cursor: var(--cursor); }
+.welcome-recent-text { flex: 1; min-width: 0; }
+.welcome-recent-item.is-missing .welcome-recent-name { color: var(--text-muted); text-decoration: line-through; }
+.welcome-recent-remove { opacity: 0.6; }
+.welcome-recent-item:hover .welcome-recent-remove { opacity: 1; }
+.welcome-status { min-height: 1.2em; color: var(--text-muted); font-size: var(--text-sm); }
 .welcome-recent-item:first-child { border-top: none; }
 .welcome-recent-item:hover { background: var(--doom-base2); }
 .welcome-recent-name { font-family: var(--font-chrome); color: var(--doom-blue-text); }

@@ -23,6 +23,17 @@ const CODE_KEYS: Record<string, string> = {
 	Digit0: '0', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9',
 };
 
+/**
+ * The key pressed, as hotkeys name it: with Shift (or Alt on macOS) held, punctuation and digits type
+ * another character, and Option+letter on macOS types a symbol (⌥K is ˚) or starts an accent, so those
+ * are read from the physical key.
+ */
+export function physicalKey(e: { altKey: boolean; shiftKey: boolean; key: string; code?: string }): string {
+	if ((e.shiftKey || e.altKey) && e.code && CODE_KEYS[e.code] && !/^[a-z0-9]$/i.test(e.key)) return CODE_KEYS[e.code]!;
+	if (e.altKey && e.code && /^Key[A-Z]$/.test(e.code) && !/^[a-z]$/i.test(e.key)) return e.code.slice(3).toLowerCase();
+	return e.key;
+}
+
 /** The same form for a key press. */
 export function eventString(e: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; key: string; code?: string }): string {
 	const mods: string[] = [];
@@ -31,9 +42,7 @@ export function eventString(e: { altKey: boolean; ctrlKey: boolean; metaKey: boo
 	if (e.metaKey) mods.push('Meta');
 	if (e.shiftKey) mods.push('Shift');
 	// With Shift (or Alt on macOS) held, punctuation and digits type another character: use the key itself.
-	let raw = (e.shiftKey || e.altKey) && e.code && CODE_KEYS[e.code] && !/^[a-z0-9]$/i.test(e.key) ? CODE_KEYS[e.code]! : e.key;
-	// Option+letter on macOS types a symbol (⌥K is ˚) or starts an accent: use the letter's key.
-	if (e.altKey && e.code && /^Key[A-Z]$/.test(e.code) && !/^[a-z]$/i.test(e.key)) raw = e.code.slice(3);
+	const raw = physicalKey(e);
 	const key = raw.length === 1 ? raw.toUpperCase() : raw;
 	return [...mods.sort(), key].join('+');
 }

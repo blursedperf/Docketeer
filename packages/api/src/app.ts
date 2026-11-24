@@ -32,8 +32,10 @@ export function formatHotkey(h: Hotkey): string {
 /** The command registry: every action in the app, its shortcuts, and running it. */
 export class Commands {
 	commands: Record<string, Command> = {};
-	/** User overrides: command id to hotkeys (empty array removes the default). */
+	/** User overrides in this homebase: command id to hotkeys (empty array removes the default). */
 	customKeys: Record<string, Hotkey[]> = {};
+	/** User overrides for every homebase, kept in the app's own settings (the Docket key). Under `customKeys`. */
+	appKeys: Record<string, Hotkey[]> = {};
 
 	constructor(private app: App) {
 		if (typeof window !== 'undefined') window.addEventListener('keydown', (e) => this.onKeyDown(e), true);
@@ -48,7 +50,12 @@ export class Commands {
 	listCommands(): Command[] { return Object.values(this.commands); }
 
 	hotkeysFor(cmd: Command): Hotkey[] {
-		return this.customKeys[cmd.id] ?? cmd.hotkeys ?? [];
+		return this.customKeys[cmd.id] ?? this.appKeys[cmd.id] ?? cmd.hotkeys ?? [];
+	}
+
+	/** Whether the hotkeys were changed for every homebase. */
+	isAppCustomised(id: string): boolean {
+		return id in this.appKeys;
 	}
 
 	/** Whether the user changed this command's hotkeys. */
@@ -67,6 +74,13 @@ export class Commands {
 		} catch {
 			console.error('Could not read the hotkeys file');
 		}
+		try {
+			const getConfig = this.app.host?.app?.getConfig;
+			const app = getConfig ? (await getConfig()).hotkeys : null;
+			if (app && typeof app === 'object') this.appKeys = Object.fromEntries(Object.entries(app as Record<string, unknown>).filter((e): e is [string, Hotkey[]] => Array.isArray(e[1])));
+		} catch {
+			console.error('Could not read the app hotkeys');
+		}
 	}
 
 	/** Set a command's hotkeys (an empty list removes them all); null goes back to the default. */
@@ -74,6 +88,15 @@ export class Commands {
 		if (keys === null) delete this.customKeys[id];
 		else this.customKeys[id] = keys;
 		await this.app.vault.adapter.write(this.hotkeysPath, JSON.stringify(this.customKeys, null, '\t'));
+		this.app.trigger('hotkeys-changed', id);
+	}
+
+	/** Set a command's hotkeys for every homebase (in the app's settings); null goes back to the default. */
+	async setAppHotkeys(id: string, keys: Hotkey[] | null): Promise<void> {
+		if (keys === null) delete this.appKeys[id];
+		else this.appKeys[id] = keys;
+		await this.app.host.app.setConfig({ hotkeys: this.appKeys });
+		this.app.trigger('hotkeys-changed', id);
 	}
 
 	/**

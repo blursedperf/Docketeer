@@ -37,7 +37,7 @@ export {
 	type FuzzyMatch, type Instruction, type SettingDefinitionItem,
 } from './ui';
 export { Plugin, type Command, type CommandContext, type Hotkey, type Modifier, type PluginManifest } from './plugin';
-export { type KeyContext, hotkeyString, eventString, parseHotkey, reservedFor } from './keymap';
+export { type KeyContext, hotkeyString, eventString, parseHotkey, physicalKey, reservedFor } from './keymap';
 export { parsePrefix, caseNameAt, inFootnote, contextPanel, groupResults, mergeResults, clampHeight, DOCKET_PREFIXES } from './docket-logic';
 export { SearchIndex, tokenize, type TextHit, type NameHit, type HeadingHit, type RankContext, type IndexedHeading } from './search-index';
 export { SearchService } from './search-service';

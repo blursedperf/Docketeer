@@ -12,6 +12,10 @@ Everything is reached from the keyboard through **the Docket**, a tray that drop
 (subjects and topics), citations, the homebase and the layout. Notes tile into panes from the keyboard. See
 [docs/docket/shortcuts.md](docs/docket/shortcuts.md) and [docs/docket/walkthrough.md](docs/docket/walkthrough.md).
 
+To look around first, choose *Try the example homebase* on the welcome screen (or *Switch homebase* → *Open the
+example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Quire
+example" in your Documents. Its source is in [packages/app/example](packages/app/example).
+
 See [PLAN.md](PLAN.md) for the architecture, the plugin API and the roadmap.
 
 ## Install

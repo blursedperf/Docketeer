@@ -69,7 +69,12 @@ export interface HostBridge {
 	app: {
 		getConfig(): Promise<Record<string, unknown>>;
 		setConfig(patch: Record<string, unknown>): Promise<void>;
-		recentVaults(): Promise<{ path: string; name: string; time: number }[]>;
+		/** Recent homebases, newest first: `missing` when the folder is gone, `current` for the open one. */
+		recentVaults(): Promise<{ path: string; name: string; time: number; missing?: boolean; current?: boolean }[]>;
+		/** Take a homebase off the recent list (the folder is not touched). */
+		forgetVault?(path: string): Promise<void>;
+		/** Copy the example homebase into Documents (once) and open it; resolves to its folder. */
+		openExample?(): Promise<string>;
 		/** Ask for a folder and open it as a vault (reloads the window). */
 		chooseVault(create?: boolean): Promise<boolean>;
 		openVault(path: string): Promise<boolean>;

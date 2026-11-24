@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- **Change the Docket key.** Settings → Hotkeys starts with *Docket key*: click *Change…* and press the keys. It is
+  the same in every homebase (it is kept with Quire's own settings, not in the homebase), and the handle at the top
+  and the first-run hint show the new key at once. Keys that would type text, or that the system keeps for itself,
+  are refused; a key another command uses is shown as a clash. The arrow puts back Ctrl+P (⌘P). The Docket command
+  *Change the Docket key* opens the setting.
+- **Switch homebases quickly.** *Switch homebase…* (Mod+Shift+O), or the homebase's name now at the left of the
+  status bar, lists your recent homebases in the Docket, then *Open a folder*, *Create a new homebase* and *Open
+  the example homebase*. A homebase whose folder has gone is marked *Not found*; opening it says so and takes it off
+  the list. *Remove a homebase from this list* takes entries off without touching their folders. The welcome screen
+  does the same, with × on each recent homebase.
+- **An example homebase.** *Try the example homebase* (on the welcome screen, or in the switcher) copies a set of
+  sample law notes into "Quire example" in your Documents and opens it: a topic summary, a case brief, a lecture
+  note with a recording and timestamps, a reading with page links and quotes, and an exam checklist. Opening it
+  again opens the same folder, with your changes. Its recording and reading are samples made for it.
+- **Fixed**: recording a hotkey with ⌥ on macOS stored the symbol ⌥ types (˚ for ⌥K) instead of the key.
+- Spellcheck no longer marks "homebase" or key names such as "Ctrl".
+- **Plugin API**: `commands.setAppHotkeys` and `isAppCustomised` (hotkeys for every homebase), the
+  `hotkeys-changed` event, and `physicalKey(event)`.
+
 ## v0.8.0
 
 - **PDFs open in Quire.** Judgments, readings and slides open in a tab: pages appear as you scroll, with text you

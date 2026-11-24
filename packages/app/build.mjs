@@ -6,9 +6,11 @@
  *   renderer/index.html          with the import map inline, and csp.txt with its hash
  *   renderer/pdf/engine.js       pdf.js (loaded when a PDF is first opened) and its JavaScript image decoders
  *   pdfjs/                       fonts and character maps for PDFs, read by the main process on demand
+ *   example-homebase/            the example homebase (example/), with its sample recording and reading
  *   plugins/<id>/                built-in plugins, copied from ../../plugins/*
  */
 import esbuild from 'esbuild';
+import { buildExample } from './example/build.mjs';
 import { createHash } from 'node:crypto';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -171,6 +173,9 @@ for (const [what, file] of [
 	notices += `\n${'='.repeat(78)}\n${what}\n${'='.repeat(78)}\n\n${(await readFile(join(root, 'pdfjs-dist', file), 'utf8')).trim()}\n`;
 }
 await writeFile(join(dist, 'THIRD_PARTY_NOTICES.txt'), notices);
+
+// The example homebase (example/build.mjs), copied into Documents when the user asks for it.
+await buildExample(join(dist, 'example-homebase'));
 
 // Built-in plugins.
 const pluginsRoot = join(here, '..', '..', 'plugins');

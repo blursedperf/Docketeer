@@ -12,6 +12,9 @@ import type { App } from './app';
 import { Events } from './events';
 import { LEGAL_WORDS } from './legal-words';
 
+/** Quire's own words and the names of keys, which notes about Quire use: never marked as misspelt. */
+export const APP_WORDS = ['homebase', 'homebases', 'Ctrl', 'Cmd', 'Esc', 'Alt'];
+
 export const SPELL_LANGUAGES: Record<string, string> = {
 	'en-AU': 'English (Australia)',
 	'en-GB': 'English (United Kingdom)',
@@ -47,6 +50,7 @@ export class Spellchecker extends Events {
 			if (!dict) throw new Error(`No dictionary for ${lang}`);
 			const checker = nspell(dict.aff, dict.dic);
 			await this.readPersonal();
+			for (const w of APP_WORDS) checker.add(w);
 			for (const w of this.personal) checker.add(w);
 			if (this.app.vault.getConfig('spellcheckLegal') !== false) for (const w of LEGAL_WORDS) checker.add(w);
 			this.checker = checker;

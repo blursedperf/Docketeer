@@ -66,7 +66,7 @@ export class Docket {
 		const handleBtn = this.handleEl.createEl('button', { cls: 'docket-handle-button', attr: { type: 'button' } });
 		setIcon(handleBtn.createSpan({ cls: 'docket-handle-icon' }), 'chevron-down');
 		handleBtn.createSpan({ text: 'Docket' });
-		handleBtn.createEl('kbd', { cls: 'docket-handle-key', text: this.shortcutText() });
+		handleBtn.createEl('kbd', { cls: 'docket-handle-key', text: this.shortcutText(), attr: { 'data-docket-key': 'handle' } });
 		handleBtn.addEventListener('click', () => this.toggle());
 
 		this.el = createDiv({ cls: 'docket', attr: { role: 'dialog', 'aria-label': 'Docket', hidden: '' } });
@@ -121,6 +121,12 @@ export class Docket {
 		this.detach.push(() => document.removeEventListener('mousedown', this.onOutsideMouseDown, true));
 		const ref = app.docket.on('changed', () => { if (this.opened) this.renderTabs(); });
 		this.detach.push(() => app.docket.offref(ref));
+		// The Docket key can be changed (Settings → Hotkeys): the handle and hint say the new one.
+		const keys = app.on('hotkeys-changed', (id: string) => {
+			if (id !== 'app:docket') return;
+			for (const kbd of Array.from(this.handleEl.querySelectorAll<HTMLElement>('[data-docket-key]'))) kbd.setText(this.shortcutText() || (kbd.dataset.docketKey === 'hint' ? 'the Docket key' : ''));
+		});
+		this.detach.push(() => app.offref(keys));
 	}
 
 	get isOpen(): boolean { return this.opened; }
@@ -131,7 +137,7 @@ export class Docket {
 	private showHint(): void {
 		const hint = this.handleEl.createDiv({ cls: 'docket-hint', attr: { role: 'status' } });
 		hint.createSpan({ text: 'Press ' });
-		hint.createEl('kbd', { cls: 'docket-handle-key', text: this.shortcutText() || 'the Docket key' });
+		hint.createEl('kbd', { cls: 'docket-handle-key', text: this.shortcutText() || 'the Docket key', attr: { 'data-docket-key': 'hint' } });
 		hint.createSpan({ text: ' for everything: notes, search, commands and panels. ' });
 		hint.createEl('kbd', { cls: 'docket-handle-key', text: '?' });
 		hint.createSpan({ text: ' in it lists every shortcut.' });
@@ -166,7 +172,7 @@ export class Docket {
 	// -----------------------------------------------------------------------------------------------
 	// Opening and closing
 
-	/** Mod+P: open (on the panel the cursor suggests), focus it when pinned elsewhere, or close. */
+	/** The Docket key (Mod+P unless changed): open (on the panel the cursor suggests), focus it when pinned elsewhere, or close. */
 	toggle(): void {
 		if (!this.opened) this.open();
 		else if (this.mode === 'pinned' && !this.el.contains(document.activeElement)) this.focusZone('input');

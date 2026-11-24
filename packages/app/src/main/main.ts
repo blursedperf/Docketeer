@@ -9,6 +9,7 @@ import * as fsp from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { serveVaultFile, vaultType } from './vault-files';
+import { installExample } from './example';
 
 const APP_DIR = __dirname; // dist/
 const RENDERER_DIR = path.join(APP_DIR, 'renderer');
@@ -43,6 +44,8 @@ interface MainConfig { recent: Recent[]; last: string | null; [key: string]: unk
 
 const configFile = () => path.join(app.getPath('userData'), 'quire.json');
 let config: MainConfig = { recent: [], last: null };
+/** The settings file as it was when a test run started: the run must leave it as it was. */
+let configAtStart: string | null = null;
 
 async function loadConfig() {
 	try { config = { recent: [], last: null, ...JSON.parse(await fsp.readFile(configFile(), 'utf8')) }; } catch { /* first run */ }
@@ -254,8 +257,21 @@ function registerIpc() {
 	});
 
 	handle('app:getConfig', () => config);
-	handle('app:setConfig', async (patch: Record<string, unknown>) => { Object.assign(config, patch); await saveConfig(); });
-	handle('app:recent', () => config.recent.filter((r) => existsSync(r.path)));
+	// Test runs (smoke, screenshots, benchmark) change settings in memory only: never the user's own file.
+	handle('app:setConfig', async (patch: Record<string, unknown>) => { Object.assign(config, patch); if (!SMOKE) await saveConfig(); });
+	// Recent homebases, newest first; a folder that has gone is listed as missing so it can be removed.
+	handle('app:recent', () => config.recent.map((r) => ({ ...r, missing: !existsSync(r.path), current: r.path === vaultRoot })));
+	handle('app:forgetVault', async (p: string) => {
+		config.recent = config.recent.filter((r) => r.path !== p);
+		if (config.last === p) config.last = vaultRoot;
+		if (!SMOKE) await saveConfig();
+	});
+	// The example homebase: copied into Documents the first time, opened as it is after that.
+	handle('app:openExample', async () => {
+		const dest = await installExample(path.join(APP_DIR, 'example-homebase'), app.getPath('documents'));
+		await openVaultAndReload(dest);
+		return dest;
+	});
 	handle('app:chooseVault', async (create: boolean) => {
 		const r = await dialog.showOpenDialog(win!, { title: create ? 'Create a homebase in a folder' : 'Open a folder as a homebase', properties: ['openDirectory', 'createDirectory'] });
 		const p = r.filePaths[0];
@@ -505,7 +521,10 @@ async function finishSmoke(report: Record<string, unknown>) {
 		// The smoke test plays a recording from the homebase; Chromium asks for it in byte ranges.
 		const mediaRanges = SHOTS || BENCH ? null : partialResponses > 0;
 		if (mediaRanges === false) exitCode = 1;
-		const out = { ...report, mainFetchBlocked, mediaRanges, logsClean, logLeaks: leaks.length, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot, screenshotError };
+		// A test run must not change the user's own settings (recent homebases, hotkeys).
+		const settingsUntouched = (await fsp.readFile(configFile(), 'utf8').catch(() => null)) === configAtStart;
+		if (!settingsUntouched) exitCode = 1;
+		const out = { ...report, mainFetchBlocked, mediaRanges, settingsUntouched, logsClean, logLeaks: leaks.length, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot, screenshotError };
 		if (!mainFetchBlocked) exitCode = 1;
 		console.log(`QUIRE_SMOKE ${JSON.stringify(out, null, 2)}`);
 	} catch (e) {
@@ -558,6 +577,7 @@ app.whenReady().then(async () => {
 	registerProtocol();
 	registerIpc();
 	csp = await fsp.readFile(path.join(RENDERER_DIR, 'csp.txt'), 'utf8').then((s) => s.trim());
+	if (SMOKE) configAtStart = await fsp.readFile(configFile(), 'utf8').catch(() => null);
 	await loadConfig();
 	// --homebase=<folder> opens a folder directly (--vault= is accepted too).
 	const arg = process.argv.find((a) => /^--(?:homebase|vault)=/.test(a))?.replace(/^--(?:homebase|vault)=/, '');

@@ -6,12 +6,13 @@ import { EditorSelection } from '@codemirror/state';
 import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, type CommandContext, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES,
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
 import { registerMedia } from './media';
 import { registerPdf } from './pdf/view';
+import { registerHomebases } from './homebases';
 import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
 import { LinkSuggest } from './link-suggest';
@@ -220,10 +221,51 @@ function hotkeyFromEvent(e: KeyboardEvent): Hotkey | null {
 	if (Platform.isMacOS ? e.ctrlKey : e.metaKey) modifiers.push(Platform.isMacOS ? 'Ctrl' : 'Meta');
 	if (e.altKey) modifiers.push('Alt');
 	if (e.shiftKey) modifiers.push('Shift');
-	const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+	const pressed = physicalKey(e);
+	const key = pressed.length === 1 ? pressed.toLowerCase() : pressed;
 	// Plain typing keys need a modifier; function keys and the like may stand alone.
 	if (modifiers.length === 0 && !/^F\d{1,2}$|^(Insert|Delete|Home|End|PageUp|PageDown)$/.test(key)) return null;
 	return { modifiers, key };
+}
+
+/** Turn `btn` into "Press keys…" until a hotkey is pressed (`done` gets it) or Esc or a click away cancels. */
+function recordHotkey(btn: HTMLElement, done: (h: Hotkey) => unknown, cancelled: () => void): void {
+	btn.addClass('is-recording-hotkey');
+	btn.empty();
+	btn.setText('Press keys…');
+	btn.setAttr('tabindex', '0');
+	btn.focus();
+	const stop = () => { btn.removeEventListener('keydown', onKey, true); btn.removeEventListener('blur', cancel); };
+	const cancel = () => { stop(); cancelled(); };
+	const onKey = (e: KeyboardEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.key === 'Escape') { cancel(); return; }
+		const h = hotkeyFromEvent(e);
+		if (!h) return;
+		stop();
+		void done(h);
+	};
+	btn.addEventListener('keydown', onKey, true);
+	btn.addEventListener('blur', cancel);
+}
+
+/**
+ * Why `h` cannot be the Docket key, or null. It is the way into everything, so it must not type text
+ * (it needs Ctrl, ⌘ or Alt, or a function key) and must not be one the system keeps for itself.
+ */
+export function docketKeyProblem(app: App, h: Hotkey): string | null {
+	const typing = !h.modifiers.some((m) => m === 'Mod' || m === 'Ctrl' || m === 'Meta' || m === 'Alt') && !/^F\d{1,2}$/.test(h.key);
+	if (typing) return `${formatHotkey(h)} types text: hold ${Platform.isMacOS ? '⌘, ⌃ or ⌥' : 'Ctrl or Alt'} with it, or use a function key.`;
+	const sys = app.commands.reservedFor(h);
+	if (sys) return `${formatHotkey(h)} is the system's "${sys}".`;
+	return null;
+}
+
+/** Change the Docket key for every homebase. A homebase's own choice for it (in the list below) is dropped. */
+export async function setDocketKey(app: App, h: Hotkey | null): Promise<void> {
+	if (app.commands.isCustomised('app:docket')) await app.commands.setHotkeys('app:docket', null);
+	await app.commands.setAppHotkeys('app:docket', h ? [h] : null);
 }
 
 class HotkeysTab extends SettingTab {
@@ -235,6 +277,7 @@ class HotkeysTab extends SettingTab {
 		const el = this.containerEl;
 		el.empty();
 		new Setting(el).setName('Hotkeys').setHeading();
+		this.renderDocketKey(el.createDiv());
 		new Setting(el).setName('Find a command').setDesc('Click + and press the keys to add a hotkey; × removes one; the arrow goes back to the default. Saved in this homebase (.quire/hotkeys.json).')
 			.addSearch((s) => {
 				s.setPlaceholder('Filter commands…').setValue(this.filter).onChange((v) => { this.filter = v; this.renderList(list); });
@@ -242,6 +285,36 @@ class HotkeysTab extends SettingTab {
 			});
 		const list = el.createDiv({ cls: 'hotkey-list' });
 		this.renderList(list);
+	}
+
+	/** The Docket key, first: it is the way into everything, and it is the same in every homebase. */
+	private renderDocketKey(box: HTMLElement): void {
+		box.empty();
+		const cmds = this.app.commands;
+		const cmd = cmds.findCommand('app:docket');
+		if (!cmd) return;
+		const keys = cmds.hotkeysFor(cmd);
+		const row = new Setting(box).setName('Docket key').setClass('mod-hotkeys').setClass('mod-docket-key');
+		const clashes = keys.flatMap((k) => cmds.conflicts(k, cmd.id).map((c) => `${formatHotkey(k)} also runs "${c.name}"`));
+		row.setDesc(clashes.length ? clashes.join('; ') : 'Opens and closes the Docket, in every homebase.');
+		if (clashes.length) row.descEl.addClass('mod-warning');
+		for (const k of keys) row.controlEl.createSpan({ cls: 'hotkey-pill', text: formatHotkey(k) });
+		if (keys.length === 0) row.controlEl.createSpan({ cls: 'hotkey-none', text: 'Blank' });
+		if (cmds.isAppCustomised(cmd.id) || cmds.isCustomised(cmd.id)) {
+			row.addExtraButton((b) => b.setIcon('rotate-ccw').setTooltip(`Back to ${formatHotkey({ modifiers: ['Mod'], key: 'p' })}`).onClick(async () => {
+				await setDocketKey(this.app, null);
+				this.display();
+			}));
+		}
+		row.addButton((b) => {
+			b.setButtonText('Change…');
+			b.onClick(() => recordHotkey(b.buttonEl, async (h) => {
+				const problem = docketKeyProblem(this.app, h);
+				if (problem) new Notice(problem);
+				else await setDocketKey(this.app, h);
+				this.display();
+			}, () => this.display()));
+		});
 	}
 
 	private renderList(list: HTMLElement): void {
@@ -272,26 +345,10 @@ class HotkeysTab extends SettingTab {
 				b.setIcon('plus').setTooltip('Add a hotkey');
 				const btn = b.extraSettingsEl;
 				btn.setAttr('tabindex', '0');
-				b.onClick(() => {
-					btn.addClass('is-recording-hotkey');
-					btn.empty();
-					btn.setText('Press keys…');
-					btn.focus();
-					const done = () => { btn.removeEventListener('keydown', onKey, true); btn.removeEventListener('blur', cancel); };
-					const cancel = () => { done(); this.renderList(list); };
-					const onKey = async (e: KeyboardEvent) => {
-						e.preventDefault();
-						e.stopPropagation();
-						if (e.key === 'Escape') { cancel(); return; }
-						const h = hotkeyFromEvent(e);
-						if (!h) return;
-						done();
-						await cmds.setHotkeys(cmd.id, [...keys, h]);
-						this.renderList(list);
-					};
-					btn.addEventListener('keydown', onKey, true);
-					btn.addEventListener('blur', cancel);
-				});
+				b.onClick(() => recordHotkey(btn, async (h) => {
+					await cmds.setHotkeys(cmd.id, [...keys, h]);
+					this.renderList(list);
+				}, () => this.renderList(list)));
 			});
 		}
 	}
@@ -433,7 +490,8 @@ export function registerCore(app: App): { reveal(): void } {
 	const activeMarkdown = () => workspace.getActiveViewOfType(MarkdownView);
 
 	add({ id: 'app:open-settings', name: 'Open settings', icon: 'settings', section: 'App', aliases: ['Preferences', 'Options'], hotkeys: [{ modifiers: ['Mod'], key: ',' }], callback: () => app.setting.open() });
-	add({ id: 'app:open-homebase', name: 'Open another homebase', icon: 'folder-open', section: 'Homebase', aliases: ['Switch homebase', 'Open vault'], callback: () => { void app.host.app.chooseVault(false); } });
+	add({ id: 'app:open-homebase', name: 'Open a folder as a homebase…', icon: 'folder-open', section: 'Homebase', aliases: ['Open another homebase', 'Open vault'], callback: () => { void app.host.app.chooseVault(false); } });
+	add({ id: 'app:change-docket-key', name: 'Change the Docket key', icon: 'keyboard', section: 'Docket', aliases: ['Docket hotkey', 'Docket shortcut'], callback: () => app.setting.openTabById('hotkeys') });
 	/** Every note in a folder and the folders inside it. */
 	const notesIn = (folder: TFolder): TFile[] => {
 		const out: TFile[] = [];
@@ -585,6 +643,7 @@ export function registerCore(app: App): { reveal(): void } {
 	const tiling = registerTiling(app);
 	registerMedia(app);
 	registerPdf(app);
+	registerHomebases(app);
 	(app as unknown as { tiling: typeof tiling }).tiling = tiling;
 	const docket = registerDocket(app);
 	return {

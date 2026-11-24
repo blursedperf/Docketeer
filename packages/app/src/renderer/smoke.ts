@@ -5,7 +5,8 @@
  */
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
-import { type App, MarkdownView, Platform, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
+import { type App, MarkdownView, Platform, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
+import { docketKeyProblem, setDocketKey } from './core';
 
 interface Check { name: string; ok: boolean; detail?: string; }
 
@@ -283,8 +284,8 @@ export async function runSmoke(app: App): Promise<void> {
 		const textLayer = () => view.contentEl.querySelector<HTMLElement>('.pdf-page[data-page="2"] .textLayer');
 		if (!(await until(() => (textLayer()?.textContent ?? '').includes('duty of care'), 8000))) problems.push(`no text layer: ${textLayer()?.textContent}`);
 		// The page is drawn: some pixels of its canvas are dark (the text).
-		const canvas = view.contentEl.querySelector<HTMLCanvasElement>('.pdf-page[data-page="2"] canvas');
-		await until(() => { const c = canvas?.getContext('2d'); if (!c || !canvas) return false; const d = c.getImageData(0, 0, canvas.width, Math.min(canvas.height, Math.ceil(canvas.height * 0.15))).data; for (let i = 0; i < d.length; i += 4) if (d[i]! < 100 && d[i + 3]! > 0) return true; return false; }, 5000)
+		// Looked up each time: the canvas is put in place only once it is drawn.
+		await until(() => { const canvas = view.contentEl.querySelector<HTMLCanvasElement>('.pdf-page[data-page="2"] canvas'); const c = canvas?.getContext('2d'); if (!c || !canvas) return false; const d = c.getImageData(0, 0, canvas.width, Math.min(canvas.height, Math.ceil(canvas.height * 0.15))).data; for (let i = 0; i < d.length; i += 4) if (d[i]! < 100 && d[i + 3]! > 0) return true; return false; }, 5000)
 			|| problems.push('page 2 was not drawn');
 		// Select the line and quote it into the note.
 		const range = document.createRange();
@@ -313,6 +314,50 @@ export async function runSmoke(app: App): Promise<void> {
 		await vault.delete(note);
 		await vault.delete(pdf);
 		return problems.length === 0 || problems.join('; ');
+	});
+	await check('the Docket key can be changed for every homebase; the handle says the new one', async () => {
+		const problems: string[] = [];
+		const ui = (app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI;
+		const press = (key: string, code: string, shift: boolean) => window.dispatchEvent(new KeyboardEvent('keydown', {
+			key, code, shiftKey: shift, ctrlKey: !Platform.isMacOS, metaKey: Platform.isMacOS, bubbles: true, cancelable: true,
+		}));
+		const handleKey = () => document.querySelector('.docket-handle [data-docket-key="handle"]')?.textContent ?? '';
+		const modP = formatHotkey({ modifiers: ['Mod'], key: 'p' });
+		const next = { modifiers: ['Mod' as const, 'Shift' as const], key: 'k' };
+		if (docketKeyProblem(app, next)) problems.push(`refused ${formatHotkey(next)}: ${docketKeyProblem(app, next)}`);
+		if (!docketKeyProblem(app, { modifiers: [], key: 'k' })) problems.push('a plain letter was accepted');
+		if (!docketKeyProblem(app, { modifiers: ['Shift'], key: 'k' })) problems.push('Shift and a letter was accepted');
+		if (handleKey() !== modP) problems.push(`handle said ${handleKey()} before`);
+		if (app.docketOpen) ui?.close(true);
+		await setDocketKey(app, next);
+		if (handleKey() !== formatHotkey(next)) problems.push(`handle says ${handleKey()}`);
+		press('K', 'KeyK', true);
+		await sleep(50);
+		if (!app.docketOpen) problems.push('the new key did not open the Docket');
+		press('K', 'KeyK', true);
+		await sleep(50);
+		if (app.docketOpen) { problems.push('the new key did not close the Docket'); ui?.close(true); }
+		press('p', 'KeyP', false);
+		await sleep(50);
+		if (app.docketOpen) { problems.push('the old key still opens the Docket'); ui?.close(true); }
+		const saved = (await app.host.app.getConfig()).hotkeys as Record<string, unknown> | undefined;
+		if (JSON.stringify(saved?.['app:docket']) !== JSON.stringify([next])) problems.push(`app settings: ${JSON.stringify(saved)}`);
+		await setDocketKey(app, null);
+		if (handleKey() !== modP) problems.push(`after reset the handle says ${handleKey()}`);
+		return problems.length === 0 || problems.join('; ');
+	});
+	await check('switch homebase: the name in the status bar opens recent homebases and the ways to open one', async () => {
+		const bar = document.querySelector<HTMLElement>('.status-bar .mod-homebase');
+		if (!bar) return 'no homebase in the status bar';
+		if (!bar.textContent?.includes(app.host.vault!.name)) return `status bar says ${bar.textContent}`;
+		if (!bar.previousElementSibling?.classList.contains('status-bar-badge')) return 'the homebase is not beside the mode badge';
+		bar.click();
+		const text = () => document.querySelector('.docket')?.textContent ?? '';
+		const shown = await until(() => app.docketOpen && text().includes('Open the example homebase'), 3000);
+		const want = ['Switch homebase', 'This homebase', 'Open a folder as a homebase', 'Create a new homebase', 'Open the example homebase'];
+		const missing = want.filter((w) => !text().includes(w));
+		(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
+		return (shown && missing.length === 0) || `missing: ${missing.join(', ')}`;
 	});
 	await check('reading view embeds notes, sections and pictures', async () => {
 		const pic = vault.getFiles().find((f) => f.path.startsWith('attachments/Pasted image'))!;

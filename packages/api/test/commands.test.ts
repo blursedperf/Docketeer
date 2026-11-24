@@ -224,3 +224,27 @@ describe('"New note" goes last', () => {
 		expect(g.map((x) => x.type)).toEqual(['Headings', 'Plugin things', 'New note']);
 	});
 });
+
+describe('app-wide hotkeys (the Docket key)', () => {
+	it('sit between the default and a homebase\'s own, and are saved in the app\'s settings', async () => {
+		const { app, cmds } = fakeApp();
+		const config: Record<string, unknown> = { hotkeys: { 'a:x': [{ modifiers: ['Mod'], key: 'k' }], 'a:bad': 'nonsense' } };
+		app.host = { app: { getConfig: async () => config, setConfig: async (p: Record<string, unknown>) => { Object.assign(config, p); } } };
+		cmds.addCommand({ id: 'a:x', name: 'X', hotkeys: [{ modifiers: ['Mod'], key: 'p' }] });
+		const x = cmds.findCommand('a:x')!;
+		await cmds.loadHotkeys();
+		expect(cmds.hotkeysFor(x)).toEqual([{ modifiers: ['Mod'], key: 'k' }]);
+		expect(cmds.isAppCustomised('a:x')).toBe(true);
+		expect(cmds.isAppCustomised('a:bad')).toBe(false);
+		await cmds.setHotkeys('a:x', [{ modifiers: ['Alt'], key: 'j' }]);
+		expect(cmds.hotkeysFor(x)).toEqual([{ modifiers: ['Alt'], key: 'j' }]);
+		await cmds.setHotkeys('a:x', null);
+		expect(cmds.hotkeysFor(x)).toEqual([{ modifiers: ['Mod'], key: 'k' }]);
+		await cmds.setAppHotkeys('a:x', [{ modifiers: ['Mod', 'Shift'], key: 'k' }]);
+		expect(config.hotkeys).toEqual({ 'a:x': [{ modifiers: ['Mod', 'Shift'], key: 'k' }] });
+		await cmds.setAppHotkeys('a:x', null);
+		expect(cmds.hotkeysFor(x)).toEqual([{ modifiers: ['Mod'], key: 'p' }]);
+		expect(config.hotkeys).toEqual({});
+		expect(app.trigger).toHaveBeenCalledWith('hotkeys-changed', 'a:x');
+	});
+});
