@@ -74,15 +74,10 @@ export class FileExplorerView extends ItemView {
 	}
 
 	override async onOpen(): Promise<void> {
-		const bar = this.contentEl.createDiv({ cls: 'nav-header' });
-		const button = (icon: string, label: string, cb: () => void) => {
-			const b = bar.createDiv({ cls: 'clickable-icon nav-action-button', attr: { 'aria-label': label, title: label } });
-			setIcon(b, icon);
-			b.addEventListener('click', cb);
-		};
-		button('square-pen', 'New note', () => { void this.newNote(this.app.vault.getRoot()); });
-		button('folder-plus', 'New folder', () => this.newFolder(this.app.vault.getRoot()));
-		button('chevrons-down-up', 'Collapse all', () => { this.expanded.clear(); this.render(); this.app.workspace.requestSaveLayout(); });
+		// In the view's header line, so it shares a band with the header lines of the other columns.
+		this.addAction('chevrons-down-up', 'Collapse all', () => { this.expanded.clear(); this.render(); this.app.workspace.requestSaveLayout(); });
+		this.addAction('folder-plus', 'New folder', () => this.newFolder(this.app.vault.getRoot()));
+		this.addAction('square-pen', 'New note', () => { void this.newNote(this.app.vault.getRoot()); });
 		this.treeEl = this.contentEl.createDiv({ cls: 'nav-files-container' });
 		this.treeEl.addEventListener('contextmenu', (e) => {
 			if ((e.target as HTMLElement).closest('.tree-item-self')) return;
@@ -121,7 +116,8 @@ export class FileExplorerView extends ItemView {
 		for (const child of this.sorted(folder)) {
 			const item = parent.createDiv({ cls: 'tree-item' });
 			const self = item.createDiv({ cls: 'tree-item-self is-clickable', attr: { 'data-path': child.path, draggable: 'true' } });
-			self.style.paddingLeft = `${8 + depth * 16}px`;
+			// [indent][chevron slot][name]: 16px per level, so names at one depth share a column.
+			self.style.paddingLeft = `${4 + depth * 16}px`;
 			if (child instanceof TFolder) {
 				const open = this.expanded.has(child.path);
 				self.addClass('nav-folder-title');
@@ -133,10 +129,16 @@ export class FileExplorerView extends ItemView {
 					this.render();
 					this.app.workspace.requestSaveLayout();
 				});
-				if (open) this.renderChildren(child, item.createDiv({ cls: 'tree-item-children' }), depth + 1);
+				if (open) {
+					const children = item.createDiv({ cls: 'tree-item-children' });
+					// The guide runs under this folder's chevron (centre of its 16px slot).
+					children.style.setProperty('--guide-left', `${4 + depth * 16 + 7}px`);
+					this.renderChildren(child, children, depth + 1);
+				}
 			} else if (child instanceof TFile) {
 				self.addClass('nav-file-title');
 				if (child.path === this.selectedPath) self.addClass('is-active');
+				self.createDiv({ cls: 'tree-item-icon is-empty' });
 				self.createDiv({ cls: 'tree-item-inner', text: child.extension === 'md' ? child.basename : child.name });
 				if (child.extension !== 'md') self.createDiv({ cls: 'nav-file-tag', text: child.extension });
 				self.addEventListener('click', (e) => {

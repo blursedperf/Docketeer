@@ -165,6 +165,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		if (mode === 'preview') await this.renderPreview();
 		else this.editor.focus();
 		this.app.workspace.requestSaveLayout();
+		this.app.workspace.trigger('layout-change');
 	}
 
 	toggleMode(): Promise<void> {

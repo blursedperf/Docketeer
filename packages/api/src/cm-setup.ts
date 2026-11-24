@@ -68,6 +68,8 @@ const footnoteDefMark = Decoration.mark({ class: 'cm-footnote-def' });
 const highlightMark = Decoration.mark({ class: 'cm-highlight' });
 const commentMark = Decoration.mark({ class: 'cm-comment cm-percent-comment' });
 const frontmatterLine = Decoration.line({ class: 'cm-frontmatter' });
+const frontmatterEnd = Decoration.line({ class: 'cm-frontmatter cm-frontmatter-end' });
+const commentLine = Decoration.line({ class: 'cm-comment-line' });
 
 /** Style [[links]], [^footnotes], ==highlights== and the frontmatter block. */
 const inlineMarks = ViewPlugin.fromClass(class {
@@ -82,7 +84,7 @@ const inlineMarks = ViewPlugin.fromClass(class {
 		if (doc.lines > 1 && doc.line(1).text === '---') {
 			for (let n = 2; n <= Math.min(doc.lines, 500); n++) {
 				if (doc.line(n).text === '---' || doc.line(n).text === '...') {
-					for (let k = 1; k <= n; k++) { const l = doc.line(k); ranges.push({ from: l.from, to: l.from, deco: frontmatterLine }); }
+					for (let k = 1; k <= n; k++) { const l = doc.line(k); ranges.push({ from: l.from, to: l.from, deco: k === n ? frontmatterEnd : frontmatterLine }); }
 					break;
 				}
 			}
@@ -92,6 +94,10 @@ const inlineMarks = ViewPlugin.fromClass(class {
 		const cre = /%%[\s\S]*?(?:%%|$)/g;
 		for (let m = cre.exec(all); m; m = cre.exec(all)) {
 			if (m[0].length > 0) ranges.push({ from: m.index, to: m.index + m[0].length, deco: commentMark });
+			// A comment over several lines reads as a block: a rule beside every line of it.
+			const first = doc.lineAt(m.index);
+			const last = doc.lineAt(m.index + m[0].length);
+			if (last.number > first.number) for (let n = first.number; n <= last.number; n++) { const l = doc.line(n); ranges.push({ from: l.from, to: l.from, deco: commentLine }); }
 			if (m[0].length === 0) cre.lastIndex++;
 		}
 		for (const { from, to } of view.visibleRanges) {

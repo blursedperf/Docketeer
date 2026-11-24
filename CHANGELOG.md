@@ -14,6 +14,11 @@
   option and as the fallback. Plugins still use Lucide names. See docs/design/icons.md.
 - **Design.** A polish plan for spacing and alignment (docs/design/polish-plan.md), and `npm run shots`
   to capture every surface for review.
+- **Polish.** The stylesheet is rebuilt on design tokens (4px spacing grid, four UI text sizes, fixed row,
+  control and band heights), enforced by a lint in `npm test`. Tab strips and header lines line up across
+  all three columns; file and folder names share a column; one row style for menus, palette and
+  switcher; settings controls in one column with a title bar; a focus ring everywhere; notices at the
+  bottom right; the modeline badge shows the mode. An empty tab is reused instead of left behind.
 
 ## v0.1.0
 

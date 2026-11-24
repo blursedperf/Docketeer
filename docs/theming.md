@@ -51,7 +51,7 @@ body.theme-dark {
 | Lines | `--doom-hairline`, `--doom-border-subtle`, `--doom-border-strong` |
 | Headings | `--h1-color` … `--h6-color` |
 | Modeline | `--doom-modeline-bar`, `--doom-modeline-badge-bg`, `--doom-modeline-badge-fg` |
-| Spacing | `--row-pad-y`, `--menu-pad-y`, `--setting-pad-y`, `--tab-strip-height`, `--status-height`, `--view-header-height` |
+| Spacing and sizes | `--space-1` … `--space-8`, `--text-xs` … `--text-lg`, `--header-band`, `--subheader-band`, `--row-h`, `--control-h`, `--status-h`, `--icon-sm` … `--icon-lg`, `--control-width` (see the top of `app.css`) |
 
 The full list for each built-in palette is in `packages/api/src/themes/palettes.ts`. The standard
 variables plugins use (`--background-primary`, `--text-muted`, `--interactive-accent`, `--color-red` …)

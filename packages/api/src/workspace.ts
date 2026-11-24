@@ -266,6 +266,11 @@ export class WorkspaceLeaf extends Events {
 				this.containerEl.appendChild(view.containerEl);
 				view.load();
 				await view.onOpen();
+				// The active pane now shows something else: tell listeners, as a change of pane would.
+				if (this.workspace.activeLeaf === this) {
+					this.workspace.trigger('active-leaf-change', this);
+					this.workspace.trigger('layout-change');
+				}
 			}
 			await this.view.setState(state.state ?? {}, { history: false });
 			if (eState) this.view.setEphemeralState(eState);
@@ -478,6 +483,8 @@ export class Workspace extends Events {
 			return leaf ? this.createLeafBySplit(leaf, direction) : this.createLeafInTabs(this.activeRootTabs());
 		}
 		if (newLeaf === true || newLeaf === 'tab' || newLeaf === 'window') {
+			const recent = this.getMostRecentLeaf();
+			if (recent && !recent.pinned && recent.view instanceof EmptyView) return recent;
 			return this.createLeafInTabs(this.activeRootTabs());
 		}
 		const recent = this.getMostRecentLeaf();

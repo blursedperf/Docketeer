@@ -9,11 +9,15 @@ export class SettingsModal extends Modal {
 	private pageEl: HTMLElement;
 	private current: SettingTab | null = null;
 	private isOpen = false;
+	private currentEl: HTMLElement;
 
 	constructor(app: App) {
 		super(app);
 		this.modalEl.addClass('mod-settings');
 		this.titleEl.detach();
+		const bar = this.contentEl.createDiv({ cls: 'settings-titlebar' });
+		bar.createSpan({ text: 'Settings ›' });
+		this.currentEl = bar.createSpan({ cls: 'settings-titlebar-current' });
 		const wrap = this.contentEl.createDiv({ cls: 'vertical-tabs-container' });
 		this.navEl = wrap.createDiv({ cls: 'vertical-tab-header' });
 		this.pageEl = wrap.createDiv({ cls: 'vertical-tab-content-container' });
@@ -54,6 +58,7 @@ export class SettingsModal extends Modal {
 		this.pageEl.appendChild(tab.containerEl);
 		tab.containerEl.empty();
 		tab.display();
+		this.currentEl.setText(tab.name);
 		this.renderNav();
 	}
 

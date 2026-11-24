@@ -30,7 +30,12 @@ class CommandPalette extends SuggestModal<Command> {
 	}
 	renderSuggestion(c: Command, el: HTMLElement): void {
 		el.addClass('mod-complex');
-		el.createDiv({ cls: 'suggestion-content', text: c.name });
+		const content = el.createDiv({ cls: 'suggestion-content' });
+		// A plugin's commands: its name as a muted prefix, the command itself in normal weight.
+		const plugin = this.app.plugins.manifests[c.id.slice(0, c.id.indexOf(':'))];
+		const prefix = plugin && c.name.startsWith(`${plugin.name}: `) ? `${plugin.name}: ` : '';
+		if (prefix) content.createSpan({ cls: 'suggestion-prefix', text: prefix });
+		content.createSpan({ text: c.name.slice(prefix.length) });
 		const keys = this.app.commands.hotkeysFor(c);
 		if (keys.length) {
 			const aux = el.createDiv({ cls: 'suggestion-aux' });
@@ -73,6 +78,7 @@ class QuickSwitcher extends SuggestModal<SwitchItem> {
 		return out;
 	}
 	renderSuggestion(item: SwitchItem, el: HTMLElement): void {
+		el.addClass('mod-complex');
 		if (!(item instanceof TFile)) {
 			el.createDiv({ cls: 'suggestion-content', text: `Create "${item.create}"` });
 			el.createDiv({ cls: 'suggestion-note', text: 'New note' });
@@ -317,6 +323,23 @@ class AboutTab extends SettingTab {
 // -------------------------------------------------------------------------------------------------
 // Word count in the status bar
 
+/** The modeline badge: the active pane's mode, as Doom's modeline shows the major mode. */
+function modeBadge(app: App) {
+	const el = createDiv({ cls: 'status-bar-badge' });
+	app.statusBarEl.prepend(el);
+	const update = () => {
+		const view = app.workspace.activeLeaf?.view;
+		let mode = 'quire';
+		if (view instanceof MarkdownView) mode = view.getMode() === 'preview' ? 'read' : 'edit';
+		else if (view && view.getViewType() !== 'empty') mode = view.getViewType().split('-').pop() ?? 'quire';
+		el.setText(mode);
+		el.setAttribute('aria-label', `Mode: ${mode}`);
+	};
+	app.workspace.on('active-leaf-change', update);
+	app.workspace.on('layout-change', update);
+	update();
+}
+
 function wordCount(app: App) {
 	const el = app.statusBarEl.createDiv({ cls: 'status-bar-item mod-word-count' });
 	const update = () => {
@@ -359,6 +382,7 @@ export function registerCore(app: App): { reveal(): void } {
 	const { workspace, vault } = app;
 	workspace.registerViewType(FILE_EXPLORER, (leaf) => new FileExplorerView(leaf));
 	for (const tab of [new EditorTab(app), new FilesTab(app), new AppearanceTab(app), new PluginsTab(app), new AboutTab(app)]) app.setting.addCoreTab(tab);
+	modeBadge(app);
 	wordCount(app);
 
 	const recent: string[] = [];

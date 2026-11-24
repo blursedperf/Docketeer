@@ -152,6 +152,57 @@ export async function runSmoke(app: App): Promise<void> {
 		return ok;
 	});
 
+	// Alignment (polish plan): bands line up across the three columns, in every density.
+	const visible = (root: Element | null, sel: string) => [...(root?.querySelectorAll<HTMLElement>(sel) ?? [])].find((e) => e.offsetParent !== null) ?? null;
+	const columns = () => [workspace.leftSplit.containerEl, workspace.rootSplit.containerEl, workspace.rightSplit.containerEl];
+	for (const density of ['compact', 'comfortable', 'spacious'] as const) {
+		await app.setConfig('density', density);
+		await sleep(50);
+		await check(`header bands line up across columns (${density})`, () => {
+			const tabs = columns().map((c) => visible(c, '.workspace-tab-header-container')?.getBoundingClientRect().bottom);
+			const heads = columns().map((c) => visible(c, '.view-header')?.getBoundingClientRect().bottom);
+			const same = (xs: (number | undefined)[]) => xs.every((x) => x !== undefined && Math.abs(x - xs[0]!) < 0.5);
+			return (same(tabs) && same(heads)) || `tab strips ${tabs.join('/')} · header lines ${heads.join('/')}`;
+		});
+	}
+	await app.setConfig('density', 'comfortable');
+	await check('file and folder names share a column', () => {
+		const folder = document.querySelector('.nav-folder-title .tree-item-inner')?.getBoundingClientRect().left;
+		const file = document.querySelector('.nav-file-title .tree-item-inner')?.getBoundingClientRect().left;
+		return (folder !== undefined && folder === file) || `folder ${folder} file ${file}`;
+	});
+	await check('settings controls share one column', async () => {
+		app.setting.openTabById('appearance');
+		await sleep(50);
+		const widths = [...document.querySelectorAll<HTMLElement>('.vertical-tab-content .setting-item:not(.setting-item-heading):not(.mod-buttons) .setting-item-control')].filter((e) => !e.querySelector(':scope > button, :scope > select + select')).map((e) => Math.round(e.getBoundingClientRect().width));
+		app.setting.close();
+		return (widths.length > 5 && widths.every((w) => w === widths[0])) || widths.join(',');
+	});
+	await check('an empty tab is reused for "open in new tab"', async () => {
+		const blank = workspace.getLeaf('tab');
+		if (blank.view.getViewType() !== 'empty') return 'no blank tab';
+		workspace.setActiveLeaf(blank, { focus: false });
+		const again = workspace.getLeaf('tab');
+		const ok = again === blank;
+		await blank.openFile(vault.getFileByPath('Welcome.md')!);
+		const badge = document.querySelector('.status-bar-badge')?.textContent;
+		blank.detach();
+		if (ok && badge !== 'edit') return `reused, but listeners missed the new view (badge ${badge})`;
+		await sleep(50);
+		return ok || 'a second tab was opened';
+	});
+	await check('modeline badge shows the mode', async () => {
+		const leaf = workspace.getLeavesOfType('markdown')[0];
+		if (!leaf) return 'no note open';
+		workspace.setActiveLeaf(leaf, { focus: true });
+		await sleep(50);
+		const edit = document.querySelector('.status-bar-badge')?.textContent;
+		await (leaf.view as MarkdownView).setMode('preview');
+		const read = document.querySelector('.status-bar-badge')?.textContent;
+		await (leaf.view as MarkdownView).setMode('source');
+		return (edit === 'edit' && read === 'read') || `edit=${edit} read=${read} active=${workspace.activeLeaf?.view.getViewType()}`;
+	});
+
 	// Theming.
 	const cssVar = (name: string) => getComputedStyle(document.body).getPropertyValue(name).trim();
 	await check('homebase is the vault', () => app.homebase === app.vault);
@@ -217,9 +268,9 @@ export async function runSmoke(app: App): Promise<void> {
 	});
 	await check('density changes spacing', async () => {
 		await app.setConfig('density', 'compact');
-		const compact = cssVar('--row-pad-y');
+		const compact = cssVar('--row-h');
 		await app.setConfig('density', 'comfortable');
-		return compact === '2px' || compact;
+		return compact === '22px' || compact;
 	});
 
 	// Offline: the page itself must not be able to reach the network.

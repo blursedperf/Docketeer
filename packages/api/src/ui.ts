@@ -538,10 +538,12 @@ export class Setting {
 		this.nameEl = this.infoEl.createDiv({ cls: 'setting-item-name' });
 		this.descEl = this.infoEl.createDiv({ cls: 'setting-item-description' });
 		this.controlEl = this.settingEl.createDiv({ cls: 'setting-item-control' });
+		// Until it gets a name or description, the row holds only controls (eg a row of buttons).
+		this.settingEl.addClass('mod-buttons');
 	}
 
-	setName(name: string | DocumentFragment): this { this.nameEl.setText(name); return this; }
-	setDesc(desc: string | DocumentFragment): this { this.descEl.setText(desc); return this; }
+	setName(name: string | DocumentFragment): this { this.nameEl.setText(name); this.settingEl.removeClass('mod-buttons'); return this; }
+	setDesc(desc: string | DocumentFragment): this { this.descEl.setText(desc); this.settingEl.removeClass('mod-buttons'); return this; }
 	setClass(cls: string): this { this.settingEl.addClass(cls); return this; }
 	setTooltip(tip: string): this { this.nameEl.title = tip; return this; }
 	setHeading(): this { this.settingEl.addClass('setting-item-heading'); return this; }

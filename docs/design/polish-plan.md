@@ -105,6 +105,23 @@ in it; sliders and dropdowns fill it).
 **Focus:** one ring for everything focusable: `outline: 2px solid var(--doom-blue); outline-offset: -2px`
 on `:focus-visible`.
 
+## Progress
+
+| Step | Status |
+|---|---|
+| 1. Tokens | **Done.** `app.css` rebuilt as one layer on the tokens; `scripts/css-lint.mjs` (in `npm test`) fails on raw spacing or font sizes. X1, X2, X3, X5. |
+| 2. Header bands | **Done.** Tab strips and the header line below them line up across all three columns in every density (checked in the smoke test). Sidebars show their view's header line; a lone sidebar tab shows its title. F1, F3. |
+| 3. Explorer | **Done.** `[indent][chevron slot][name]` rows; names at one depth share a column (smoke test); guides under the parent's chevron. E1, E2, E3. |
+| 4. Rows | **Done.** One row height for tree, menus, palette, switcher, settings nav; plugin prefix muted; switcher folder on the same line. P1, P2, P3. |
+| 5. Settings | **Mostly done.** Control column (smoke test), title bar, heading rhythm, button-only rows, description width. Settings search (S6) not yet. |
+| 6. Editor | **Done.** Frontmatter drawer spacing, one heading scale, comment blocks, line width in `ch`. D1–D4. |
+| 7. Workspace behaviour | **Done.** Empty tabs are reused (and listeners are told when the active pane's view changes); notices bottom-right. F2, P5. |
+| 8. Focus and contrast | **Half done.** One focus ring (X4). The contrast check on `bg-alt` (X6) is still to do. |
+| 9. Modeline | **Done.** Even padding, one weight; the badge shows the mode (EDIT, READ, PREVIEW …). M1, M2. |
+
+Left: settings search (S6), contrast check of every palette on the sidebar surface (X6), ribbon grouping
+fine-tuning (F5), and screenshot diffing as a CI check.
+
 ## 3. Work, in order
 
 1. **Tokens.** Add the token block; replace fixed sizes in `app.css` with tokens (X1, X2, X3, X5).
