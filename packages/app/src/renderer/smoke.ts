@@ -559,6 +559,8 @@ export async function runSmoke(app: App): Promise<void> {
 export async function runShots(app: App): Promise<void> {
 	const shot = async (name: string) => { await sleep(350); await app.host.app.capture?.(name); };
 	const { workspace, commands } = app;
+	// The dictionary loads in the background; wait for it, so spelling marks are in every screenshot.
+	await until(() => app.spellchecker.ready, 15000);
 	commands.executeCommandById('aglc-citations:create-example-essay');
 	await until(() => workspace.getActiveFile()?.basename === 'AGLC4 example essay', 8000);
 	commands.executeCommandById('aglc-citations:page-preview');
