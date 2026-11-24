@@ -43,4 +43,4 @@ export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, t
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
 
 /** This API's version. */
-export const apiVersion = '0.2.0';
+export const apiVersion = '0.3.0';

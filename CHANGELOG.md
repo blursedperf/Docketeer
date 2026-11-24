@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0
 
 - **Settings search.** A search box above the settings pages finds settings on every page, plugins'
   included; the results are the settings themselves, ready to change.
