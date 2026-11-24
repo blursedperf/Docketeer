@@ -197,3 +197,4 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     so every side-by-side split showed an empty band.
 59. **Dragging tabs to dock them is not added** (optional in the plan, keyboard first): tabs can already be
     moved with Mod+Alt+Shift+arrows and from the Layout panel.
+60. **Commands and settings match word-wise** (`wordMatch`): typed letters must run on from the last match or start a word, so "mabo" no longer brings up "Move tab to the pane left" while "ntab" still finds "New tab". Notes keep the looser fuzzy match (names are short).

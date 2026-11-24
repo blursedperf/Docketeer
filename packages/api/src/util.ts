@@ -71,6 +71,48 @@ export function escapeRegExp(s: string): string {
 }
 
 /** Score a fuzzy (subsequence) match of `query` in `text`; null when it does not match. Higher is better. */
+/**
+ * A stricter fuzzy match for names made of words (commands, settings): each typed letter must follow the
+ * previous match directly or start a later word, so "ntab" finds "New tab" and "spl" finds "Split right",
+ * but "mabo" does not match "Move tab to the pane". Higher is better; null when it does not match.
+ */
+export function wordMatch(query: string, text: string): number | null {
+	const q = query.toLowerCase().replace(/\s+/g, '');
+	if (!q) return 0;
+	const t = text.toLowerCase();
+	const direct = t.indexOf(q);
+	if (direct !== -1) return 1000 - direct - (t.length - q.length) * 0.01;
+	const starts: number[] = [];
+	for (let i = 0; i < t.length; i++) if (i === 0 || /[\s/\-_.:(]/.test(t[i - 1]!)) starts.push(i);
+	// Depth-first: continue the current word, or jump to the next word start; each (letter, place) once.
+	const memo = new Map<number, number | null>();
+	const go = (qi: number, ti: number): number | null => {
+		if (qi === q.length) return 0;
+		const key = qi * 4096 + ti;
+		if (memo.has(key)) return memo.get(key)!;
+		const r = step(qi, ti);
+		memo.set(key, r);
+		return r;
+	};
+	const step = (qi: number, ti: number): number | null => {
+		const ch = q[qi]!;
+		let best: number | null = null;
+		if (ti < t.length && ti > 0 && t[ti] === ch) {
+			const r = go(qi + 1, ti + 1);
+			if (r !== null) best = r + 5;
+		}
+		for (const s of starts) {
+			if (s < ti || t[s] !== ch) continue;
+			const r = go(qi + 1, s + 1);
+			if (r !== null && (best === null || r + 3 > best)) best = r + 3;
+			break; // the nearest word start is enough
+		}
+		return best;
+	};
+	const r = go(0, 0);
+	return r === null ? null : r - t.length * 0.01;
+}
+
 export function fuzzyScore(query: string, text: string): number | null {
 	const q = query.toLowerCase().replace(/\s+/g, '');
 	if (!q) return 0;

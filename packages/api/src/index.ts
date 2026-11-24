@@ -9,7 +9,7 @@ import './dom';
 export { installDomHelpers, type DomElementInfo } from './dom';
 export { Events, type EventRef } from './events';
 export { Component } from './component';
-export { debounce, normalizePath, Platform, escapeRegExp, fuzzyScore, type Debouncer } from './util';
+export { debounce, normalizePath, Platform, escapeRegExp, fuzzyScore, wordMatch, type Debouncer } from './util';
 export { setIcon, getIcon, addIcon, getIconIds, registerIconPack, getIconPacks, setIconPack, getActiveIconPack, type IconPack, type IconData } from './icons';
 export { CustomCss, cssProblems, accentVars, type Palette } from './themes/manager';
 export { BUILTIN_PALETTES } from './themes/palettes';

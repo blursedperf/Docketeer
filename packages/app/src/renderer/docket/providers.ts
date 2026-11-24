@@ -4,17 +4,17 @@
  */
 import {
 	type App, type Command, type OpenWhere, type SearchResult, MarkdownView, TFile,
-	formatHotkey, fuzzyScore, getAllTags,
+	formatHotkey, fuzzyScore, getAllTags, wordMatch,
 } from '@quire/api';
 import { SEARCH_VIEW, type SearchView } from '../panes/search';
 import { FILE_EXPLORER, type FileExplorerView } from '../explorer';
 
-/** The best fuzzy score of `q` against any of `texts` (the first counts most). */
-function best(q: string, texts: (string | undefined)[]): number | null {
+/** The best score of `q` against any of `texts` (the first counts most); word-wise for commands and settings. */
+function best(q: string, texts: (string | undefined)[], match: (q: string, t: string) => number | null = fuzzyScore): number | null {
 	let top: number | null = null;
 	texts.forEach((t, i) => {
 		if (!t) return;
-		const s = fuzzyScore(q, t);
+		const s = match(q, t);
 		if (s !== null) { const w = s - i * 2; if (top === null || w > top) top = w; }
 	});
 	return top;
@@ -94,7 +94,7 @@ export function registerCoreProviders(app: App): () => void {
 						if (prefix === '>') out.push(commandResult(c, used * 10 - c.name.charCodeAt(0) / 1000));
 						continue;
 					}
-					const s = best(text, [c.name, ...(c.aliases ?? []), ...(c.keywords ?? []), c.section]);
+					const s = best(text, [c.name, ...(c.aliases ?? []), ...(c.keywords ?? []), c.section], wordMatch);
 					if (s !== null) out.push(commandResult(c, s + used));
 				}
 				return out;
@@ -163,7 +163,7 @@ export function registerCoreProviders(app: App): () => void {
 				settings ??= app.setting.listSettings();
 				const out: SearchResult[] = [];
 				for (const st of settings) {
-					const s = best(text, [st.name, st.tabName, st.desc]);
+					const s = best(text, [st.name, st.tabName, st.desc], wordMatch);
 					if (s === null || s < 50) continue; // close matches only: descriptions are long
 					out.push({
 						id: `${st.tabId}:${st.name}`, type: 'Settings', title: st.name, detail: st.tabName, icon: 'settings', score: s,

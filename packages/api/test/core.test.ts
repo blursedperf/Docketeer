@@ -152,3 +152,24 @@ describe('contrast', () => {
 		expect(check({ ...vars, ...contrastFixes(vars) })).toEqual([]);
 	});
 });
+
+import { wordMatch } from '../src/util';
+
+describe('word matching', () => {
+	it('matches letters that run on or start words', () => {
+		expect(wordMatch('ntab', 'New tab')).not.toBeNull();
+		expect(wordMatch('spl', 'Split right')).not.toBeNull();
+		expect(wordMatch('srig', 'Split right')).not.toBeNull();
+		expect(wordMatch('mabo', 'Move tab to the pane left')).toBeNull();
+		expect(wordMatch('tab', 'New tab')!).toBeGreaterThan(wordMatch('ntab', 'New tab')!);
+	});
+});
+
+describe('word matching speed', () => {
+	it('stays fast on long queries that nearly match', () => {
+		const text = 'a '.repeat(60) + 'b';
+		const t = performance.now();
+		expect(wordMatch('a'.repeat(40) + 'c', text)).toBeNull();
+		expect(performance.now() - t).toBeLessThan(50);
+	});
+});
