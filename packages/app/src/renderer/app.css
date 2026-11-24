@@ -751,6 +751,87 @@ input.settings-search { margin: var(--space-2) var(--space-2) 0; }
 .fatal-error { padding: var(--space-8); user-select: text; }
 .fatal-error pre { white-space: pre-wrap; font-family: var(--font-monospace); font-size: var(--text-sm); }
 
+/* ------------------------------------------------------------------ sidebar panes
+   Search, backlinks, outgoing links, tags, outline: tree rows, groups with counts, snippets. */
+.pane-toolbar { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-2) var(--space-1); }
+input.pane-search-input { flex: 1; min-width: 0; }
+.clickable-icon.is-active { color: var(--doom-blue-text); background: rgba(var(--doom-blue-rgb), 0.16); }
+.pane-summary { padding: 0 var(--space-3) var(--space-1); font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
+.pane-summary:empty { display: none; }
+.pane-results { padding: var(--space-1) var(--space-2) var(--space-6); font-size: var(--text-sm); }
+.pane-group-header { font-family: var(--font-chrome); color: var(--doom-blue-text); font-weight: var(--font-medium); }
+.pane-group-header.pane-section { margin-top: var(--space-2); color: var(--doom-magenta-text); font-size: var(--text-xs); letter-spacing: 0.04em; text-transform: uppercase; }
+.pane-group-header.pane-section:first-child { margin-top: 0; }
+.pane-group-body { padding-left: var(--space-1); }
+.tree-item-flair { flex-shrink: 0; margin-left: auto; padding: 0 var(--space-1); line-height: 16px; font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); background: var(--doom-base2); border-radius: var(--radius-s); }
+.pane-file {
+	display: flex; align-items: center; gap: var(--space-2); height: var(--row-h); padding: 0 var(--space-2);
+	font-family: var(--font-chrome); color: var(--text-normal); border-radius: var(--radius-s); cursor: var(--cursor);
+}
+.pane-file:hover { background: rgba(var(--doom-blue-rgb), 0.09); }
+.pane-file.is-unresolved { color: var(--text-muted); font-style: italic; }
+.pane-match {
+	display: block;
+	margin: 0 0 var(--space-1) var(--space-4); padding: var(--space-1) var(--space-2);
+	font-size: var(--text-sm); line-height: 1.45; color: var(--text-muted);
+	background: var(--doom-base1); border-left: 2px solid var(--doom-border-subtle); border-radius: var(--radius-s);
+	white-space: pre-wrap; word-break: break-word; cursor: var(--cursor); user-select: text;
+}
+.pane-match:hover { border-left-color: var(--doom-blue); color: var(--text-normal); }
+/* A snippet with a button beside it (unlinked mentions). */
+.pane-match:has(> .pane-match-text) { display: flex; align-items: flex-start; gap: var(--space-2); }
+.pane-match-text { flex: 1; min-width: 0; }
+mark.search-match { color: var(--text-normal); background: var(--text-highlight-bg); border-radius: 2px; padding: 0 1px; }
+button.pane-link-button { height: 20px; padding: 0 var(--space-2); font-size: var(--text-xs); flex-shrink: 0; }
+.pane-more { margin-left: var(--space-4); padding: var(--space-1) var(--space-2); font-size: var(--text-xs); color: var(--text-faint); }
+.pane-empty { padding: var(--space-2) var(--space-3); font-size: var(--text-sm); color: var(--text-faint); }
+.tag-pane-tag { color: var(--doom-yellow-text, var(--doom-yellow)); }
+.outline-heading { color: var(--text-muted); }
+.outline-heading.mod-level-1 { color: var(--h1-color); font-weight: var(--font-semibold); }
+.outline-heading.mod-level-2 { color: var(--h2-color); }
+.outline-heading.mod-level-3 { color: var(--h3-color); }
+.outline-heading.is-active { background: rgba(var(--doom-blue-rgb), 0.16); box-shadow: inset 2px 0 0 var(--doom-blue); }
+
+/* ------------------------------------------------------------------ hotkeys and vim */
+.vertical-tab-content .setting-item.mod-hotkeys .setting-item-control { width: auto; min-width: var(--control-width); flex-wrap: wrap; }
+.hotkey-pill {
+	display: inline-flex; align-items: center; gap: var(--space-1); height: 22px; padding: 0 var(--space-1) 0 var(--space-2);
+	font-family: var(--font-monospace); font-size: var(--text-xs); color: var(--doom-yellow-text, var(--doom-yellow));
+	background: var(--doom-base2); border: var(--border-width) solid var(--doom-border-subtle); border-radius: var(--radius-s);
+}
+.hotkey-pill-remove { display: inline-flex; color: var(--text-faint); cursor: var(--cursor); border-radius: 2px; }
+.hotkey-pill-remove:hover { color: var(--text-error); }
+.hotkey-pill-remove .svg-icon { width: 12px; height: 12px; }
+.hotkey-none { font-size: var(--text-xs); color: var(--text-faint); }
+.extra-setting-button.is-recording-hotkey {
+	width: auto; padding: 0 var(--space-2); font-family: var(--font-chrome); font-size: var(--text-xs);
+	color: var(--doom-blue-text); background: rgba(var(--doom-blue-rgb), 0.16); box-shadow: inset 0 0 0 1px var(--doom-blue);
+}
+/* Vim: block cursor in the accent, and the ":" command line as a minibuffer. */
+.cm-editor .cm-fat-cursor { background: rgba(var(--doom-blue-rgb), 0.75) !important; color: var(--doom-on-accent) !important; outline: none !important; }
+.cm-editor:not(.cm-focused) .cm-fat-cursor { background: none !important; outline: 1px solid var(--doom-blue) !important; }
+.cm-vim-panel { padding: var(--space-1) var(--space-3); font-family: var(--font-monospace); font-size: var(--text-sm); background: var(--doom-base0); color: var(--text-normal); }
+.cm-vim-panel input { height: auto; padding: 0; border: none; background: transparent; box-shadow: none; font-family: inherit; color: inherit; }
+
+/* ------------------------------------------------------------------ live preview */
+.is-live-preview .cm-lp-link { cursor: var(--cursor); }
+.is-live-preview .cm-lp-link:hover { text-decoration-color: var(--doom-blue); }
+.cm-lp-bullet { display: inline-block; width: 1ch; color: var(--doom-blue-text); font-weight: var(--font-bold); }
+input.cm-lp-task { margin: 0 var(--space-1) 0 0; vertical-align: -1px; accent-color: var(--doom-blue); cursor: var(--cursor); }
+.cm-lp-task-done { color: var(--text-muted); text-decoration: line-through; }
+.cm-lp-hr { display: inline-block; width: 100%; height: 0; vertical-align: middle; border-top: 1px solid var(--doom-border-strong); }
+.cm-line.cm-lp-quote { border-left: 3px solid var(--doom-magenta); padding-left: var(--space-3) !important; color: var(--text-muted); background: rgba(var(--doom-magenta-rgb), 0.04); }
+
+/* ------------------------------------------------------------------ embeds */
+.cm-image-embed { padding: var(--space-2) 0; }
+.cm-image-embed img, .markdown-rendered img.image-embed { display: block; max-width: 100%; max-height: 70vh; border-radius: var(--radius-s); }
+.markdown-embed { margin: var(--space-4) 0; padding: var(--space-2) var(--space-4) var(--space-1); background: var(--doom-bg-alt); border-left: 2px solid var(--doom-violet); border-radius: var(--radius-s); }
+.markdown-embed-title { margin-bottom: var(--space-1); font-family: var(--font-chrome); font-size: var(--text-sm); }
+.markdown-embed-title a { color: var(--doom-violet-text); }
+.markdown-embed-content > .markdown-rendered-body > :first-child { margin-top: 0; }
+.markdown-embed.mod-file { display: flex; align-items: baseline; gap: var(--space-3); }
+.markdown-embed-file { font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
+
 /* Screenshot mode (npm run shots): nothing that changes from frame to frame. */
 body.is-shots .cm-cursorLayer, body.is-shots .cm-cursor { display: none !important; }
 body.is-shots *, body.is-shots *::before, body.is-shots *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }

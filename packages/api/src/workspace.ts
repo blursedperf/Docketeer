@@ -819,6 +819,10 @@ export class Workspace extends Events {
 	override on(name: 'active-leaf-change', callback: (leaf: WorkspaceLeaf | null) => unknown, ctx?: unknown): EventRef;
 	override on(name: 'file-open', callback: (file: TFile | null) => unknown, ctx?: unknown): EventRef;
 	override on(name: 'editor-change', callback: (editor: Editor, info: MarkdownView) => unknown, ctx?: unknown): EventRef;
+	/** Vim's mode in an editor changed (null: vim is off). */
+	override on(name: 'vim-mode-change', callback: (mode: string | null, info: MarkdownView) => unknown, ctx?: unknown): EventRef;
+	/** After each edit or cursor move in an editor. */
+	override on(name: 'editor-cursor', callback: (editor: Editor, info: MarkdownView) => unknown, ctx?: unknown): EventRef;
 	override on(name: 'file-menu', callback: (menu: Menu, file: TAbstractFile, source: string, leaf?: WorkspaceLeaf) => unknown, ctx?: unknown): EventRef;
 	override on(name: 'editor-menu', callback: (menu: Menu, editor: Editor, info: MarkdownView) => unknown, ctx?: unknown): EventRef;
 	override on(name: 'layout-change' | 'resize' | 'css-change' | 'quit' | 'layout-ready', callback: () => unknown, ctx?: unknown): EventRef;

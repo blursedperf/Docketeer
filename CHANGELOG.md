@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+- **Search.** A search pane (Ctrl/Cmd+Shift+F, or the search tab in the left sidebar) finds text in every
+  note: all the words, `"exact phrases"`, `-excluded` words, `path:` and `tag:` filters, match case. Results
+  show each matching line; click to go there.
+- **Backlinks and outgoing links.** The right sidebar shows which notes link to the open note, with the
+  line each link is on, and notes that mention it without a link (one click makes it a link); and where the
+  open note links to, including links to notes not written yet.
+- **Tags and outline.** Every tag with its count, nested by `/` (click to search for it); the open note's
+  headings, with the one the cursor is under marked.
+- **Link completion.** Type `[[` for notes and files by name, then `#` for headings.
+- Suggestions open when you type, not when a plugin or a command changes the text.
+- **Hotkeys.** Settings → Hotkeys lists every command: add a hotkey by pressing it, remove one, or go back
+  to the default. Clashes are flagged. Saved per homebase in `.quire/hotkeys.json`.
+- **Vim mode.** Settings → Editor → Vim key bindings (codemirror-vim, MIT): modes, motions, operators,
+  `:w` to save, `:q` to close the tab, `:wq`. The modeline badge shows NORMAL, INSERT, VISUAL.
+- Auto-pair brackets now applies to open notes straight away.
+- **Attachments.** Paste a picture (a screenshot, say) or drop files into a note: they are saved in the
+  attachments folder (Settings → Files and links; the homebase's `attachments/` by default, or beside the
+  note) and embedded (`![[picture.png]]`) or linked. A note dragged from the file tree becomes a link.
+- **Embeds.** Pictures show under their `![[…]]` (or `![](…)`) line in the editor, at a width with
+  `![[picture.png|300]]`. In the reading view `![[Note]]` and `![[Note#Heading]]` show the note or section
+  in a framed box; other files show as a card. API: `fileManager.getAvailablePathForAttachment`.
+- **Live preview**, on by default: Markdown is shown formatted while you write — headings without `#`,
+  bold and italics without their marks, links as their text (click to open), bullets, task boxes you can
+  tick, quotes and rules. The lines holding the cursor or a selection, and `%% comments %%`, show the
+  Markdown as written. Footnotes are left as written. Turn it off in Settings → Editor, or with "Toggle
+  live preview / source mode".
+
 ## v0.3.0
 
 - **Settings search.** A search box above the settings pages finds settings on every page, plugins'

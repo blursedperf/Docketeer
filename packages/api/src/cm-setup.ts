@@ -142,8 +142,17 @@ export function linkAt(state: EditorState, pos: number): { type: 'wiki' | 'url';
 	return null;
 }
 
+/** Auto-paired brackets and quotes (its own compartment, so the setting applies to open notes). */
+export function bracketExtensions(on: boolean): Extension {
+	return on ? [closeBrackets(), keymap.of(closeBracketsKeymap)] : [];
+}
+
 export interface SetupOptions {
 	onFollowLink(link: { type: 'wiki' | 'url'; target: string }, newLeaf: boolean): void;
+	/** Files pasted or dropped at `pos`; return true when handled. */
+	onFiles?(files: File[], pos: number): boolean;
+	/** A note dragged from the file tree, dropped at `pos`; return true when handled. */
+	onDropPath?(path: string, pos: number): boolean;
 	spellcheck: boolean;
 	closeBrackets: boolean;
 }
@@ -158,7 +167,6 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 		indentOnInput(),
 		EditorState.allowMultipleSelections.of(true),
 		highlightSelectionMatches(),
-		opts.closeBrackets ? closeBrackets() : [],
 		search({ top: true }),
 		markdown({ base: markdownLanguage, addKeymap: true, extensions: [frontmatter] }),
 		syntaxHighlighting(quireHighlight),
@@ -166,7 +174,6 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 		EditorView.contentAttributes.of({ spellcheck: opts.spellcheck ? 'true' : 'false', autocorrect: 'off', autocapitalize: 'off' }),
 		inlineMarks,
 		keymap.of([
-			...(opts.closeBrackets ? closeBracketsKeymap : []),
 			...markdownKeymap,
 			...defaultKeymap,
 			...historyKeymap,
@@ -174,6 +181,21 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 			indentWithTab,
 		]),
 		EditorView.domEventHandlers({
+			paste(e, view) {
+				const files = [...(e.clipboardData?.files ?? [])];
+				if (files.length === 0 || !opts.onFiles) return false;
+				e.preventDefault();
+				return opts.onFiles(files, view.state.selection.main.head);
+			},
+			drop(e, view) {
+				const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }) ?? view.state.selection.main.head;
+				const path = e.dataTransfer?.getData('text/x-quire-path');
+				if (path && opts.onDropPath) { e.preventDefault(); return opts.onDropPath(path, pos); }
+				const files = [...(e.dataTransfer?.files ?? [])];
+				if (files.length === 0 || !opts.onFiles) return false;
+				e.preventDefault();
+				return opts.onFiles(files, pos);
+			},
 			mousedown(e, view) {
 				if (e.button !== 0 || !(e.ctrlKey || e.metaKey)) return false;
 				const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });

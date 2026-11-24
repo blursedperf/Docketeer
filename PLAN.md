@@ -135,6 +135,24 @@ Known gaps, deliberately left for later phases:
   left as written in the plugin to keep the port to the import line.
 
 ### Phase 3 — Everyday parity
+
+Progress:
+- [x] Full-text search pane (words, "phrases", -exclusions, `path:`, `tag:`, match case; Ctrl/Cmd+Shift+F).
+- [x] Backlinks (linked and unlinked mentions, with "Link" to turn a mention into a link), outgoing links,
+      tags (nested, with counts; click to search), outline (follows the cursor).
+- [x] `[[` link autocomplete, with `#` for headings.
+- [x] Rename a note updates links to it (since 0.1); workspace layout saved and restored (since 0.1).
+- [x] Customisable hotkeys (Settings → Hotkeys; per homebase in `.quire/hotkeys.json`); vim mode (Editor
+      settings; `:w`, `:q`, `:wq`; the modeline shows the vim mode).
+- [x] Attachments and embeds: paste or drop files (Files and links → Folder for attachments); pictures shown
+      under their embed in the editor; notes, sections and pictures embedded in the reading view (3 levels deep).
+      Footnotes inside an embedded section are not resolved yet.
+- [x] Live preview (default; Editor settings or "Toggle live preview / source mode"): formatting marks hidden
+      and links, bullets, task boxes, quotes and rules drawn, except on the lines being edited and in %% comments.
+      Footnote syntax is left as written for the AGLC4 plugin. Tables and code blocks are shown as written.
+- [ ] Offline spellcheck (dictionary licences to check first).
+
+Items:
 - Offline spellcheck with bundled dictionaries.
 - Full-text search pane; backlinks and outgoing links; tags pane; outline pane.
 - `[[` link autocomplete; rename a note updates links to it.

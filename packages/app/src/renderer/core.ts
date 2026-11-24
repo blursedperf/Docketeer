@@ -3,11 +3,24 @@
  * switcher, core commands, settings pages and the word count.
  */
 import { EditorSelection } from '@codemirror/state';
+import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon, type Hotkey, type Modifier, Platform,
 } from '@quire/api';
 import { FILE_EXPLORER, FileExplorerView, NameModal, freePath } from './explorer';
+import { BACKLINK_VIEW, BacklinksView } from './panes/backlinks';
+import { LinkSuggest } from './panes/link-suggest';
+import { OUTGOING_VIEW, OutgoingLinksView } from './panes/outgoing';
+import { OUTLINE_VIEW, OutlineView } from './panes/outline';
+import { SEARCH_VIEW, SearchView } from './panes/search';
+import { TAG_VIEW, TagsView } from './panes/tags';
+
+/** The panes Quire puts in the sidebars, in order. Each is added once per homebase; closing one is remembered. */
+const SIDEBAR_PANES: [type: string, side: 'left' | 'right'][] = [
+	[FILE_EXPLORER, 'left'], [SEARCH_VIEW, 'left'], [TAG_VIEW, 'left'],
+	[BACKLINK_VIEW, 'right'], [OUTGOING_VIEW, 'right'], [OUTLINE_VIEW, 'right'],
+];
 
 // -------------------------------------------------------------------------------------------------
 // Command palette
@@ -126,7 +139,11 @@ class EditorTab extends SettingTab {
 		new Setting(el).setName('Editor').setHeading();
 		new Setting(el).setName('Readable line length').setDesc('Limit the width of the text so lines are easy to read.')
 			.addToggle((t) => t.setValue(c.readableLineLength).onChange((v) => { void this.app.setConfig('readableLineLength', v); }));
-		new Setting(el).setName('Auto-pair brackets').setDesc('Type the closing bracket or quote with the opening one. Applies to notes opened after the change.')
+		new Setting(el).setName('Live preview').setDesc('Show Markdown formatted as you write: headings without #, bold without **, links as their text, bullets and task boxes. The lines you are editing show the Markdown as written. Off: the Markdown is always shown as written (source mode).')
+			.addToggle((t) => t.setValue(c.livePreview).onChange((v) => { void this.app.setConfig('livePreview', v); }));
+		new Setting(el).setName('Vim key bindings').setDesc('Edit with Vim keys: normal, insert and visual modes, motions, operators, :w to save and :q to close the tab. The modeline shows the mode.')
+			.addToggle((t) => t.setValue(c.vimMode).onChange((v) => { void this.app.setConfig('vimMode', v); }));
+		new Setting(el).setName('Auto-pair brackets').setDesc('Type the closing bracket or quote with the opening one.')
 			.addToggle((t) => t.setValue(c.autoPairBrackets).onChange((v) => { void this.app.setConfig('autoPairBrackets', v); }));
 		new Setting(el).setName('Spellcheck').setDesc('Not available yet: the spelling dictionaries Electron uses are downloaded from the web, so Quire leaves them off. Offline dictionaries are planned.')
 			.setDisabled(true);
@@ -147,6 +164,8 @@ class FilesTab extends SettingTab {
 			new Setting(el).setName('Folder for new notes')
 				.addText((t) => t.setPlaceholder('Notes').setValue(c.newFileFolderPath).onChange((v) => { void this.app.setConfig('newFileFolderPath', v.trim().replace(/^\/+|\/+$/g, '')); }));
 		}
+		new Setting(el).setName('Folder for attachments').setDesc('Where pasted and dropped files go. A folder from the homebase root (eg attachments), ./ for the same folder as the note, or ./name for a folder beside the note.')
+			.addText((t) => t.setPlaceholder('attachments').setValue(c.attachmentFolder).onChange((v) => { void this.app.setConfig('attachmentFolder', v.trim() || 'attachments'); }));
 		new Setting(el).setName('Update links when renaming').setDesc('When a note is renamed, change [[links]] to it in other notes.')
 			.addToggle((t) => t.setValue(c.alwaysUpdateLinks).onChange((v) => { void this.app.setConfig('alwaysUpdateLinks', v); }));
 	}
@@ -272,6 +291,88 @@ class AppearanceTab extends SettingTab {
 	}
 }
 
+/** A hotkey from a key press: Mod is Ctrl (Cmd on macOS). */
+function hotkeyFromEvent(e: KeyboardEvent): Hotkey | null {
+	if (['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'CapsLock'].includes(e.key)) return null;
+	const modifiers: Modifier[] = [];
+	if (Platform.isMacOS ? e.metaKey : e.ctrlKey) modifiers.push('Mod');
+	if (Platform.isMacOS ? e.ctrlKey : e.metaKey) modifiers.push(Platform.isMacOS ? 'Ctrl' : 'Meta');
+	if (e.altKey) modifiers.push('Alt');
+	if (e.shiftKey) modifiers.push('Shift');
+	const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+	// Plain typing keys need a modifier; function keys and the like may stand alone.
+	if (modifiers.length === 0 && !/^F\d{1,2}$|^(Insert|Delete|Home|End|PageUp|PageDown)$/.test(key)) return null;
+	return { modifiers, key };
+}
+
+class HotkeysTab extends SettingTab {
+	override id = 'hotkeys';
+	override name = 'Hotkeys';
+	private filter = '';
+
+	display(): void {
+		const el = this.containerEl;
+		el.empty();
+		new Setting(el).setName('Hotkeys').setHeading();
+		new Setting(el).setName('Find a command').setDesc('Click + and press the keys to add a hotkey; × removes one; the arrow goes back to the default. Saved in this homebase (.quire/hotkeys.json).')
+			.addSearch((s) => {
+				s.setPlaceholder('Filter commands…').setValue(this.filter).onChange((v) => { this.filter = v; this.renderList(list); });
+				window.setTimeout(() => s.inputEl.focus(), 0);
+			});
+		const list = el.createDiv({ cls: 'hotkey-list' });
+		this.renderList(list);
+	}
+
+	private renderList(list: HTMLElement): void {
+		list.empty();
+		const cmds = this.app.commands;
+		const words = this.filter.toLowerCase().split(/\s+/).filter(Boolean);
+		const all = cmds.listCommands().filter((c) => words.every((w) => c.name.toLowerCase().includes(w))).sort((a, b) => a.name.localeCompare(b.name));
+		if (all.length === 0) list.createDiv({ cls: 'setting-note', text: 'No commands match.' });
+		for (const cmd of all) {
+			const row = new Setting(list).setName(cmd.name).setClass('mod-hotkeys');
+			const keys = cmds.hotkeysFor(cmd);
+			const clashes = keys.flatMap((k) => cmds.conflicts(k, cmd.id).map((c) => `${formatHotkey(k)} also runs "${c.name}"`));
+			if (clashes.length) row.setDesc(clashes.join('; ')).descEl.addClass('mod-warning');
+			for (const [i, k] of keys.entries()) {
+				const pill = row.controlEl.createSpan({ cls: 'hotkey-pill', text: formatHotkey(k) });
+				const x = pill.createSpan({ cls: 'hotkey-pill-remove', attr: { 'aria-label': 'Remove', role: 'button', tabindex: '0' } });
+				setIcon(x, 'x');
+				x.addEventListener('click', async () => { await cmds.setHotkeys(cmd.id, keys.filter((_, j) => j !== i)); this.renderList(list); });
+			}
+			if (keys.length === 0) row.controlEl.createSpan({ cls: 'hotkey-none', text: 'Blank' });
+			if (cmds.isCustomised(cmd.id)) {
+				row.addExtraButton((b) => b.setIcon('rotate-ccw').setTooltip('Back to the default').onClick(async () => { await cmds.setHotkeys(cmd.id, null); this.renderList(list); }));
+			}
+			row.addExtraButton((b) => {
+				b.setIcon('plus').setTooltip('Add a hotkey');
+				const btn = b.extraSettingsEl;
+				btn.setAttr('tabindex', '0');
+				b.onClick(() => {
+					btn.addClass('is-recording-hotkey');
+					btn.empty();
+					btn.setText('Press keys…');
+					btn.focus();
+					const done = () => { btn.removeEventListener('keydown', onKey, true); btn.removeEventListener('blur', cancel); };
+					const cancel = () => { done(); this.renderList(list); };
+					const onKey = async (e: KeyboardEvent) => {
+						e.preventDefault();
+						e.stopPropagation();
+						if (e.key === 'Escape') { cancel(); return; }
+						const h = hotkeyFromEvent(e);
+						if (!h) return;
+						done();
+						await cmds.setHotkeys(cmd.id, [...keys, h]);
+						this.renderList(list);
+					};
+					btn.addEventListener('keydown', onKey, true);
+					btn.addEventListener('blur', cancel);
+				});
+			});
+		}
+	}
+}
+
 class PluginsTab extends SettingTab {
 	override id = 'plugins';
 	override name = 'Plugins';
@@ -330,13 +431,14 @@ function modeBadge(app: App) {
 	const update = () => {
 		const view = app.workspace.activeLeaf?.view;
 		let mode = 'quire';
-		if (view instanceof MarkdownView) mode = view.getMode() === 'preview' ? 'read' : 'edit';
+		if (view instanceof MarkdownView) mode = view.getMode() === 'preview' ? 'read' : view.vimMode ?? 'edit';
 		else if (view && view.getViewType() !== 'empty') mode = view.getViewType().split('-').pop() ?? 'quire';
 		el.setText(mode);
 		el.setAttribute('aria-label', `Mode: ${mode}`);
 	};
 	app.workspace.on('active-leaf-change', update);
 	app.workspace.on('layout-change', update);
+	app.workspace.on('vim-mode-change', update);
 	update();
 }
 
@@ -381,7 +483,25 @@ function wrapSelection(app: App, before: string, after = before) {
 export function registerCore(app: App): { reveal(): void } {
 	const { workspace, vault } = app;
 	workspace.registerViewType(FILE_EXPLORER, (leaf) => new FileExplorerView(leaf));
-	for (const tab of [new EditorTab(app), new FilesTab(app), new AppearanceTab(app), new PluginsTab(app), new AboutTab(app)]) app.setting.addCoreTab(tab);
+	const openSearch = async (query?: string) => {
+		const leaf = await workspace.ensureSideLeaf(SEARCH_VIEW, 'left', { reveal: true });
+		const view = leaf.view as SearchView;
+		if (query !== undefined) view.setQuery(query);
+		view.focus();
+	};
+	workspace.registerViewType(SEARCH_VIEW, (leaf) => new SearchView(leaf));
+	workspace.registerViewType(BACKLINK_VIEW, (leaf) => new BacklinksView(leaf));
+	workspace.registerViewType(OUTGOING_VIEW, (leaf) => new OutgoingLinksView(leaf));
+	workspace.registerViewType(TAG_VIEW, (leaf) => new TagsView(leaf, (tag) => { void openSearch(`tag:${tag}`); }));
+	workspace.registerViewType(OUTLINE_VIEW, (leaf) => new OutlineView(leaf));
+	app.editorSuggests.push(new LinkSuggest(app));
+	for (const tab of [new EditorTab(app), new FilesTab(app), new AppearanceTab(app), new HotkeysTab(app), new PluginsTab(app), new AboutTab(app)]) app.setting.addCoreTab(tab);
+	// Vim's ex commands act on the app: save, close the tab.
+	const vimView = () => workspace.getActiveViewOfType(MarkdownView);
+	Vim.defineEx('write', 'w', () => { void vimView()?.save(); });
+	Vim.defineEx('quit', 'q', () => { workspace.activeLeaf?.detach(); });
+	Vim.defineEx('wq', 'wq', () => { const v = vimView(); void v?.save().then(() => v.leaf.detach()); });
+	Vim.defineEx('xit', 'x', () => { const v = vimView(); void v?.save().then(() => v.leaf.detach()); });
 	modeBadge(app);
 	wordCount(app);
 
@@ -391,6 +511,19 @@ export function registerCore(app: App): { reveal(): void } {
 	const explorer = () => workspace.getLeavesOfType(FILE_EXPLORER)[0]?.view as FileExplorerView | undefined;
 
 	add({ id: 'app:command-palette', name: 'Command palette: Open', icon: 'terminal', hotkeys: [{ modifiers: ['Mod'], key: 'p' }], callback: () => new CommandPalette(app, recent).open() });
+	add({
+		id: 'app:search', name: 'Search: Search in all notes', icon: 'search', hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'f' }],
+		callback: () => {
+			const sel = activeMarkdown()?.editor.getSelection();
+			void openSearch(sel && !sel.includes('\n') ? sel : undefined);
+		},
+	});
+	const showPane = (id: string, name: string, icon: string, type: string, side: 'left' | 'right') =>
+		add({ id, name, icon, callback: () => { void workspace.ensureSideLeaf(type, side, { reveal: true }); } });
+	showPane('app:show-backlinks', 'Show backlinks', 'link', BACKLINK_VIEW, 'right');
+	showPane('app:show-outgoing-links', 'Show outgoing links', 'arrow-up-right', OUTGOING_VIEW, 'right');
+	showPane('app:show-outline', 'Show outline', 'list-tree', OUTLINE_VIEW, 'right');
+	showPane('app:show-tags', 'Show tags', 'tags', TAG_VIEW, 'left');
 	add({ id: 'app:quick-switcher', name: 'Quick switcher: Open', icon: 'search', hotkeys: [{ modifiers: ['Mod'], key: 'o' }], callback: () => new QuickSwitcher(app).open() });
 	add({ id: 'app:open-settings', name: 'Open settings', icon: 'settings', hotkeys: [{ modifiers: ['Mod'], key: ',' }], callback: () => app.setting.open() });
 	add({ id: 'app:open-homebase', name: 'Open another homebase', icon: 'folder-open', callback: () => { void app.host.app.chooseVault(false); } });
@@ -440,6 +573,14 @@ export function registerCore(app: App): { reveal(): void } {
 	add({
 		id: 'app:toggle-reading', name: 'Toggle reading view', icon: 'book-open', hotkeys: [{ modifiers: ['Mod'], key: 'e' }],
 		checkCallback: (checking) => { const v = activeMarkdown(); if (!v) return false; if (!checking) void v.toggleMode(); return true; },
+	});
+	add({
+		id: 'app:toggle-live-preview', name: 'Toggle live preview / source mode', icon: 'eye',
+		callback: () => {
+			const on = !app.config.livePreview;
+			void app.setConfig('livePreview', on);
+			new Notice(on ? 'Live preview: Markdown is shown formatted.' : 'Source mode: Markdown is shown as written.');
+		},
 	});
 	add({
 		id: 'app:save', name: 'Save current file', hotkeys: [{ modifiers: ['Mod'], key: 's' }],
@@ -503,6 +644,35 @@ export function registerCore(app: App): { reveal(): void } {
 	toggleLeft.addEventListener('click', () => workspace.leftSplit.toggle());
 
 	return {
-		reveal: () => { void workspace.ensureSideLeaf(FILE_EXPLORER, 'left'); },
+		reveal: () => { void seedSidebars(app); },
 	};
+}
+
+/**
+ * Add the sidebar panes a homebase has not had yet (new homebases, and panes added in a later version),
+ * keeping whichever tab was showing. A pane the user closes stays closed: each is added only once.
+ */
+async function seedSidebars(app: App): Promise<void> {
+	const { workspace } = app;
+	const seeded = new Set(Array.isArray(app.config.seededPanes) ? (app.config.seededPanes as string[]) : []);
+	const before = { left: workspace.leftSplit.tabs.activeLeaf, right: workspace.rightSplit.tabs.activeLeaf };
+	let added = false;
+	for (const [type, side] of SIDEBAR_PANES) {
+		if (seeded.has(type) && type !== FILE_EXPLORER) continue;
+		if (workspace.getLeavesOfType(type).length === 0) {
+			await workspace.ensureSideLeaf(type, side);
+			added = true;
+		}
+		seeded.add(type);
+	}
+	if (added) {
+		for (const side of ['left', 'right'] as const) {
+			const tabs = side === 'left' ? workspace.leftSplit.tabs : workspace.rightSplit.tabs;
+			const keep = before[side] ?? tabs.children[0];
+			if (keep) tabs.selectTab(keep);
+		}
+	}
+	if (seeded.size !== (Array.isArray(app.config.seededPanes) ? (app.config.seededPanes as string[]).length : 0)) {
+		await app.setConfig('seededPanes', [...seeded]);
+	}
 }

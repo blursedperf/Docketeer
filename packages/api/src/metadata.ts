@@ -2,6 +2,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { Events, type EventRef } from './events';
 import { TFile, TFolder, type TAbstractFile } from './files';
 import type { App } from './app';
+import { attachmentFolder, availablePath, safeFileName } from './attachments';
 import { normalizePath } from './util';
 
 export interface Loc { line: number; col: number; offset: number; }
@@ -365,6 +366,11 @@ export class FileManager {
 	generateMarkdownLink(file: TFile, sourcePath: string, subpath = '', alias = ''): string {
 		const text = this.app.metadataCache.fileToLinktext(file, sourcePath);
 		return `[[${text}${subpath}${alias ? `|${alias}` : ''}]]`;
+	}
+
+	/** A free path for a new attachment called `filename` of the note at `sourcePath`. */
+	async getAvailablePathForAttachment(filename: string, sourcePath?: string): Promise<string> {
+		return availablePath(this.app, attachmentFolder(this.app, sourcePath ?? ''), safeFileName(filename));
 	}
 
 	async trashFile(file: TAbstractFile): Promise<void> {

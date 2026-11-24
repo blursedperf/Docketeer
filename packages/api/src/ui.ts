@@ -121,6 +121,7 @@ export class Modal {
 	/** Keys while this is the top dialog. */
 	protected onKey(e: KeyboardEvent): void {
 		if (topModal() !== this) return;
+		if ((e.target as HTMLElement | null)?.closest?.('.is-recording-hotkey')) return;
 		if (e.key === 'Escape') {
 			e.preventDefault();
 			e.stopPropagation();

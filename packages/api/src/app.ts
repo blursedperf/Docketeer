@@ -53,6 +53,37 @@ export class Commands {
 		return this.customKeys[cmd.id] ?? cmd.hotkeys ?? [];
 	}
 
+	/** Whether the user changed this command's hotkeys. */
+	isCustomised(id: string): boolean {
+		return id in this.customKeys;
+	}
+
+	private get hotkeysPath(): string { return `${this.app.vault.configDir}/hotkeys.json`; }
+
+	async loadHotkeys(): Promise<void> {
+		try {
+			if (await this.app.vault.adapter.exists(this.hotkeysPath)) {
+				const data = JSON.parse(await this.app.vault.adapter.read(this.hotkeysPath)) as Record<string, Hotkey[]>;
+				this.customKeys = Object.fromEntries(Object.entries(data).filter(([, v]) => Array.isArray(v)));
+			}
+		} catch (e) {
+			console.error('Could not read hotkeys.json', e);
+		}
+	}
+
+	/** Set a command's hotkeys (an empty list removes them all); null goes back to the default. */
+	async setHotkeys(id: string, keys: Hotkey[] | null): Promise<void> {
+		if (keys === null) delete this.customKeys[id];
+		else this.customKeys[id] = keys;
+		await this.app.vault.adapter.write(this.hotkeysPath, JSON.stringify(this.customKeys, null, '\t'));
+	}
+
+	/** Commands (other than `except`) that a hotkey would also run. */
+	conflicts(h: Hotkey, except?: string): Command[] {
+		const key = hotkeyString(h);
+		return this.listCommands().filter((c) => c.id !== except && this.hotkeysFor(c).some((k) => hotkeyString(k) === key));
+	}
+
 	/** Whether the command can run now (its check callback, or an editor being active). */
 	isAvailable(cmd: Command): boolean {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -221,8 +252,12 @@ export interface AppConfig {
 	autoPairBrackets: boolean;
 	newFileLocation: 'root' | 'current' | 'folder';
 	newFileFolderPath: string;
+	/** Where pasted and dropped files go: a folder from the root, "./" (the note's folder) or "./name". */
+	attachmentFolder: string;
 	alwaysUpdateLinks: boolean;
 	vimMode: boolean;
+	/** Show Markdown formatted while writing (raw on the lines being edited). */
+	livePreview: boolean;
 	textFont: string;
 	interfaceFont: string;
 	monospaceFont: string;
@@ -248,8 +283,10 @@ export const DEFAULT_CONFIG: AppConfig = {
 	autoPairBrackets: false,
 	newFileLocation: 'current',
 	newFileFolderPath: '',
+	attachmentFolder: 'attachments',
 	alwaysUpdateLinks: true,
 	vimMode: false,
+	livePreview: true,
 	textFont: '',
 	interfaceFont: '',
 	monospaceFont: '',
@@ -318,6 +355,7 @@ export class App extends Events {
 		this.config[key] = value;
 		this.vault.setConfigValues(this.config);
 		this.applyConfig();
+		if (key === 'vimMode' || key === 'autoPairBrackets' || key === 'livePreview') this.workspace.updateOptions();
 		await this.vault.adapter.write(`${this.vault.configDir}/app.json`, JSON.stringify(this.config, null, '\t'));
 	}
 
@@ -363,6 +401,7 @@ export class App extends Events {
 	/** After each edit or cursor move: open, update or close suggestion popups. */
 	onEditorUpdate(view: MarkdownView, typed: boolean): void {
 		const editor = view.editor;
+		this.workspace.trigger('editor-cursor', editor, view);
 		const cursor = editor.getCursor();
 		const open = this.activeSuggest;
 		if (open) {
@@ -371,7 +410,7 @@ export class App extends Events {
 			void open.update({ ...info, editor, file: view.file });
 			return;
 		}
-		if (!typed || !editor.cm.hasFocus) return;
+		if (!typed) return;
 		for (const s of this.editorSuggests) {
 			const info = this.safeTrigger(s, view);
 			if (info) {
@@ -397,6 +436,7 @@ export class App extends Events {
 	/** Load the vault, index it, load plugins, then restore the layout. */
 	async start(): Promise<void> {
 		await this.loadConfig();
+		await this.commands.loadHotkeys();
 		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.applyConfig());
 		await this.vault.load();
 		await this.customCss.load();

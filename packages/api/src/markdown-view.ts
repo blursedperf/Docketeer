@@ -1,6 +1,10 @@
 import { Compartment, EditorState, type Extension, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { baseExtensions } from './cm-setup';
+import { getCM, vim } from '@replit/codemirror-vim';
+import { baseExtensions, bracketExtensions } from './cm-setup';
+import { attachFiles, embedMarkdown, isImage } from './attachments';
+import { imageEmbeds } from './embeds-editor';
+import { livePreview } from './live-preview';
 import { Editor, editorInfoField, type MarkdownFileInfo } from './editor';
 import { TFile, type TAbstractFile } from './files';
 import { MarkdownRenderer } from './markdown-render';
@@ -20,6 +24,11 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	previewEl: HTMLElement;
 	private mode: MarkdownViewModeType = 'source';
 	private pluginCompartment = new Compartment();
+	private vimCompartment = new Compartment();
+	private bracketCompartment = new Compartment();
+	private livePreviewCompartment = new Compartment();
+	/** The vim mode last reported for this editor (normal, insert, visual …), or null when vim is off. */
+	vimMode: string | null = null;
 	private dirty = false;
 	/** The text as last read from or written to disk. */
 	private lastSaved = '';
@@ -57,18 +66,28 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		const app = this.app;
 		const cfg = (k: string, d: boolean) => (app.vault.getConfig(k) as boolean | undefined) ?? d;
 		const extensions: Extension[] = [
+			// Vim first, so its keys come before the editor's own.
+			this.vimCompartment.of(cfg('vimMode', false) ? vim() : []),
 			editorInfoField.init(() => this),
+			this.bracketCompartment.of(bracketExtensions(cfg('autoPairBrackets', false))),
+			this.livePreviewCompartment.of(cfg('livePreview', true) ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
 			baseExtensions({
 				spellcheck: cfg('spellcheck', true),
 				closeBrackets: cfg('autoPairBrackets', false),
-				onFollowLink: (link, newLeaf) => {
-					if (link.type === 'url') {
-						app.host.clipboard.writeText(link.target);
-						new Notice('Quire is offline and does not open web links. The link was copied to the clipboard.');
-						return;
-					}
-					void app.workspace.openLinkText(link.target, this.file?.path ?? '', newLeaf ? 'tab' : false);
+				onFollowLink: (link, newLeaf) => this.followLink(link, newLeaf),
+				onFiles: (files, pos) => { void this.insertFiles(files, pos); return true; },
+				onDropPath: (path, pos) => {
+					const f = app.vault.getFileByPath(path);
+					if (!f) return false;
+					this.insertAt(pos, embedMarkdown(app, f, this.file?.path ?? ''));
+					return true;
 				},
+			}),
+			imageEmbeds((target, wiki) => {
+				const source = this.file?.path ?? '';
+				if (!isImage(target.replace(/[#^].*$/, ''))) return null;
+				const f = wiki ? app.metadataCache.getFirstLinkpathDest(target, source) : app.vault.getFileByPath(resolveRelative(source, target));
+				return f ? app.vault.getResourcePath(f) : null;
 			}),
 			Prec.highest(keymap.of(app.suggestKeymap())),
 			this.pluginCompartment.of(app.getEditorExtensions()),
@@ -79,15 +98,70 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 					this.saveSoon();
 					app.workspace.trigger('editor-change', this.editor, this);
 				}
-				if (u.docChanged || u.selectionSet) app.onEditorUpdate(this, u.docChanged);
+				// Suggestions open on typing (input or delete events), not on changes made by code.
+				const typed = u.transactions.some((tr) => tr.isUserEvent('input') || tr.isUserEvent('delete'));
+				if (u.docChanged || u.selectionSet) app.onEditorUpdate(this, typed);
 			}),
 		];
 		return EditorState.create({ doc, extensions });
 	}
 
+	/** Follow vim's mode (normal, insert, visual …) for the modeline. Each editor state has its own adapter. */
+	private watchVim(): void {
+		const vimOn = this.app.vault.getConfig('vimMode') === true;
+		const cm = vimOn ? getCM(this.editor.cm) : null;
+		const report = (mode: string | null) => {
+			if (mode === this.vimMode) return;
+			this.vimMode = mode;
+			this.app.workspace.trigger('vim-mode-change', mode, this);
+		};
+		if (!cm) { report(null); return; }
+		const tagged = cm as unknown as { __quireWatched?: boolean };
+		if (!tagged.__quireWatched) {
+			tagged.__quireWatched = true;
+			cm.on('vim-mode-change', (e: { mode: string; subMode?: string }) => report(e.subMode ? `${e.mode} ${e.subMode}` : e.mode));
+		}
+		report(this.vimMode ?? 'normal');
+	}
+
+	/** Open a link from the editor: notes in Quire; web links are copied, as Quire stays offline. */
+	private followLink(link: { type: 'wiki' | 'url'; target: string }, newLeaf: boolean): void {
+		if (link.type === 'url') {
+			this.app.host.clipboard.writeText(link.target);
+			new Notice('Quire is offline and does not open web links. The link was copied to the clipboard.');
+			return;
+		}
+		void this.app.workspace.openLinkText(link.target, this.file?.path ?? '', newLeaf ? 'tab' : false);
+	}
+
+	/** Save pasted or dropped files as attachments and insert their embeds at `pos`. */
+	private async insertFiles(files: File[], pos: number): Promise<void> {
+		if (!this.file) return;
+		try {
+			const md = await attachFiles(this.app, files, this.file.path);
+			this.insertAt(pos, md);
+		} catch (e) {
+			new Notice(`Could not add the file: ${e instanceof Error ? e.message : String(e)}`);
+		}
+	}
+
+	private insertAt(pos: number, text: string): void {
+		const cm = this.editor.cm;
+		const at = Math.min(pos, cm.state.doc.length);
+		cm.dispatch({ changes: { from: at, insert: text }, selection: { anchor: at + text.length }, userEvent: 'input.drop' });
+		cm.focus();
+	}
+
 	/** Re-apply plugin editor extensions. */
 	reconfigure(): void {
-		this.editor.cm.dispatch({ effects: this.pluginCompartment.reconfigure(this.app.getEditorExtensions()) });
+		const cfg = (k: string) => this.app.vault.getConfig(k) === true;
+		this.editor.cm.dispatch({ effects: [
+			this.pluginCompartment.reconfigure(this.app.getEditorExtensions()),
+			this.vimCompartment.reconfigure(cfg('vimMode') ? vim() : []),
+			this.bracketCompartment.reconfigure(bracketExtensions(cfg('autoPairBrackets'))),
+			this.livePreviewCompartment.reconfigure(this.app.vault.getConfig('livePreview') !== false ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
+		] });
+		this.watchVim();
 	}
 
 	override async onOpen(): Promise<void> {
@@ -98,6 +172,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		const text = await this.app.vault.read(file);
 		this.loading = true;
 		this.editor.cm.setState(this.makeState(text));
+		this.watchVim();
 		this.loading = false;
 		this.lastSaved = text;
 		this.dirty = false;
@@ -201,6 +276,28 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		new Notice('Quire is offline and does not open web links. The link was copied to the clipboard.');
 	}
 
+	/**
+	 * Go to a place in the note: `{ line }` (0-based), or `{ from, to }` offsets to select (as search
+	 * results and backlinks do), or `{ subpath: "#Heading" }`.
+	 */
+	override setEphemeralState(state: unknown): void {
+		const s = (state ?? {}) as { line?: number; from?: number; to?: number; subpath?: string; focus?: boolean };
+		if (this.mode !== 'source' && (s.line !== undefined || s.from !== undefined)) void this.setMode('source');
+		const cm = this.editor.cm;
+		if (typeof s.from === 'number') {
+			const from = Math.max(0, Math.min(cm.state.doc.length, s.from));
+			const to = Math.max(from, Math.min(cm.state.doc.length, s.to ?? from));
+			cm.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: 'center' }) });
+		} else if (typeof s.line === 'number') {
+			const pos = { line: s.line, ch: 0 };
+			this.editor.setCursor(pos);
+			this.editor.scrollIntoView({ from: pos, to: pos }, true);
+		} else if (typeof s.subpath === 'string') {
+			this.scrollToSubpath(s.subpath);
+		}
+		if (s.focus !== false && this.mode === 'source') this.editor.focus();
+	}
+
 	/** Scroll to "#Heading" (or "#^block") in this note. */
 	scrollToSubpath(subpath: string): void {
 		const heading = subpath.replace(/^#/, '').trim().toLowerCase();
@@ -227,4 +324,15 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	override onResize(): void {
 		this.editor.cm.requestMeasure();
 	}
+}
+
+/** A path relative to the note at `source` ("img/a.png", "../a.png"), as a homebase path. */
+function resolveRelative(source: string, target: string): string {
+	if (target.startsWith('/')) return target.slice(1);
+	const parts = source.includes('/') ? source.slice(0, source.lastIndexOf('/')).split('/') : [];
+	for (const seg of target.split('/')) {
+		if (seg === '..') parts.pop();
+		else if (seg !== '.' && seg !== '') parts.push(seg);
+	}
+	return parts.join('/');
 }
