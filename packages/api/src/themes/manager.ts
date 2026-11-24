@@ -1,3 +1,4 @@
+import { errorSummary } from '../util';
 import type { App } from '../app';
 import { Events, type EventRef } from '../events';
 import { getActiveIconPack, setIconPack } from '../icons';
@@ -189,7 +190,7 @@ export class CustomCss extends Events {
 		try {
 			css = await this.app.vault.adapter.read(path);
 		} catch (e) {
-			console.error(`Could not read ${path}`, e);
+			console.error(`Could not read a ${kind}:`, errorSummary(e));
 			return null;
 		}
 		const problems = cssProblems(css);

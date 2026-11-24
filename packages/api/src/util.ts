@@ -38,6 +38,18 @@ export function normalizePath(path: string): string {
 
 const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
 
+/**
+ * What may be logged about an error: its kind and code, never its message (file system errors put the
+ * path in the message, and the plan forbids paths, note text and queries in logs).
+ */
+export function errorSummary(e: unknown): string {
+	if (e instanceof Error) {
+		const code = (e as { code?: unknown }).code;
+		return typeof code === 'string' ? `${e.name} ${code}` : e.name;
+	}
+	return typeof e;
+}
+
 export const Platform = {
 	isDesktop: true,
 	isMobile: false,

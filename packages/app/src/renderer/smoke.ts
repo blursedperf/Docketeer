@@ -277,6 +277,24 @@ export async function runSmoke(app: App): Promise<void> {
 		const ok = normal === 'normal' && insert === 'insert' && back === 'normal' && disk.includes('Typed in vim insert mode.') && off === 'edit';
 		return ok || `normal=${normal} insert=${insert} back=${back} saved=${disk.includes('Typed in vim')} off=${off}`;
 	});
+	await check('menu actions run registry commands (with arguments and confirmation)', async () => {
+		const cmds = app.commands;
+		const note = vault.getMarkdownFiles()[0]!;
+		const before = vault.getFiles().length;
+		cmds.executeCommandById('app:copy-file', { file: note });
+		await sleep(100);
+		const copied = vault.getFiles().length === before + 1;
+		const copy = vault.getFiles().find((f) => f.path !== note.path && f.basename.startsWith(note.basename) && f.extension === 'md');
+		cmds.executeCommandById('app:delete-file', { file: copy });
+		await sleep(50);
+		const asked = !!topModal() && vault.getFiles().length === before + 1;
+		topModal()?.close();
+		if (copy) await vault.trash(copy, true);
+		const fields = ['app:new-note', 'app:delete-file', 'app:split-right'].every((id) => !!cmds.findCommand(id)?.section && cmds.findCommand(id)?.source === 'core');
+		const pluginSource = cmds.listCommands().some((c) => c.source === 'plugin:aglc-citations');
+		return (copied && asked && fields && pluginSource) || `copied=${copied} asked=${asked} fields=${fields} plugin=${pluginSource}`;
+	});
+
 	await check('hotkeys: record, run, conflicts, reset, saved', async () => {
 		const cmds = app.commands;
 		await cmds.setHotkeys('app:toggle-left-sidebar', [{ modifiers: ['Mod', 'Alt'], key: 'l' }]);

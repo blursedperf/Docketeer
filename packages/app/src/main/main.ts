@@ -353,7 +353,7 @@ function lockDown() {
 		const ok = ALLOWED_SCHEMES.some((s) => details.url.startsWith(s));
 		if (!ok) {
 			blocked.push(details.url);
-			console.warn(`Blocked network request: ${details.url}`);
+			console.warn(`Blocked a request (${details.url.split(':')[0]}:)`);
 		}
 		cb({ cancel: !ok });
 	});

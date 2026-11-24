@@ -227,9 +227,11 @@ export class WorkspaceLeaf extends Events {
 		});
 		this.tabHeaderEl.addEventListener('contextmenu', (e) => {
 			const menu = new Menu();
-			menu.addItem((i) => i.setTitle('Close').setIcon('x').onClick(() => this.detach()));
-			menu.addItem((i) => i.setTitle('Split right').setIcon('separator-vertical').onClick(() => { void this.workspace.duplicateLeaf(this, 'vertical'); }));
-			menu.addItem((i) => i.setTitle('Split down').setIcon('separator-horizontal').onClick(() => { void this.workspace.duplicateLeaf(this, 'horizontal'); }));
+			// Each item runs a command for this pane (falling back to the action if the command is absent).
+			const run = (id: string, fallback: () => unknown) => () => { if (!this.app.commands.executeCommandById(id, { leaf: this })) fallback(); };
+			menu.addItem((i) => i.setTitle('Close').setIcon('x').onClick(run('app:close-tab', () => this.detach())));
+			menu.addItem((i) => i.setTitle('Split right').setIcon('separator-vertical').onClick(run('app:split-right', () => this.workspace.duplicateLeaf(this, 'vertical'))));
+			menu.addItem((i) => i.setTitle('Split down').setIcon('separator-horizontal').onClick(run('app:split-down', () => this.workspace.duplicateLeaf(this, 'horizontal'))));
 			this.view.onPaneMenu(menu, 'tab-header');
 			menu.showAtMouseEvent(e);
 		});

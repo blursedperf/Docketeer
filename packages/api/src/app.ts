@@ -5,9 +5,12 @@ import type { EditorSuggest } from './editor-suggest';
 import type { HostBridge, HostPluginInfo } from './host';
 import { MarkdownView } from './markdown-view';
 import { FileManager, MetadataCache } from './metadata';
-import type { Command, Hotkey, Plugin, PluginManifest } from './plugin';
+import type { Command, CommandContext, Hotkey, Plugin, PluginManifest } from './plugin';
+import { type KeyContext, eventString, formatHotkey as formatHotkeyFor, hotkeyString, reservedFor } from './keymap';
+import { DocketRegistry } from './docket-registry';
+import type { TFile } from './files';
 import { SettingsModal } from './settings-modal';
-import { Notice, topModal } from './ui';
+import { Modal, Notice, topModal } from './ui';
 import { Platform } from './util';
 import { Vault } from './vault';
 import { Workspace } from './workspace';
@@ -17,35 +20,26 @@ import { Spellchecker } from './spellcheck';
 // -------------------------------------------------------------------------------------------------
 // Commands and hotkeys
 
-function hotkeyString(h: Hotkey): string {
-	const mods = [...new Set(h.modifiers.map((m) => (m === 'Mod' ? (Platform.isMacOS ? 'Meta' : 'Ctrl') : m)))].sort();
-	return [...mods, h.key.length === 1 ? h.key.toUpperCase() : h.key].join('+');
-}
-
-function eventString(e: KeyboardEvent): string {
-	const mods: string[] = [];
-	if (e.altKey) mods.push('Alt');
-	if (e.ctrlKey) mods.push('Ctrl');
-	if (e.metaKey) mods.push('Meta');
-	if (e.shiftKey) mods.push('Shift');
-	const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
-	return [...mods.sort(), key].join('+');
-}
+const platform = () => Platform;
 
 export function formatHotkey(h: Hotkey): string {
-	return hotkeyString(h).replace('Meta', Platform.isMacOS ? '⌘' : 'Meta');
+	return formatHotkeyFor(h, platform());
 }
 
+/** The command registry: every action in the app, its shortcuts, and running it. */
 export class Commands {
 	commands: Record<string, Command> = {};
 	/** User overrides: command id to hotkeys (empty array removes the default). */
 	customKeys: Record<string, Hotkey[]> = {};
 
 	constructor(private app: App) {
-		window.addEventListener('keydown', (e) => this.onKeyDown(e), true);
+		if (typeof window !== 'undefined') window.addEventListener('keydown', (e) => this.onKeyDown(e), true);
 	}
 
-	addCommand(cmd: Command): void { this.commands[cmd.id] = cmd; }
+	addCommand(cmd: Command): void {
+		if (!cmd.source) cmd.source = 'core';
+		this.commands[cmd.id] = cmd;
+	}
 	removeCommand(id: string): void { delete this.commands[id]; }
 	findCommand(id: string): Command | undefined { return this.commands[id]; }
 	listCommands(): Command[] { return Object.values(this.commands); }
@@ -67,8 +61,8 @@ export class Commands {
 				const data = JSON.parse(await this.app.vault.adapter.read(this.hotkeysPath)) as Record<string, Hotkey[]>;
 				this.customKeys = Object.fromEntries(Object.entries(data).filter(([, v]) => Array.isArray(v)));
 			}
-		} catch (e) {
-			console.error('Could not read hotkeys.json', e);
+		} catch {
+			console.error('Could not read the hotkeys file');
 		}
 	}
 
@@ -79,60 +73,138 @@ export class Commands {
 		await this.app.vault.adapter.write(this.hotkeysPath, JSON.stringify(this.customKeys, null, '\t'));
 	}
 
-	/** Commands (other than `except`) that a hotkey would also run. */
+	/**
+	 * Commands (other than `except`) that a hotkey would also run. Two commands only clash when their
+	 * shortcuts can work in the same place (a global command clashes with everything).
+	 */
 	conflicts(h: Hotkey, except?: string): Command[] {
-		const key = hotkeyString(h);
-		return this.listCommands().filter((c) => c.id !== except && this.hotkeysFor(c).some((k) => hotkeyString(k) === key));
+		const key = hotkeyString(h, platform());
+		const ctx = except ? this.commands[except]?.context ?? 'global' : 'global';
+		return this.listCommands().filter((c) => {
+			if (c.id === except || !this.hotkeysFor(c).some((k) => hotkeyString(k, platform()) === key)) return false;
+			const other = c.context ?? 'global';
+			return ctx === 'global' || other === 'global' || ctx === other;
+		});
 	}
 
-	/** Whether the command can run now (its check callback, or an editor being active). */
-	isAvailable(cmd: Command): boolean {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const editorOk = !!view && view.getMode() === 'source';
+	/** What the system already does with this hotkey ("Copy", "Quit" …), if anything. */
+	reservedFor(h: Hotkey): string | null {
+		return reservedFor(h, platform());
+	}
+
+	/** The context a command runs in: the active editor, view and note, and its arguments. */
+	context(args: Record<string, unknown> = {}): CommandContext {
+		const view = this.app.workspace?.getActiveViewOfType(MarkdownView) ?? null;
+		const source = view && view.getMode() === 'source' ? view : null;
+		return { app: this.app, editor: source?.editor ?? null, view, file: this.app.workspace?.getActiveFile() ?? null, args };
+	}
+
+	/** Whether the command can run now: its `when`, or its callbacks' own checks. */
+	isAvailable(cmd: Command, args: Record<string, unknown> = {}): boolean {
+		const ctx = this.context(args);
 		try {
-			if (cmd.editorCheckCallback) return editorOk && cmd.editorCheckCallback(true, view!.editor, view!) === true;
-			if (cmd.editorCallback) return editorOk;
+			if (cmd.when) return cmd.when(ctx);
+			if (cmd.run) return true;
+			const view = ctx.editor ? ctx.view : null;
+			if (cmd.editorCheckCallback) return !!view && cmd.editorCheckCallback(true, view.editor, view) === true;
+			if (cmd.editorCallback) return !!view;
 			if (cmd.checkCallback) return cmd.checkCallback(true) === true;
 			return !!cmd.callback;
-		} catch (e) {
-			console.error(`Command ${cmd.id} check failed`, e);
+		} catch {
+			console.error(`Command ${cmd.id}: its availability check failed`);
 			return false;
 		}
 	}
 
-	executeCommand(cmd: Command): boolean {
-		if (!this.isAvailable(cmd)) return false;
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		try {
-			if (cmd.editorCheckCallback) cmd.editorCheckCallback(false, view!.editor, view!);
-			else if (cmd.editorCallback) cmd.editorCallback(view!.editor, view!);
-			else if (cmd.checkCallback) cmd.checkCallback(false);
-			else cmd.callback?.();
-		} catch (e) {
-			console.error(`Command ${cmd.id} failed`, e);
-			new Notice(`Command failed: ${e instanceof Error ? e.message : String(e)}`);
+	/**
+	 * Run a command, with arguments (menus pass the file or pane they were opened on). Returns false when
+	 * it is not available. Commands with `confirm` ask first; `requiresUnlocked` ones refuse while locked.
+	 */
+	executeCommand(cmd: Command, args: Record<string, unknown> = {}): boolean {
+		if (!this.isAvailable(cmd, args)) return false;
+		const ctx = this.context(args);
+		if (cmd.requiresUnlocked && this.app.isLocked(ctx.file)) {
+			new Notice(`${cmd.name}: unlock first.`);
+			return false;
 		}
-		this.app.lastCommand = cmd.id;
+		const go = () => this.runNow(cmd, ctx);
+		if (cmd.confirm) {
+			const question = typeof cmd.confirm === 'function' ? cmd.confirm(ctx) : typeof cmd.confirm === 'string' ? cmd.confirm : `${cmd.name}?`;
+			new ConfirmCommandModal(this.app, cmd.name, question, go).open();
+			return true;
+		}
+		go();
 		return true;
 	}
 
-	executeCommandById(id: string): boolean {
+	private runNow(cmd: Command, ctx: CommandContext): void {
+		try {
+			const view = ctx.editor ? ctx.view : null;
+			let r: unknown;
+			if (cmd.run) r = cmd.run(ctx, ctx.args);
+			else if (cmd.editorCheckCallback) r = cmd.editorCheckCallback(false, view!.editor, view!);
+			else if (cmd.editorCallback) r = cmd.editorCallback(view!.editor, view!);
+			else if (cmd.checkCallback) r = cmd.checkCallback(false);
+			else r = cmd.callback?.();
+			if (r instanceof Promise) r.catch((e: unknown) => this.failed(cmd, e));
+		} catch (e) {
+			this.failed(cmd, e);
+		}
+		this.app.lastCommand = cmd.id;
+		this.app.trigger('command-run', cmd.id);
+	}
+
+	private failed(cmd: Command, e: unknown) {
+		// The message may name a file: shown to the user, never written to the log.
+		console.error(`Command ${cmd.id} failed`);
+		new Notice(`${cmd.name} failed: ${e instanceof Error ? e.message : String(e)}`);
+	}
+
+	executeCommandById(id: string, args: Record<string, unknown> = {}): boolean {
 		const cmd = this.commands[id];
-		return cmd ? this.executeCommand(cmd) : false;
+		return cmd ? this.executeCommand(cmd, args) : false;
+	}
+
+	/** Where the keyboard is: the Docket, an editor, or elsewhere. */
+	private keyContexts(): Set<KeyContext> {
+		const set = new Set<KeyContext>(['global']);
+		if (this.app.docketOpen) set.add('docket');
+		const active = typeof document !== 'undefined' ? document.activeElement : null;
+		if (active?.closest?.('.cm-editor')) set.add('editor');
+		return set;
 	}
 
 	private onKeyDown(e: KeyboardEvent) {
 		if (e.isComposing || topModal()) return;
 		if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
 		const pressed = eventString(e);
+		const where = this.keyContexts();
 		for (const cmd of Object.values(this.commands)) {
-			if (!this.hotkeysFor(cmd).some((h) => hotkeyString(h) === pressed)) continue;
+			if (!where.has(cmd.context ?? 'global')) continue;
+			if (!this.hotkeysFor(cmd).some((h) => hotkeyString(h, platform()) === pressed)) continue;
 			if (this.executeCommand(cmd)) {
 				e.preventDefault();
 				e.stopPropagation();
 				return;
 			}
 		}
+	}
+}
+
+/** Asks before a command with `confirm` runs. */
+class ConfirmCommandModal extends Modal {
+	constructor(app: App, title: string, private question: string, private onYes: () => void) {
+		super(app);
+		this.setTitle(title);
+	}
+	override onOpen(): void {
+		this.contentEl.createEl('p', { text: this.question });
+		const row = this.contentEl.createDiv({ cls: 'modal-button-container' });
+		const no = row.createEl('button', { text: 'Cancel' });
+		no.addEventListener('click', () => this.close());
+		const yes = row.createEl('button', { cls: 'mod-cta', text: 'Continue' });
+		yes.addEventListener('click', () => { this.close(); this.onYes(); });
+		window.setTimeout(() => yes.focus(), 0);
 	}
 }
 
@@ -324,6 +396,10 @@ export class App extends Events {
 	customCss: CustomCss;
 	/** Offline spellcheck (dictionaries ship with the app). */
 	spellchecker: Spellchecker;
+	/** Docket panels, search providers and result actions (core and plugins). */
+	docket: DocketRegistry;
+	/** True while the Docket is open (for shortcuts that only work there). */
+	docketOpen = false;
 	statusBarEl: HTMLElement;
 	config: AppConfig = { ...DEFAULT_CONFIG };
 	editorSuggests: EditorSuggest<any>[] = [];
@@ -345,6 +421,15 @@ export class App extends Events {
 		this.setting = new SettingsModal(this);
 		this.customCss = new CustomCss(this);
 		this.spellchecker = new Spellchecker(this);
+		this.docket = new DocketRegistry();
+	}
+
+	/**
+	 * Whether the homebase, or `file`, is locked. Nothing can be locked until the locking phase; commands
+	 * and search already ask, so they need no change then.
+	 */
+	isLocked(_file?: TFile | null): boolean {
+		return false;
 	}
 
 	/** The homebase: the folder of notes Quire has open. (The API calls it `vault`, as plugins expect.) */

@@ -35,3 +35,26 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 11. **Authorities and Cite are built into the app**, not provided by the AGLC4 plugin. The AGLC formatting
     code they need moves (or is shared) into a core module.
 12. **The Mod+5 panel is "Homebase"**, matching the rest of the app.
+
+## Phase 1
+
+13. **Command ids keep Quire's existing form** (`app:new-note`, `editor:toggle-bold`, `<pluginId>:<name>`)
+    rather than the plan's `core.note.new` / `plugin.<id>.<name>`. Renaming would break saved hotkeys in
+    `.quire/hotkeys.json` and any plugin calling `executeCommandById`. `source` ("core" or "plugin:<id>") and
+    `section` carry the grouping the dotted names were for.
+14. **`title` is `name`, `defaultShortcut` is `hotkeys`** (the existing field names, kept for plugins). The plan's
+    other fields are new optional fields on `Command`: `aliases`, `keywords`, `section`, `context`, `when`,
+    `run(ctx, args)`, `requiresUnlocked`, `confirm`, `source`. Commands without `when`/`run` behave as before.
+15. **Shortcut contexts are `global`, `editor` and `docket`.** "Pane focused" from the plan is not a separate
+    context yet: pane commands act on the active pane, which is always the focused one. Revisit in Phase 5.
+16. **Menus pass arguments to commands**: the file menu runs `app:rename-file` etc. with `{ file }`, the tab
+    menu runs `app:close-tab`/`app:split-*` with `{ leaf }`, the explorer buttons run `app:new-note`/`app:new-folder`
+    with `{ folder }`. Plugin items added through the `file-menu` event are unchanged (they are the plugins'
+    own commands' business).
+17. **`app.isLocked()` exists and always returns false** until the locking phase, so `requiresUnlocked` is
+    already enforced and search can already ask.
+18. **The command palette keeps Mod+P until the Docket ships (Phase 2)**, then the Docket takes Mod+P and the
+    palette becomes the `>` prefix.
+19. **Logs never carry error messages from file operations**, since Node puts the path in them: `errorSummary(e)`
+    logs only the error's name and code. The two path-logging places from the inventory are fixed, and the
+    main process logs only the scheme of a blocked request.

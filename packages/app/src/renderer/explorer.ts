@@ -1,4 +1,4 @@
-import { ItemView, Menu, Modal, Notice, Setting, TFile, TFolder, setIcon, type TAbstractFile, type WorkspaceLeaf, debounce } from '@quire/api';
+import { type App, ItemView, Menu, Modal, Notice, Setting, TFile, TFolder, setIcon, type TAbstractFile, type WorkspaceLeaf, debounce } from '@quire/api';
 
 export const FILE_EXPLORER = 'file-explorer';
 
@@ -75,9 +75,11 @@ export class FileExplorerView extends ItemView {
 
 	override async onOpen(): Promise<void> {
 		// In the view's header line, so it shares a band with the header lines of the other columns.
-		this.addAction('chevrons-down-up', 'Collapse all', () => { this.expanded.clear(); this.render(); this.app.workspace.requestSaveLayout(); });
-		this.addAction('folder-plus', 'New folder', () => this.newFolder(this.app.vault.getRoot()));
-		this.addAction('square-pen', 'New note', () => { void this.newNote(this.app.vault.getRoot()); });
+		// Each button runs a command (also in the Docket and the command palette).
+		const root = () => ({ folder: this.app.vault.getRoot() });
+		this.addAction('chevrons-down-up', 'Collapse all', () => this.app.commands.executeCommandById('app:collapse-folders'));
+		this.addAction('folder-plus', 'New folder', () => this.app.commands.executeCommandById('app:new-folder', root()));
+		this.addAction('square-pen', 'New note', () => this.app.commands.executeCommandById('app:new-note', root()));
 		this.treeEl = this.contentEl.createDiv({ cls: 'nav-files-container' });
 		this.treeEl.addEventListener('contextmenu', (e) => {
 			if ((e.target as HTMLElement).closest('.tree-item-self')) return;
@@ -174,58 +176,42 @@ export class FileExplorerView extends ItemView {
 		});
 	}
 
-	async newNote(folder: TFolder): Promise<void> {
-		const file = await this.app.vault.create(freePath(this.app, folder, 'Untitled', '.md'), '');
-		await this.app.workspace.getLeaf(false).openFile(file);
-		this.promptRename(file);
+	/** Expand the folders down to `path` (after creating a folder). */
+	expandTo(path: string): void {
+		const parts = path.split('/');
+		for (let i = 1; i <= parts.length; i++) this.expanded.add(parts.slice(0, i).join('/'));
+		this.render();
 	}
 
-	newFolder(folder: TFolder): void {
-		new NameModal(this.app, 'New folder', 'New folder', 'Create', (name) => {
-			if (!name) return;
-			const path = folder.isRoot() ? name : `${folder.path}/${name}`;
-			this.app.vault.createFolder(path).then(() => { this.expanded.add(folder.path); this.expanded.add(path); this.render(); })
-				.catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
-		}).open();
+	collapseAll(): void {
+		this.expanded.clear();
+		this.render();
+		this.app.workspace.requestSaveLayout();
 	}
 
-	promptRename(file: TAbstractFile): void {
-		const isNote = file instanceof TFile && file.extension === 'md';
-		new NameModal(this.app, isNote ? 'Rename note' : 'Rename', isNote ? (file as TFile).basename : file.name, 'Rename', (name) => {
-			if (!name) return;
-			const finalName = isNote && !/\.md$/i.test(name) ? `${name}.md` : name;
-			if (/[\\/:]/.test(name)) { new Notice('A name cannot contain / \\ or :'); return; }
-			const parent = file.parent;
-			const to = !parent || parent.isRoot() ? finalName : `${parent.path}/${finalName}`;
-			this.app.fileManager.renameFile(file, to).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
-		}).open();
-	}
-
-	confirmDelete(file: TAbstractFile): void {
-		new ConfirmModal(this.app, 'Delete', `Move "${file.path}" to the system trash?`, 'Delete', () => {
-			this.app.vault.trash(file, true).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
-		}).open();
-	}
-
+	/** The right-click menu: every item runs a command, for this file or folder. */
 	showMenu(e: MouseEvent, file: TAbstractFile): void {
 		const menu = new Menu();
+		const run = (id: string, args: Record<string, unknown>) => () => { this.app.commands.executeCommandById(id, args); };
+		const item = (id: string, args: Record<string, unknown>, title?: string, warning = false) => {
+			const cmd = this.app.commands.findCommand(id);
+			if (!cmd || !this.app.commands.isAvailable(cmd, args)) return;
+			menu.addItem((i) => { i.setTitle(title ?? cmd.name).setIcon(cmd.icon ?? null).onClick(run(id, args)); if (warning) i.setWarning(true); });
+		};
 		const folder = file instanceof TFolder ? file : file.parent ?? this.app.vault.getRoot();
-		menu.addItem((i) => i.setTitle('New note').setIcon('square-pen').onClick(() => { void this.newNote(folder); }));
-		menu.addItem((i) => i.setTitle('New folder').setIcon('folder-plus').onClick(() => this.newFolder(folder)));
+		item('app:new-note', { folder }, 'New note');
+		item('app:new-folder', { folder }, 'New folder');
 		if (!(file instanceof TFolder && file.isRoot())) {
 			menu.addSeparator();
-			if (file instanceof TFile) {
-				menu.addItem((i) => i.setTitle('Open in new tab').setIcon('file-plus').onClick(() => { void this.app.workspace.getLeaf('tab').openFile(file); }));
-				menu.addItem((i) => i.setTitle('Open to the right').setIcon('separator-vertical').onClick(() => { void this.app.workspace.getLeaf('split').openFile(file); }));
-				menu.addItem((i) => i.setTitle('Make a copy').setIcon('copy').onClick(() => {
-					void this.app.vault.copy(file, freePath(this.app, folder, file.basename, file.extension ? `.${file.extension}` : ''));
-				}));
-			}
-			menu.addItem((i) => i.setTitle('Rename…').setIcon('pencil').onClick(() => this.promptRename(file)));
-			menu.addItem((i) => i.setTitle('Delete').setIcon('trash-2').setWarning(true).onClick(() => this.confirmDelete(file)));
+			item('app:open-in-new-tab', { file });
+			item('app:open-to-right', { file });
+			item('app:copy-file', { file });
+			item('app:rename-file', { file }, 'Rename…');
+			item('app:move-file', { file }, 'Move to…');
+			item('app:delete-file', { file }, 'Delete', true);
 		}
 		menu.addSeparator();
-		menu.addItem((i) => i.setTitle('Show in system file manager').setIcon('folder-open').onClick(() => { void this.app.host.app.showItemInFolder(file instanceof TFolder && file.isRoot() ? '' : file.path); }));
+		item('app:show-in-folder', { file });
 		menu.addSeparator();
 		this.app.workspace.trigger('file-menu', menu, file, 'file-explorer-context-menu', this.leaf);
 		menu.showAtMouseEvent(e);
@@ -237,4 +223,17 @@ export class FileExplorerView extends ItemView {
 		this.render();
 		this.treeEl.querySelector(`[data-path="${CSS.escape(file.path)}"]`)?.scrollIntoView({ block: 'center' });
 	}
+}
+
+/** Ask for a new name and rename (keeping a note's .md, and updating links). */
+export function promptRename(app: App, file: TAbstractFile): void {
+	const isNote = file instanceof TFile && file.extension === 'md';
+	new NameModal(app, isNote ? 'Rename note' : 'Rename', isNote ? (file as TFile).basename : file.name, 'Rename', (name) => {
+		if (!name) return;
+		if (/[\\/:]/.test(name)) { new Notice('A name cannot contain / \\ or :'); return; }
+		const finalName = isNote && !/\.md$/i.test(name) ? `${name}.md` : name;
+		const parent = file.parent;
+		const to = !parent || parent.isRoot() ? finalName : `${parent.path}/${finalName}`;
+		app.fileManager.renameFile(file, to).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
+	}).open();
 }

@@ -3,7 +3,7 @@ import { Events, type EventRef } from './events';
 import { TFile, TFolder, type TAbstractFile } from './files';
 import type { App } from './app';
 import { attachmentFolder, availablePath, safeFileName } from './attachments';
-import { normalizePath } from './util';
+import { errorSummary, normalizePath } from './util';
 
 export interface Loc { line: number; col: number; offset: number; }
 export interface Pos { start: Loc; end: Loc; }
@@ -185,7 +185,7 @@ export class MetadataCache extends Events {
 		const batch = 32;
 		for (let i = 0; i < files.length; i += batch) {
 			await Promise.all(files.slice(i, i + batch).map(async (f) => {
-				try { this.caches.set(f.path, parseMetadata(await vault.cachedRead(f))); } catch (e) { console.error('Could not index', f.path, e); }
+				try { this.caches.set(f.path, parseMetadata(await vault.cachedRead(f))); } catch (e) { console.error('Could not index a note:', errorSummary(e)); }
 			}));
 		}
 		for (const f of files) this.resolveLinksOf(f);

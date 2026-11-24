@@ -36,7 +36,9 @@ export {
 	ButtonComponent, ExtraButtonComponent, ToggleComponent, TextComponent, SearchComponent, TextAreaComponent, SliderComponent, DropdownComponent, ColorComponent,
 	type FuzzyMatch, type Instruction, type SettingDefinitionItem,
 } from './ui';
-export { Plugin, type Command, type Hotkey, type Modifier, type PluginManifest } from './plugin';
+export { Plugin, type Command, type CommandContext, type Hotkey, type Modifier, type PluginManifest } from './plugin';
+export { type KeyContext, hotkeyString, eventString, parseHotkey, reservedFor } from './keymap';
+export { DocketRegistry, type DocketPanel, type SearchProvider, type SearchResult, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
 export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';

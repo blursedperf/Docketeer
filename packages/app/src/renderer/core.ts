@@ -5,10 +5,10 @@
 import { EditorSelection } from '@codemirror/state';
 import { Vim } from '@replit/codemirror-vim';
 import {
-	type App, type AppConfig, type Command, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
+	type App, type AppConfig, type Command, type CommandContext, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
 	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES,
 } from '@quire/api';
-import { FILE_EXPLORER, FileExplorerView, NameModal, freePath } from './explorer';
+import { FILE_EXPLORER, FileExplorerView, NameModal, freePath, promptRename } from './explorer';
 import { BACKLINK_VIEW, BacklinksView } from './panes/backlinks';
 import { LinkSuggest } from './panes/link-suggest';
 import { OUTGOING_VIEW, OutgoingLinksView } from './panes/outgoing';
@@ -341,12 +341,15 @@ class HotkeysTab extends SettingTab {
 		list.empty();
 		const cmds = this.app.commands;
 		const words = this.filter.toLowerCase().split(/\s+/).filter(Boolean);
-		const all = cmds.listCommands().filter((c) => words.every((w) => c.name.toLowerCase().includes(w))).sort((a, b) => a.name.localeCompare(b.name));
+		const all = cmds.listCommands().filter((c) => { const hay = [c.name, c.section ?? '', ...(c.aliases ?? []), ...(c.keywords ?? [])].join(' ').toLowerCase(); return words.every((w) => hay.includes(w)); }).sort((a, b) => a.name.localeCompare(b.name));
 		if (all.length === 0) list.createDiv({ cls: 'setting-note', text: 'No commands match.' });
 		for (const cmd of all) {
 			const row = new Setting(list).setName(cmd.name).setClass('mod-hotkeys');
 			const keys = cmds.hotkeysFor(cmd);
-			const clashes = keys.flatMap((k) => cmds.conflicts(k, cmd.id).map((c) => `${formatHotkey(k)} also runs "${c.name}"`));
+			const clashes = keys.flatMap((k) => {
+				const sys = cmds.reservedFor(k);
+				return [...cmds.conflicts(k, cmd.id).map((c) => `${formatHotkey(k)} also runs "${c.name}"`), ...(sys ? [`${formatHotkey(k)} is the system's "${sys}"`] : [])];
+			});
 			if (clashes.length) row.setDesc(clashes.join('; ')).descEl.addClass('mod-warning');
 			for (const [i, k] of keys.entries()) {
 				const pill = row.controlEl.createSpan({ cls: 'hotkey-pill', text: formatHotkey(k) });
@@ -536,44 +539,56 @@ export function registerCore(app: App): { reveal(): void } {
 	const activeMarkdown = () => workspace.getActiveViewOfType(MarkdownView);
 	const explorer = () => workspace.getLeavesOfType(FILE_EXPLORER)[0]?.view as FileExplorerView | undefined;
 
-	add({ id: 'app:command-palette', name: 'Command palette: Open', icon: 'terminal', hotkeys: [{ modifiers: ['Mod'], key: 'p' }], callback: () => new CommandPalette(app, recent).open() });
+	add({ id: 'app:command-palette', name: 'Command palette: Open', icon: 'terminal', section: 'Search', aliases: ['Commands'], hotkeys: [{ modifiers: ['Mod'], key: 'p' }], callback: () => new CommandPalette(app, recent).open() });
 	add({
-		id: 'app:search', name: 'Search: Search in all notes', icon: 'search', hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'f' }],
+		id: 'app:search', name: 'Search: Search in all notes', icon: 'search', section: 'Search', aliases: ['Find in notes', 'Full-text search'], hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'f' }],
 		callback: () => {
 			const sel = activeMarkdown()?.editor.getSelection();
 			void openSearch(sel && !sel.includes('\n') ? sel : undefined);
 		},
 	});
 	const showPane = (id: string, name: string, icon: string, type: string, side: 'left' | 'right') =>
-		add({ id, name, icon, callback: () => { void workspace.ensureSideLeaf(type, side, { reveal: true }); } });
+		add({ id, name, icon, section: 'View', callback: () => { void workspace.ensureSideLeaf(type, side, { reveal: true }); } });
 	showPane('app:show-backlinks', 'Show backlinks', 'link', BACKLINK_VIEW, 'right');
 	showPane('app:show-outgoing-links', 'Show outgoing links', 'arrow-up-right', OUTGOING_VIEW, 'right');
 	showPane('app:show-outline', 'Show outline', 'list-tree', OUTLINE_VIEW, 'right');
 	showPane('app:show-tags', 'Show tags', 'tags', TAG_VIEW, 'left');
-	add({ id: 'app:quick-switcher', name: 'Quick switcher: Open', icon: 'search', hotkeys: [{ modifiers: ['Mod'], key: 'o' }], callback: () => new QuickSwitcher(app).open() });
-	add({ id: 'app:open-settings', name: 'Open settings', icon: 'settings', hotkeys: [{ modifiers: ['Mod'], key: ',' }], callback: () => app.setting.open() });
-	add({ id: 'app:open-homebase', name: 'Open another homebase', icon: 'folder-open', callback: () => { void app.host.app.chooseVault(false); } });
+	add({ id: 'app:quick-switcher', name: 'Quick switcher: Open', icon: 'search', section: 'Search', aliases: ['Open note', 'Go to file'], hotkeys: [{ modifiers: ['Mod'], key: 'o' }], callback: () => new QuickSwitcher(app).open() });
+	add({ id: 'app:open-settings', name: 'Open settings', icon: 'settings', section: 'App', aliases: ['Preferences', 'Options'], hotkeys: [{ modifiers: ['Mod'], key: ',' }], callback: () => app.setting.open() });
+	add({ id: 'app:open-homebase', name: 'Open another homebase', icon: 'folder-open', section: 'Homebase', aliases: ['Switch homebase', 'Open vault'], callback: () => { void app.host.app.chooseVault(false); } });
+	/** The file a command acts on: the one a menu passed, or the open note. */
+	const fileArg = (ctx: CommandContext): TAbstractFile | null => (ctx.args.file instanceof TAbstractFile ? ctx.args.file : ctx.file);
+	const leafArg = (ctx: CommandContext): WorkspaceLeaf | null => (ctx.args.leaf instanceof WorkspaceLeaf ? ctx.args.leaf : workspace.activeLeaf);
+	const report = (e: unknown) => new Notice(e instanceof Error ? e.message : String(e));
 	add({
-		id: 'app:new-note', name: 'Create new note', icon: 'square-pen', hotkeys: [{ modifiers: ['Mod'], key: 'n' }],
-		callback: async () => {
-			const folder = app.fileManager.getNewFileParent(workspace.getActiveFile()?.path ?? '');
+		id: 'app:new-note', name: 'Create new note', icon: 'square-pen', section: 'Notes', aliases: ['New note', 'New file'],
+		hotkeys: [{ modifiers: ['Mod'], key: 'n' }],
+		run: async (ctx) => {
+			const folder = ctx.args.folder instanceof TFolder ? ctx.args.folder : app.fileManager.getNewFileParent(workspace.getActiveFile()?.path ?? '');
 			const file = await vault.create(freePath(app, folder, 'Untitled', '.md'), '');
 			await workspace.getLeaf(false).openFile(file);
-			explorer()?.promptRename(file);
+			promptRename(app, file);
 		},
 	});
 	add({
-		id: 'app:new-tab', name: 'New tab', hotkeys: [{ modifiers: ['Mod'], key: 't' }],
+		id: 'app:new-folder', name: 'Create new folder', icon: 'folder-plus', section: 'Notes', aliases: ['New folder', 'New subject', 'New topic'],
+		run: (ctx) => {
+			const parent = ctx.args.folder instanceof TFolder ? ctx.args.folder : vault.getRoot();
+			new NameModal(app, 'New folder', 'New folder', 'Create', (name) => {
+				if (!name) return;
+				const path = parent.isRoot() ? name : `${parent.path}/${name}`;
+				vault.createFolder(path).then(() => explorer()?.expandTo(path)).catch(report);
+			}).open();
+		},
+	});
+	add({
+		id: 'app:new-tab', name: 'New tab', section: 'Layout', hotkeys: [{ modifiers: ['Mod'], key: 't' }],
 		callback: () => { const leaf = workspace.getLeaf('tab'); workspace.setActiveLeaf(leaf, { focus: true }); },
 	});
 	add({
-		id: 'app:close-tab', name: 'Close current tab', hotkeys: [{ modifiers: ['Mod'], key: 'w' }],
-		checkCallback: (checking) => {
-			const leaf = workspace.activeLeaf;
-			if (!leaf) return false;
-			if (!checking) leaf.detach();
-			return true;
-		},
+		id: 'app:close-tab', name: 'Close current tab', section: 'Layout', aliases: ['Close pane'], hotkeys: [{ modifiers: ['Mod'], key: 'w' }],
+		when: (ctx) => !!leafArg(ctx),
+		run: (ctx) => leafArg(ctx)?.detach(),
 	});
 	const cycleTab = (step: number) => (checking: boolean) => {
 		const tabs = workspace.activeLeaf?.parent;
@@ -584,24 +599,22 @@ export function registerCore(app: App): { reveal(): void } {
 		}
 		return true;
 	};
-	add({ id: 'app:next-tab', name: 'Go to next tab', hotkeys: [{ modifiers: ['Ctrl'], key: 'Tab' }], checkCallback: cycleTab(1) });
-	add({ id: 'app:previous-tab', name: 'Go to previous tab', hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'Tab' }], checkCallback: cycleTab(-1) });
-	add({
-		id: 'app:split-right', name: 'Split right', icon: 'separator-vertical',
-		checkCallback: (checking) => { const l = workspace.activeLeaf; if (!l || l.isSidebar()) return false; if (!checking) void workspace.duplicateLeaf(l, 'vertical'); return true; },
+	add({ id: 'app:next-tab', name: 'Go to next tab', section: 'Layout', hotkeys: [{ modifiers: ['Ctrl'], key: 'Tab' }], checkCallback: cycleTab(1) });
+	add({ id: 'app:previous-tab', name: 'Go to previous tab', section: 'Layout', hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'Tab' }], checkCallback: cycleTab(-1) });
+	const split = (direction: 'vertical' | 'horizontal') => ({
+		when: (ctx: CommandContext) => { const l = leafArg(ctx); return !!l && !l.isSidebar(); },
+		run: (ctx: CommandContext) => { void workspace.duplicateLeaf(leafArg(ctx)!, direction); },
 	});
+	add({ id: 'app:split-right', name: 'Split right', icon: 'separator-vertical', section: 'Layout', ...split('vertical') });
+	add({ id: 'app:split-down', name: 'Split down', icon: 'separator-horizontal', section: 'Layout', ...split('horizontal') });
+	add({ id: 'app:toggle-left-sidebar', name: 'Toggle left sidebar', icon: 'panel-left', section: 'Layout', callback: () => workspace.leftSplit.toggle() });
+	add({ id: 'app:toggle-right-sidebar', name: 'Toggle right sidebar', icon: 'panel-right', section: 'Layout', callback: () => workspace.rightSplit.toggle() });
 	add({
-		id: 'app:split-down', name: 'Split down', icon: 'separator-horizontal',
-		checkCallback: (checking) => { const l = workspace.activeLeaf; if (!l || l.isSidebar()) return false; if (!checking) void workspace.duplicateLeaf(l, 'horizontal'); return true; },
-	});
-	add({ id: 'app:toggle-left-sidebar', name: 'Toggle left sidebar', icon: 'panel-left', callback: () => workspace.leftSplit.toggle() });
-	add({ id: 'app:toggle-right-sidebar', name: 'Toggle right sidebar', icon: 'panel-right', callback: () => workspace.rightSplit.toggle() });
-	add({
-		id: 'app:toggle-reading', name: 'Toggle reading view', icon: 'book-open', hotkeys: [{ modifiers: ['Mod'], key: 'e' }],
+		id: 'app:toggle-reading', name: 'Toggle reading view', icon: 'book-open', section: 'View', hotkeys: [{ modifiers: ['Mod'], key: 'e' }],
 		checkCallback: (checking) => { const v = activeMarkdown(); if (!v) return false; if (!checking) void v.toggleMode(); return true; },
 	});
 	add({
-		id: 'app:toggle-live-preview', name: 'Toggle live preview / source mode', icon: 'eye',
+		id: 'app:toggle-live-preview', name: 'Toggle live preview / source mode', icon: 'eye', section: 'View',
 		callback: () => {
 			const on = !app.config.livePreview;
 			void app.setConfig('livePreview', on);
@@ -609,57 +622,73 @@ export function registerCore(app: App): { reveal(): void } {
 		},
 	});
 	add({
-		id: 'app:save', name: 'Save current file', hotkeys: [{ modifiers: ['Mod'], key: 's' }],
+		id: 'app:save', name: 'Save current file', section: 'Notes', hotkeys: [{ modifiers: ['Mod'], key: 's' }],
 		checkCallback: (checking) => { const v = activeMarkdown(); if (!v) return false; if (!checking) void v.save(); return true; },
 	});
 	add({
-		id: 'app:rename-file', name: 'Rename file', hotkeys: [{ modifiers: [], key: 'F2' }],
-		checkCallback: (checking) => { const f = workspace.getActiveFile(); if (!f) return false; if (!checking) explorer()?.promptRename(f); return true; },
+		id: 'app:rename-file', name: 'Rename file', icon: 'pencil', section: 'Notes', hotkeys: [{ modifiers: [], key: 'F2' }],
+		when: (ctx) => { const f = fileArg(ctx); return !!f && !(f instanceof TFolder && f.isRoot()); },
+		run: (ctx) => promptRename(app, fileArg(ctx)!),
 	});
 	add({
-		id: 'app:delete-file', name: 'Delete current file',
-		checkCallback: (checking) => { const f = workspace.getActiveFile(); if (!f) return false; if (!checking) explorer()?.confirmDelete(f); return true; },
+		id: 'app:delete-file', name: 'Delete file', icon: 'trash-2', section: 'Notes', aliases: ['Remove', 'Trash'],
+		when: (ctx) => { const f = fileArg(ctx); return !!f && !(f instanceof TFolder && f.isRoot()); },
+		confirm: (ctx) => `Move "${fileArg(ctx)?.name}" to the system trash?`,
+		run: (ctx) => vault.trash(fileArg(ctx)!, true).catch(report),
 	});
 	add({
-		id: 'app:move-file', name: 'Move current file to another folder',
-		checkCallback: (checking) => {
-			const f = workspace.getActiveFile();
-			if (!f) return false;
-			if (!checking) new FolderPicker(app, (folder) => {
+		id: 'app:move-file', name: 'Move file to another folder', icon: 'folder-input', section: 'Notes',
+		when: (ctx) => { const f = fileArg(ctx); return !!f && !(f instanceof TFolder && f.isRoot()); },
+		run: (ctx) => {
+			const f = fileArg(ctx)!;
+			new FolderPicker(app, (folder) => {
 				const to = folder.isRoot() ? f.name : `${folder.path}/${f.name}`;
-				app.fileManager.renameFile(f, to).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
+				app.fileManager.renameFile(f, to).catch(report);
 			}).open();
-			return true;
 		},
 	});
 	add({
-		id: 'app:reveal-file', name: 'Reveal current file in navigation',
-		checkCallback: (checking) => {
-			const f = workspace.getActiveFile();
-			if (!f) return false;
-			if (!checking) void workspace.ensureSideLeaf(FILE_EXPLORER, 'left', { reveal: true }).then((leaf) => (leaf.view as FileExplorerView).reveal(f));
-			return true;
+		id: 'app:copy-file', name: 'Make a copy', icon: 'copy', section: 'Notes', aliases: ['Duplicate'],
+		when: (ctx) => fileArg(ctx) instanceof TFile,
+		run: (ctx) => {
+			const f = fileArg(ctx) as TFile;
+			void vault.copy(f, freePath(app, f.parent ?? vault.getRoot(), f.basename, f.extension ? `.${f.extension}` : '')).catch(report);
 		},
 	});
 	add({
-		id: 'app:show-in-folder', name: 'Show current file in system file manager',
-		checkCallback: (checking) => { const f = workspace.getActiveFile(); if (!f) return false; if (!checking) void app.host.app.showItemInFolder(f.path); return true; },
+		id: 'app:open-in-new-tab', name: 'Open in new tab', icon: 'file-plus', section: 'Layout',
+		when: (ctx) => ctx.args.file instanceof TFile,
+		run: (ctx) => workspace.getLeaf('tab').openFile(ctx.args.file as TFile),
 	});
 	add({
-		id: 'app:new-folder', name: 'Create new folder',
-		callback: () => new NameModal(app, 'New folder', 'New folder', 'Create', (name) => {
-			if (name) vault.createFolder(name).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
-		}).open(),
+		id: 'app:open-to-right', name: 'Open to the right', icon: 'separator-vertical', section: 'Layout',
+		when: (ctx) => ctx.args.file instanceof TFile,
+		run: (ctx) => workspace.getLeaf('split').openFile(ctx.args.file as TFile),
+	});
+	add({
+		id: 'app:reveal-file', name: 'Reveal current file in navigation', section: 'Notes',
+		when: (ctx) => !!ctx.file,
+		run: (ctx) => workspace.ensureSideLeaf(FILE_EXPLORER, 'left', { reveal: true }).then((leaf) => (leaf.view as FileExplorerView).reveal(ctx.file!)),
+	});
+	add({
+		id: 'app:collapse-folders', name: 'Collapse all folders', icon: 'chevrons-down-up', section: 'Notes',
+		when: () => !!explorer(),
+		run: () => explorer()?.collapseAll(),
+	});
+	add({
+		id: 'app:show-in-folder', name: 'Show in system file manager', icon: 'folder-open', section: 'Notes',
+		when: (ctx) => !!fileArg(ctx),
+		run: (ctx) => { const f = fileArg(ctx)!; void app.host.app.showItemInFolder(f instanceof TFolder && f.isRoot() ? '' : f.path); },
 	});
 	const editorCmd = (id: string, name: string, key: string, before: string, after = before) => add({
-		id, name, hotkeys: [{ modifiers: ['Mod'], key }], editorCallback: () => wrapSelection(app, before, after),
+		id, name, section: 'Edit', hotkeys: [{ modifiers: ['Mod'], key }], editorCallback: () => wrapSelection(app, before, after),
 	});
 	editorCmd('editor:toggle-bold', 'Toggle bold', 'b', '**');
 	editorCmd('editor:toggle-italics', 'Toggle italics', 'i', '*');
 	editorCmd('editor:insert-wikilink', 'Insert internal link', 'k', '[[', ']]');
-	add({ id: 'editor:toggle-highlight', name: 'Toggle highlight', editorCallback: () => wrapSelection(app, '==') });
-	add({ id: 'editor:toggle-code', name: 'Toggle inline code', editorCallback: () => wrapSelection(app, '`') });
-	add({ id: 'editor:toggle-strikethrough', name: 'Toggle strikethrough', editorCallback: () => wrapSelection(app, '~~') });
+	add({ id: 'editor:toggle-highlight', name: 'Toggle highlight', section: 'Edit', editorCallback: () => wrapSelection(app, '==') });
+	add({ id: 'editor:toggle-code', name: 'Toggle inline code', section: 'Edit', editorCallback: () => wrapSelection(app, '`') });
+	add({ id: 'editor:toggle-strikethrough', name: 'Toggle strikethrough', section: 'Edit', editorCallback: () => wrapSelection(app, '~~') });
 
 	// Ribbon
 	workspace.leftRibbon.addRibbonItemButton('app:quick-switcher', 'search', 'Open quick switcher', () => app.commands.executeCommandById('app:quick-switcher'));
@@ -667,7 +696,7 @@ export function registerCore(app: App): { reveal(): void } {
 	workspace.leftRibbon.addRibbonItemButton('app:new-note', 'square-pen', 'Create new note', () => app.commands.executeCommandById('app:new-note'));
 	const toggleLeft = app.statusBarEl.createDiv({ cls: 'status-bar-item mod-clickable', attr: { 'aria-label': 'Toggle sidebars' } });
 	setIcon(toggleLeft, 'panel-left');
-	toggleLeft.addEventListener('click', () => workspace.leftSplit.toggle());
+	toggleLeft.addEventListener('click', () => app.commands.executeCommandById('app:toggle-left-sidebar'));
 
 	return {
 		reveal: () => { void seedSidebars(app); },
