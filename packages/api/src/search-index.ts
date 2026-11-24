@@ -72,7 +72,7 @@ export class SearchIndex {
 	 * "smit" also matched "smi", so the next keystroke only rechecks those instead of every note.
 	 */
 	private lastNames: { q: string; version: number; ids: number[] } | null = null;
-	private lastHeadings: { q: string; version: number; hits: [number, number][] } | null = null;
+	private lastHeadings: { q: string; version: number; hits: number[] } | null = null;
 	/** Scratch for intersections: a stamp per note id. */
 	private marks = new Uint32Array(0);
 	private stamp = 0;
@@ -213,19 +213,19 @@ export class SearchIndex {
 		const prev = this.lastNames;
 		const narrow = prev && prev.version === this.version && q.startsWith(prev.q) ? prev.ids : null;
 		const ids: number[] = [];
-		const hits: NameHit[] = [];
+		const top = new TopK(limit);
 		const check = (id: number) => {
 			const d = this.docs[id];
 			if (!d) return;
 			const s = fuzzyLower(q, d.lowerName);
 			if (s === null) return;
 			ids.push(id);
-			hits.push({ path: d.path, score: s + this.context(d, ctx) });
+			top.push(id, s + this.context(d, ctx));
 		};
 		if (narrow) for (const id of narrow) check(id);
 		else for (let id = 0; id < this.docs.length; id++) check(id);
 		this.lastNames = { q, version: this.version, ids };
-		return { hits: topSorted(hits, limit), total: hits.length };
+		return { hits: top.ids.map((id, i) => ({ path: this.docs[id]!.path, score: top.scores[i]! })), total: ids.length };
 	}
 
 	/**
@@ -242,16 +242,17 @@ export class SearchIndex {
 		// Two passes: a cheap score (use, unit, the name matching) for every match, then the costly checks
 		// (the whole phrase, how near the top) for the best few hundred. With thousands of matches the rest
 		// are never looked at; the query gets refined instead.
-		const scored: { d: Doc; score: number }[] = [];
+		const top = new TopK(SearchIndex.DEEP);
+		let total = 0;
 		for (let id = 0; id < this.docs.length; id++) {
 			if (this.marks[id] !== require) continue;
+			total++;
 			const d = this.docs[id]!;
 			let score = 10 + this.context(d, ctx);
 			if (words.every((w) => d.lowerName.includes(w))) score += 8;
-			scored.push({ d, score });
+			top.push(id, score);
 		}
-		const total = scored.length;
-		const deep = total > SearchIndex.DEEP ? topN(scored, SearchIndex.DEEP) : scored;
+		const deep = top.ids.map((id, i) => ({ d: this.docs[id]!, score: top.scores[i]! }));
 		for (const s of deep) {
 			if (words.length > 1 && s.d.lower.includes(phrase)) s.score += 20;
 			const at = s.d.lower.indexOf(first);
@@ -269,27 +270,43 @@ export class SearchIndex {
 		if (!words.length) return { hits: [], total: 0 };
 		const prev = this.lastHeadings;
 		const narrow = prev && prev.version === this.version && q.startsWith(prev.q) && !/\s$/.test(query) ? prev.hits : null;
-		const kept: [number, number][] = [];
-		const hits: HeadingHit[] = [];
+		// A heading is numbered note id × 4096 + its position in the note.
+		const kept: number[] = [];
+		const top = new TopK(limit);
 		const check = (id: number, hi: number) => {
 			const d = this.docs[id];
 			const h = d?.headings[hi];
 			if (!d || !h || !words.every((w) => h.lower.includes(w))) return;
-			kept.push([id, hi]);
+			kept.push(id * 4096 + hi);
 			const starts = h.lower.startsWith(words[0]!) ? 4 : 0;
-			hits.push({ path: d.path, heading: h, score: 10 + starts - h.level * 0.5 - h.lower.length * 0.01 + this.context(d, ctx) });
+			top.push(id * 4096 + hi, 10 + starts - h.level * 0.5 - h.lower.length * 0.01 + this.context(d, ctx));
 		};
-		if (narrow) for (const [id, hi] of narrow) check(id, hi);
-		else for (let id = 0; id < this.docs.length; id++) { const d = this.docs[id]; if (d) for (let hi = 0; hi < d.headings.length; hi++) check(id, hi); }
+		if (narrow) for (const k of narrow) check(Math.floor(k / 4096), k % 4096);
+		else for (let id = 0; id < this.docs.length; id++) { const d = this.docs[id]; if (d) for (let hi = 0; hi < Math.min(d.headings.length, 4096); hi++) check(id, hi); }
 		this.lastHeadings = { q, version: this.version, hits: kept };
-		return { hits: topSorted(hits, limit), total: hits.length };
+		const hits = top.ids.map((k, i) => { const d = this.docs[Math.floor(k / 4096)]!; return { path: d.path, heading: d.headings[k % 4096]!, score: top.scores[i]! }; });
+		return { hits, total: kept.length };
 	}
 }
 
-/** The best `limit` items, best first, without sorting every match when there are many. */
-function topSorted<T extends { score: number }>(items: T[], limit: number): T[] {
-	const top = items.length > limit * 4 ? topN(items, limit) : items;
-	return top.sort((a, b) => b.score - a.score).slice(0, limit);
+/**
+ * The best `k` of a stream of (id, score), best first. Most matches are turned away by one comparison once
+ * it is full, so a search over thousands of notes allocates almost nothing.
+ */
+class TopK {
+	ids: number[] = [];
+	scores: number[] = [];
+	constructor(private k: number) {}
+	push(id: number, score: number): void {
+		const n = this.scores.length;
+		if (n === this.k && score <= this.scores[n - 1]!) return;
+		let lo = 0;
+		let hi = n;
+		while (lo < hi) { const m = (lo + hi) >>> 1; if (this.scores[m]! >= score) lo = m + 1; else hi = m; }
+		this.scores.splice(lo, 0, score);
+		this.ids.splice(lo, 0, id);
+		if (this.scores.length > this.k) { this.scores.pop(); this.ids.pop(); }
+	}
 }
 
 /** `fuzzyScore` for text that is already lowercase (names are stored that way), without copying it. */
@@ -311,16 +328,6 @@ function fuzzyLower(q: string, t: string): number | null {
 		ti = found + 1;
 	}
 	return score - t.length * 0.01;
-}
-
-/** The `n` highest-scoring items (unordered), without sorting them all. */
-function topN<T extends { score: number }>(items: T[], n: number): T[] {
-	// Find the cut-off score by sampling the n-th best via partial selection on a copy of the scores.
-	const scores = Float64Array.from(items, (x) => x.score).sort();
-	const cut = scores[scores.length - n]!;
-	const above = items.filter((x) => x.score > cut);
-	for (const x of items) { if (above.length >= n) break; if (x.score === cut) above.push(x); }
-	return above;
 }
 
 /** The line with the first match (the phrase, else the first word), trimmed around it, with highlights. */

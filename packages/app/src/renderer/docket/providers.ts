@@ -63,10 +63,6 @@ export function registerCoreProviders(app: App): () => void {
 		insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}]]`,
 	});
 
-	// Settings: read once a session, when the Docket first opens (drawing every page takes a moment).
-	let settings: ReturnType<typeof app.setting.listSettings> | null = null;
-	const warm = app.on('docket-open', () => { if (!settings) window.setTimeout(() => { settings ??= app.setting.listSettings(); }, 0); });
-
 	// Tag counts, worked out again only after a note changes.
 	let tags: Map<string, number> | null = null;
 	const tagsStale = [metadataCache.on('changed', () => { tags = null; }), metadataCache.on('deleted', () => { tags = null; }), vault.on('rename', () => { tags = null; })];
@@ -80,6 +76,10 @@ export function registerCoreProviders(app: App): () => void {
 		}
 		return tags;
 	};
+
+	// Settings: read once a session, when the Docket first opens (drawing every page takes a moment).
+	let settings: ReturnType<typeof app.setting.listSettings> | null = null;
+	const warm = app.on('docket-open', () => { window.setTimeout(() => { settings ??= app.setting.listSettings(); tagCounts(); }, 0); });
 
 	const removers = [
 		docket.addSearchProvider({
