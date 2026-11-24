@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.7.0
+
+- **Arrow keys in the Docket**: ↑ from the first result or panel row goes back to the search; with nothing
+  typed, ← and → move to the previous or next panel.
+- **Delete and rename from the Docket**: in Units, Delete (⌘⌫ on macOS) deletes the selected note or folder,
+  and F2 renames it. Deleting a folder says how many notes it holds and asks first; the keyboard then goes to
+  the next row. Locked notes are only deleted with the homebase unlocked.
+- **The Docket keeps up**: notes and folders you create, rename, move or delete while it is open show at once.
+- The `?` cheat sheet lists the new keys, and the keys for Units.
+
 ## v0.6.0
 
 - **Locking.** Lock a note, or a folder (a subject or topic), and it is encrypted on disk: other apps see
