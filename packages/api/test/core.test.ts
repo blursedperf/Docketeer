@@ -126,3 +126,29 @@ describe('themes', () => {
 		expect(BUILTIN_PALETTES.filter((p) => p.mode === 'dark')).toHaveLength(9);
 	});
 });
+
+import { CONTRAST_PAIRS, contrastFixes, contrastRatio, parseHex, resolveToken } from '../src/themes/contrast';
+
+describe('contrast', () => {
+	const check = (vars: Record<string, string>) => CONTRAST_PAIRS.filter(([t, s, min]) => {
+		const a = parseHex(resolveToken(vars, t) ?? '');
+		const b = parseHex(resolveToken(vars, s) ?? '');
+		return !a || !b || contrastRatio(a, b) < min - 0.01;
+	}).map(([t, s]) => `${t} on ${s}`);
+
+	it('every built-in palette meets every pairing once the guard is applied', () => {
+		for (const p of BUILTIN_PALETTES) {
+			const vars = { ...p.vars, ...contrastFixes(p.vars) };
+			expect(check(vars), p.id).toEqual([]);
+		}
+	});
+	it('leaves palettes that already pass untouched', () => {
+		const crisp = BUILTIN_PALETTES.find((p) => p.id === 'crisp-dark')!;
+		expect(contrastFixes(crisp.vars)).toEqual({});
+	});
+	it('fixes a custom accent that is too light for its text', () => {
+		const crisp = BUILTIN_PALETTES.find((p) => p.id === 'crisp-light')!;
+		const vars = { ...crisp.vars, ...accentVars('#ffee88')! };
+		expect(check({ ...vars, ...contrastFixes(vars) })).toEqual([]);
+	});
+});

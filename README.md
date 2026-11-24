@@ -32,6 +32,7 @@ npm run build        # plugins, then the app (packages/app/dist)
 npm test             # typecheck, API tests, AGLC4 tests (565), build, offline audit
 npm run smoke        # boot the app offscreen on a throwaway homebase and drive it end to end
 npm run shots        # screenshots of every surface in several palettes, densities and icon sets
+npm run shots:diff -- <dir>   # compare them with test/visual/<platform>/ (--update to accept)
 npm run audit        # offline audit only
 npm run dist         # installers for this OS in packages/app/release
 ```

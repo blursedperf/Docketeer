@@ -265,7 +265,7 @@ function registerIpc() {
 		const dir = process.env.QUIRE_SMOKE_OUT ?? os.tmpdir();
 		await fsp.mkdir(dir, { recursive: true });
 		const file = path.join(dir, `${name}.png`);
-		await fsp.writeFile(file, (await win.webContents.capturePage()).toPNG());
+		await fsp.writeFile(file, (await captureFrame()).toPNG());
 		return file;
 	});
 }
@@ -418,6 +418,13 @@ function createWindow() {
 		}
 	});
 	if (SMOKE) {
+		win.webContents.setFrameRate(30);
+		win.webContents.on('paint', (_e, _dirty, image) => {
+			lastFrame = image;
+			const waiting = frameWaiters;
+			frameWaiters = [];
+			for (const w of waiting) w(image);
+		});
 		win.webContents.on('console-message', (event) => {
 			const { level, message } = event as unknown as { level: string; message: string };
 			smokeConsole.push({ level, message });
@@ -441,7 +448,7 @@ async function finishSmoke(report: Record<string, unknown>) {
 		let shot: string | null = path.join(process.env.QUIRE_SMOKE_OUT ?? os.tmpdir(), 'quire-smoke.png');
 		let screenshotError: string | null = null;
 		try {
-			if (win) await fsp.writeFile(shot, (await win.webContents.capturePage()).toPNG());
+			if (win) await fsp.writeFile(shot, (await captureFrame()).toPNG());
 		} catch (e) {
 			screenshotError = e instanceof Error ? e.message : String(e);
 			shot = null;
@@ -458,8 +465,27 @@ async function finishSmoke(report: Record<string, unknown>) {
 	app.exit(exitCode);
 }
 
+/**
+ * The window as it is now. Offscreen windows deliver their frames through 'paint'; asking for a fresh
+ * one works on CI machines where capturePage() fails (UnknownVizError on GitHub's Ubuntu runners).
+ */
+let lastFrame: Electron.NativeImage | null = null;
+let frameWaiters: ((img: Electron.NativeImage) => void)[] = [];
+async function captureFrame(): Promise<Electron.NativeImage> {
+	if (!win) throw new Error('No window');
+	if (!win.webContents.isOffscreen()) return win.webContents.capturePage();
+	const fresh = new Promise<Electron.NativeImage>((resolve) => frameWaiters.push(resolve));
+	win.webContents.invalidate();
+	const timeout = new Promise<Electron.NativeImage | null>((resolve) => setTimeout(() => resolve(null), 2000));
+	const img = (await Promise.race([fresh, timeout])) ?? lastFrame;
+	if (!img) throw new Error('No frame painted');
+	return img;
+}
+
 async function smokeVault(): Promise<string> {
-	const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'quire-smoke-'));
+	// A fixed homebase name, so screenshots are the same from run to run.
+	const dir = path.join(await fsp.mkdtemp(path.join(os.tmpdir(), 'quire-smoke-')), 'Quire demo');
+	await fsp.mkdir(dir);
 	await fsp.writeFile(path.join(dir, 'Welcome.md'), '# Welcome\n\nA note with a [[Second note]] link.[^1]\n\n[^1]: A footnote.\n');
 	await fsp.writeFile(path.join(dir, 'Second note.md'), '---\ntags: [test]\n---\n\n# Second\n\nBack to [[Welcome]].\n');
 	await fsp.mkdir(path.join(dir, 'Folder'));

@@ -77,7 +77,11 @@ async function start() {
 	const core = registerCore(app);
 	await app.start();
 	core.reveal();
-	if (host.app.isShots) await runShots(app);
+	if (host.app.isShots) {
+		// Screenshots for comparison: no caret, no animations.
+		document.body.addClass('is-shots');
+		await runShots(app);
+	}
 	else if (host.app.isSmoke) await runSmoke(app);
 }
 

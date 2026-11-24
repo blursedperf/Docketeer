@@ -61,6 +61,13 @@ Body classes a theme can target: `theme-dark` / `theme-light`, `density-compact`
 `-spacious`, `has-css-theme`, `is-readable-line-width`; `data-palette-dark`, `data-palette-light` and
 `data-icon-set` attributes on `<body>`.
 
+## Contrast
+
+Whatever the palette or accent, Quire checks every pairing of text colour and surface the interface uses
+(listed in `packages/api/src/themes/contrast.ts`) against WCAG AA: 7:1 for note text, 4.5:1 for other
+text. A colour that falls short is moved toward black or white until it passes; palettes that already
+pass are used exactly as designed. CSS themes and snippets are loaded after this and are not adjusted.
+
 ## What a theme cannot do
 
 Quire refuses a theme or snippet that contains `@import`, a `url()` that is not a `data:` URI, a web

@@ -341,11 +341,15 @@ export class Workspace extends Events {
 		containerEl.addClass('workspace');
 		const ribbonEl = containerEl.createDiv({ cls: 'workspace-ribbon side-dock-ribbon mod-left' });
 		const ribbonTop = ribbonEl.createDiv({ cls: 'side-dock-actions' });
+		// App actions first, then plugins' actions as their own group.
+		const coreGroup = ribbonTop.createDiv({ cls: 'side-dock-group mod-core' });
+		const pluginGroup = ribbonTop.createDiv({ cls: 'side-dock-group mod-plugins' });
 		const ribbonBottom = ribbonEl.createDiv({ cls: 'side-dock-settings' });
 		this.leftRibbon = {
 			containerEl: ribbonEl,
 			addRibbonItemButton: (id, icon, title, cb) => {
-				const b = ribbonTop.createDiv({ cls: 'side-dock-ribbon-action clickable-icon', attr: { 'aria-label': title, title, 'data-id': id } });
+				const group = id.startsWith('app:') ? coreGroup : pluginGroup;
+				const b = group.createDiv({ cls: 'side-dock-ribbon-action clickable-icon', attr: { 'aria-label': title, title, 'data-id': id } });
 				setIcon(b, icon);
 				b.addEventListener('click', cb);
 				return b;

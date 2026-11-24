@@ -17,7 +17,8 @@
     "typecheck": "tsc -p packages/api --noEmit && tsc -p packages/app --noEmit && tsc -p plugins/aglc4 --noEmit",
     "dist": "npm run build && npm run dist -w @quire/app",
     "shots": "npm run build && npm run shots -w @quire/app",
-    "lint:css": "node scripts/css-lint.mjs"
+    "lint:css": "node scripts/css-lint.mjs",
+    "shots:diff": "node scripts/shots-diff.mjs"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.2.0",
@@ -27,6 +28,8 @@
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "jszip": "^3.10.2",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
     "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   }

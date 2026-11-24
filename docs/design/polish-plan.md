@@ -113,14 +113,16 @@ on `:focus-visible`.
 | 2. Header bands | **Done.** Tab strips and the header line below them line up across all three columns in every density (checked in the smoke test). Sidebars show their view's header line; a lone sidebar tab shows its title. F1, F3. |
 | 3. Explorer | **Done.** `[indent][chevron slot][name]` rows; names at one depth share a column (smoke test); guides under the parent's chevron. E1, E2, E3. |
 | 4. Rows | **Done.** One row height for tree, menus, palette, switcher, settings nav; plugin prefix muted; switcher folder on the same line. P1, P2, P3. |
-| 5. Settings | **Mostly done.** Control column (smoke test), title bar, heading rhythm, button-only rows, description width. Settings search (S6) not yet. |
+| 5. Settings | **Done.** Control column (smoke test), title bar, heading rhythm, button-only rows, description width, and search across every page, plugins' included (S6). |
 | 6. Editor | **Done.** Frontmatter drawer spacing, one heading scale, comment blocks, line width in `ch`. D1–D4. |
 | 7. Workspace behaviour | **Done.** Empty tabs are reused (and listeners are told when the active pane's view changes); notices bottom-right. F2, P5. |
-| 8. Focus and contrast | **Half done.** One focus ring (X4). The contrast check on `bg-alt` (X6) is still to do. |
+| 8. Focus and contrast | **Done.** One focus ring (X4). Contrast (X6): every text/surface pairing the stylesheet uses is listed in `packages/api/src/themes/contrast.ts` with its WCAG minimum; a guard nudges any colour that falls short when a palette is applied (5 pairings in 4 light palettes needed it; palettes that pass are untouched), and a unit test holds all 16 palettes to it. |
 | 9. Modeline | **Done.** Even padding, one weight; the badge shows the mode (EDIT, READ, PREVIEW …). M1, M2. |
 
-Left: settings search (S6), contrast check of every palette on the sidebar surface (X6), ribbon grouping
-fine-tuning (F5), and screenshot diffing as a CI check.
+| Ribbon | **Done.** App actions, then plugin actions as their own group under a divider, then homebase and settings at the bottom (F5). |
+| Verifying | **Done.** `npm run shots` is deterministic (fixed homebase name, no caret or animations, frames taken from the offscreen renderer); `scripts/shots-diff.mjs` compares with reference images in `test/visual/<platform>/` and writes difference images; `.github/workflows/ci.yml` runs it on every push and pull request. |
+
+All items in the plan are done. The original audit's X6 finding was partly wrong: measured, the palettes' muted and faint text pass on the sidebar surface; the failures were the modeline badge and key/file-type labels in some light palettes.
 
 ## 3. Work, in order
 

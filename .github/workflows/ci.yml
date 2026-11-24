@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Typecheck, lints, unit tests, build and offline audit
+        run: npm test
+      - name: End-to-end smoke test (offscreen)
+        run: |
+          # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox uses.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run -a npm run smoke
+
+  screenshots:
+    # Every screen in several palettes, densities and icon sets, compared with test/visual/linux/.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Take screenshots
+        env:
+          QUIRE_SMOKE_OUT: ${{ runner.temp }}/shots
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run -a npm run shots
+      - name: Compare with the references
+        run: node scripts/shots-diff.mjs "${{ runner.temp }}/shots" --platform linux
+      - name: Keep the screenshots and differences for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore

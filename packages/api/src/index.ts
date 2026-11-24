@@ -13,6 +13,7 @@ export { debounce, normalizePath, Platform, escapeRegExp, fuzzyScore, type Debou
 export { setIcon, getIcon, addIcon, getIconIds, registerIconPack, getIconPacks, setIconPack, getActiveIconPack, type IconPack, type IconData } from './icons';
 export { CustomCss, cssProblems, accentVars, type Palette } from './themes/manager';
 export { BUILTIN_PALETTES } from './themes/palettes';
+export { CONTRAST_PAIRS, contrastFixes, contrastRatio } from './themes/contrast';
 export { TAbstractFile, TFile, TFolder, type FileStats } from './files';
 export { Vault, DataAdapter } from './vault';
 export {

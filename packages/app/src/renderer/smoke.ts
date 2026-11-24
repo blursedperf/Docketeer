@@ -178,6 +178,17 @@ export async function runSmoke(app: App): Promise<void> {
 		app.setting.close();
 		return (widths.length > 5 && widths.every((w) => w === widths[0])) || widths.join(',');
 	});
+	await check('settings search finds settings on every page', async () => {
+		app.setting.open();
+		app.setting.search('accent');
+		const appearance = [...document.querySelectorAll('.settings-search-results .setting-item-name')].map((e) => e.textContent);
+		app.setting.search('footnote pane');
+		const plugin = document.querySelectorAll('.settings-search-results .setting-item:not(.setting-item-heading)').length;
+		app.setting.search('zzzz-nothing');
+		const none = !!document.querySelector('.settings-search-empty');
+		app.setting.close();
+		return (appearance.includes('Accent colour') && plugin > 0 && none) || `appearance=${appearance.join('|')} plugin=${plugin} none=${none}`;
+	});
 	await check('an empty tab is reused for "open in new tab"', async () => {
 		const blank = workspace.getLeaf('tab');
 		if (blank.view.getViewType() !== 'empty') return 'no blank tab';
@@ -345,6 +356,8 @@ export async function runShots(app: App): Promise<void> {
 	if (scroller) { scroller.scrollTop = scroller.scrollHeight; await shot('11-settings-appearance-end'); }
 	app.setting.openTabById('aglc-citations');
 	await shot('12-settings-plugin');
+	app.setting.search('footnote');
+	await shot('13-settings-search');
 	app.setting.close();
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }

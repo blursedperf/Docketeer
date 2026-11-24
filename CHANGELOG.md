@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Settings search.** A search box above the settings pages finds settings on every page, plugins'
+  included; the results are the settings themselves, ready to change.
+- **Contrast guard.** Every text colour is checked against the surface it is shown on (WCAG AA) whatever
+  the palette or accent, and adjusted only where it falls short (modeline badge and key labels in some
+  light palettes).
+- **Ribbon.** App actions and plugin actions are separate groups.
+- **Screenshot checks.** `npm run shots` is repeatable, `npm run shots:diff` compares with reference
+  images, and a CI workflow runs tests, the smoke test and the comparison on every push.
+
 ## v0.2.0
 
 - **Homebase.** The folder of notes is now called a homebase everywhere in the app (welcome screen,

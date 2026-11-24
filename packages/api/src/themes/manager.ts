@@ -3,6 +3,7 @@ import { Events, type EventRef } from '../events';
 import { getActiveIconPack, setIconPack } from '../icons';
 import { Notice } from '../ui';
 import { BUILTIN_PALETTES, type Palette } from './palettes';
+import { contrastFixes } from './contrast';
 
 export type { Palette };
 
@@ -126,7 +127,9 @@ export class CustomCss extends Events {
 		const darkP = this.getPalette(String(c.darkPalette)) ?? this.getPalette('crisp-dark')!;
 		const lightP = this.getPalette(String(c.lightPalette)) ?? this.getPalette('crisp-light')!;
 		const accent = c.accentColor ? accentVars(String(c.accentColor)) : null;
-		const css = block('body.theme-dark', { ...darkP.vars, ...(accent ?? {}) }) + block('body.theme-light', { ...lightP.vars, ...(accent ?? {}) });
+		// Each mode's tokens, with the accent, then nudged where a pairing would fall short of WCAG AA.
+		const finish = (vars: Record<string, string>) => { const v = { ...vars, ...(accent ?? {}) }; return { ...v, ...contrastFixes(v) }; };
+		const css = block('body.theme-dark', finish(darkP.vars)) + block('body.theme-light', finish(lightP.vars));
 		if (!this.paletteEl) this.paletteEl = document.head.createEl('style', { attr: { id: 'quire-palette' } });
 		this.paletteEl.textContent = css;
 		body.dataset.paletteDark = darkP.id;
