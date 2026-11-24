@@ -241,6 +241,12 @@ async function renderEmbed(app: App, a: HTMLAnchorElement, dest: TFile, target: 
 		box.createDiv({ cls: 'markdown-embed-content u-muted', text: depth >= 3 ? 'Embedded too deeply to show here.' : 'A note cannot embed itself.' });
 		return;
 	}
+	// A locked note shows as locked, never its text (not even its headings).
+	if (app.isLocked(dest)) {
+		box.addClass('mod-locked');
+		box.createDiv({ cls: 'markdown-embed-content u-muted', text: `${dest.basename} is locked.` });
+		return;
+	}
 	let text = await app.vault.cachedRead(dest);
 	const hash = target.indexOf('#');
 	if (hash !== -1 && target[hash + 1] !== '^') {

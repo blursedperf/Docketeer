@@ -67,6 +67,8 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 			cleanup = [];
 		}
 	};
+	// Locking or unlocking changes what panels may show.
+	app.on('lock-change', () => { if (docket?.isOpen) void docket.refreshPanel(); });
 	app.on('config-changed', (key: string) => {
 		if (key === 'docket') apply();
 		if (key === 'docketMode') docket?.applyModeFromConfig();

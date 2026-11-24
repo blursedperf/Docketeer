@@ -2,6 +2,7 @@ import { Events, type EventRef } from './events';
 import { TAbstractFile, TFile, TFolder } from './files';
 import type { HostBridge, HostEntry, HostFsEvent, HostStat } from './host';
 import { normalizePath } from './util';
+import type { VaultCrypt } from './lock/service';
 
 /** Direct access to files by path, including hidden folders the vault does not index. */
 export class DataAdapter {
@@ -109,10 +110,24 @@ export class Vault extends Events {
 	// ---------------------------------------------------------------------------------------------
 	// Reading
 
+	/** Locked notes (lock/service.ts): decrypts on read, encrypts on write. */
+	crypt: VaultCrypt | null = null;
+
 	async read(file: TFile): Promise<string> {
-		const text = await this.host.fs.read(file.path);
+		const raw = await this.host.fs.read(file.path);
+		const text = this.crypt ? await this.crypt.onRead(file.path, raw) : raw;
 		this.cache.set(file.path, text);
 		return text;
+	}
+
+	/** The text to write for `path`: sealed when the note is locked. */
+	private async outgoing(path: string, data: string): Promise<string> {
+		return this.crypt ? this.crypt.onWrite(path, data) : data;
+	}
+
+	/** Drop a note's text from memory (a locked note, after locking). */
+	forget(file: TFile): void {
+		this.cache.delete(file.path);
 	}
 
 	async cachedRead(file: TFile): Promise<string> {
@@ -149,7 +164,7 @@ export class Vault extends Events {
 		const p = normalizePath(path);
 		this.assertFree(p);
 		await this.ensureFolder(parentOf(p));
-		const stat = await this.host.fs.write(p, data);
+		const stat = await this.host.fs.write(p, await this.outgoing(p, data));
 		this.written.set(p, stat.mtime);
 		this.cache.set(p, data);
 		return this.addEntry({ path: p, ...stat }, true) as TFile;
@@ -171,7 +186,7 @@ export class Vault extends Events {
 	}
 
 	async modify(file: TFile, data: string): Promise<void> {
-		const stat = await this.host.fs.write(file.path, data);
+		const stat = await this.host.fs.write(file.path, await this.outgoing(file.path, data));
 		this.written.set(file.path, stat.mtime);
 		this.cache.set(file.path, data);
 		file.stat = { ctime: stat.ctime, mtime: stat.mtime, size: stat.size };
@@ -187,6 +202,8 @@ export class Vault extends Events {
 	}
 
 	async append(file: TFile, data: string): Promise<void> {
+		// A locked note is one sealed block: append by rewriting it.
+		if (this.crypt?.isEncrypted(file.path)) { await this.modify(file, (await this.read(file)) + data); return; }
 		const stat = await this.host.fs.append(file.path, data);
 		this.written.set(file.path, stat.mtime);
 		this.cache.delete(file.path);
@@ -228,6 +245,7 @@ export class Vault extends Events {
 		const to = normalizePath(newPath);
 		this.assertFree(to);
 		await this.host.fs.copy(file.path, to);
+		this.crypt?.onCopy(file.path, to);
 		const stat = await this.host.fs.stat(to);
 		return this.addEntry({ path: to, type: 'file', size: stat?.size ?? 0, mtime: stat?.mtime ?? Date.now(), ctime: stat?.ctime ?? Date.now() }, true) as TFile;
 	}

@@ -2,7 +2,7 @@
  * Homebase (Mod+5): the homebase itself: what is in it, its lock status (locking comes in its own phase),
  * exporting a note with a confirmation step and redaction, and the homebase-wide tools.
  */
-import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Setting, type TFile } from '@quire/api';
+import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Setting, type TFile, formatHotkey } from '@quire/api';
 import type { Docket } from '../docket';
 import { row, section } from './common';
 
@@ -37,6 +37,7 @@ class ExportModal extends Modal {
 		const where = contentEl.createEl('p', { cls: 'setting-item-description' });
 		const say = () => where.setText(`Writes ${this.target} in this homebase${this.app.vault.getFileByPath(this.target) ? ', replacing the earlier export' : ''}. Nothing leaves this computer.`);
 		say();
+		if (this.app.isEncrypted(this.file)) contentEl.createEl('p', { cls: 'lock-error', text: 'This note is locked. The export will not be encrypted: anyone who can open it can read it.' });
 		new Setting(contentEl).setName('Format').addDropdown((d) => d.addOption('md', 'Markdown').addOption('html', 'HTML').setValue(this.format).onChange((v) => { this.format = v as 'md' | 'html'; say(); }));
 		new Setting(contentEl).setName('Remove comments').setDesc('%% comments %% and HTML comments.').addToggle((t) => t.setValue(this.opts.comments).onChange((v) => { this.opts.comments = v; }));
 		new Setting(contentEl).setName('Remove properties').setDesc('The frontmatter at the top.').addToggle((t) => t.setValue(this.opts.frontmatter).onChange((v) => { this.opts.frontmatter = v; }));
@@ -70,6 +71,7 @@ class ExportModal extends Modal {
 }
 
 export function homebasePanel(app: App, docket: Docket): DocketPanel {
+	const keyFor = (id: string) => { const c = app.commands.findCommand(id); const k = c ? app.commands.hotkeysFor(c)[0] : undefined; return k ? formatHotkey(k) : undefined; };
 	return {
 		id: 'core:homebase', title: 'Homebase', icon: 'house', order: 5, source: 'core',
 		render: (el) => {
@@ -80,9 +82,21 @@ export function homebasePanel(app: App, docket: Docket): DocketPanel {
 			head.createSpan({ cls: 'docket-option-detail', text: `${notes} notes · ${folders} folders · search index ${app.search.isReady ? `ready (${app.search.index.size} notes, in memory only)` : 'building…'}` });
 
 			const lock = section(el, 'Lock');
-			row(lock, docket, 'Not locked', () => new Notice('Locking and encryption come in their own phase.'), {
-				icon: 'lock-open', detail: 'Locking notes, folders or the whole homebase, and encryption, come in their own phase.',
-			});
+			const l = app.lock;
+			const run = (id: string) => () => { docket.close(); app.commands.executeCommandById(id); };
+			if (!l.isSetUp) {
+				row(lock, docket, 'Set up locking…', run('app:lock-setup'), { icon: 'shield', detail: 'Encrypt chosen notes and folders, opened with a passphrase' });
+			} else {
+				const what = `${l.sealedNotes.length} locked note${l.sealedNotes.length === 1 ? '' : 's'} · ${l.lockedFolders.length} locked folder${l.lockedFolders.length === 1 ? '' : 's'}`;
+				if (l.isUnlocked) row(lock, docket, 'Unlocked · Lock now', run('app:lock-now'), { icon: 'lock-open', detail: what, badge: keyFor('app:lock-now') });
+				else row(lock, docket, 'Locked · Unlock…', run('app:unlock'), { icon: 'lock', detail: what });
+				row(lock, docket, 'Change passphrase…', run('app:change-passphrase'), { icon: 'key-round' });
+			}
+			const f0 = app.workspace.getActiveFile();
+			if (f0 && f0.extension === 'md') {
+				if (app.isEncrypted(f0)) row(lock, docket, `Remove lock from “${f0.basename}”…`, () => { docket.close(); app.commands.executeCommandById('app:remove-note-lock', { file: f0 }); }, { icon: 'lock-open' });
+				else row(lock, docket, `Lock “${f0.basename}”`, () => { docket.close(); app.commands.executeCommandById('app:lock-note', { file: f0 }); }, { icon: 'lock' });
+			}
 
 			const file = app.workspace.getActiveFile();
 			const tools = section(el, 'This homebase');

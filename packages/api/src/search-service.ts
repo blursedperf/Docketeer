@@ -45,6 +45,11 @@ export class SearchService {
 		this.resolveReady();
 	}
 
+	/** Index a note again (after unlocking). */
+	reindex(f: TFile): Promise<void> {
+		return this.add(f);
+	}
+
 	private async add(f: TFile): Promise<void> {
 		if (f.extension !== 'md' || this.app.isLocked(f)) { this.index.remove(f.path); return; }
 		try {
@@ -66,7 +71,8 @@ export class SearchService {
 			if (f instanceof TFile) void this.add(f);
 		});
 		metadataCache.on('changed', (f: TFile, _data: string, cache: { headings?: HeadingCache[] }) => this.index.setHeadings(f.path, headingsOf(cache.headings)));
-		workspace.on('file-open', (f: TFile | null) => { if (f) this.usage.record('note', f.path); });
+		// Locked notes are not recorded (their names stay out of usage.json).
+		workspace.on('file-open', (f: TFile | null) => { if (f && !this.app.isEncrypted(f)) this.usage.record('note', f.path); });
 		this.app.on('command-run', (id: string) => this.usage.record('command', id));
 	}
 

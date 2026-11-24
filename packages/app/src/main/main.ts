@@ -3,7 +3,7 @@
  * offline guarantees — every network request is cancelled, navigation and new windows are refused, and
  * no permission is ever granted.
  */
-import { BrowserWindow, app, dialog, ipcMain, protocol, session, shell, clipboard, type WebContents } from 'electron';
+import { BrowserWindow, app, dialog, ipcMain, powerMonitor, protocol, session, shell, clipboard, type WebContents } from 'electron';
 import { existsSync, watch, type FSWatcher } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import * as os from 'node:os';
@@ -427,6 +427,12 @@ function createWindow() {
 	});
 	win.setMenuBarVisibility(false);
 	win.once('ready-to-show', () => { if (!SMOKE) win?.show(); });
+	// Sleep and screen lock: the renderer locks the homebase (if that setting is on).
+	const systemLock = () => win?.webContents.send('app:system-lock');
+	powerMonitor.on('suspend', systemLock);
+	powerMonitor.on('lock-screen', systemLock);
+	win.on('closed', () => { powerMonitor.off('suspend', systemLock); powerMonitor.off('lock-screen', systemLock); });
+	if (SMOKE) ipcMain.on('smoke:system-lock', systemLock);
 	win.on('close', (e) => {
 		if (quitting || !win) return;
 		e.preventDefault();

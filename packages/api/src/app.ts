@@ -9,12 +9,13 @@ import type { Command, CommandContext, Hotkey, Plugin, PluginManifest } from './
 import { type KeyContext, eventString, formatHotkey as formatHotkeyFor, hotkeyString, reservedFor } from './keymap';
 import { DocketRegistry } from './docket-registry';
 import { SearchService } from './search-service';
+import { LockService } from './lock/service';
 import type { TFile } from './files';
 import { SettingsModal } from './settings-modal';
 import { Modal, Notice, topModal } from './ui';
 import { Platform } from './util';
 import { Vault } from './vault';
-import { Workspace } from './workspace';
+import { Workspace, type WorkspaceLeaf } from './workspace';
 import { CustomCss } from './themes/manager';
 import { Spellchecker } from './spellcheck';
 
@@ -367,6 +368,10 @@ export interface AppConfig {
 	docketHintSeen: boolean;
 	/** Notes pinned in the Units panel (paths). */
 	pinnedNotes: string[];
+	/** Lock the homebase after this many idle minutes (0: never). */
+	lockIdleMinutes: number;
+	/** Lock when the computer sleeps or its screen locks. */
+	lockOnSleep: boolean;
 	/** Where archived notes go (keeping their folders). */
 	archiveFolder: string;
 	/** Citation style for the Cite panel. */
@@ -409,6 +414,8 @@ export const DEFAULT_CONFIG: AppConfig = {
 	docketHintSeen: false,
 	pinnedNotes: [],
 	archiveFolder: 'Archive',
+	lockIdleMinutes: 15,
+	lockOnSleep: true,
 	citationStyle: 'aglc4',
 	savedLayouts: {},
 };
@@ -456,15 +463,68 @@ export class App extends Events {
 		this.spellchecker = new Spellchecker(this);
 		this.docket = new DocketRegistry();
 		this.search = new SearchService(this);
+		this.lock = new LockService(this);
+		this.lock.on('before-lock', (wait: (p: Promise<unknown>) => void) => wait(this.closeLockedViews()));
+		this.lock.on('locked', () => this.forgetLocked());
+		this.lock.on('unlocked', () => { void this.learnUnlocked(); });
+	}
+
+	/** Before locking: save, then close, every tab showing a locked note. */
+	private async closeLockedViews(): Promise<void> {
+		const leaves: WorkspaceLeaf[] = [];
+		this.workspace.iterateAllLeaves((l) => {
+			const f = (l.view as { file?: TFile | null }).file;
+			if (f && this.isEncrypted(f)) leaves.push(l);
+		});
+		for (const l of leaves) {
+			const v = l.view;
+			if (v instanceof MarkdownView) await v.save();
+			l.detach();
+		}
+		await new Promise((r) => setTimeout(r, 0));
+	}
+
+	/** After locking: nothing of locked notes stays in memory (text cache, links, search, usage). */
+	private forgetLocked(): void {
+		for (const f of this.vault.getMarkdownFiles()) {
+			if (!this.isEncrypted(f)) continue;
+			this.vault.forget(f);
+			void this.metadataCache.update(f);
+			this.search.index.remove(f.path);
+			this.search.usage.forget('note', f.path);
+		}
+		this.trigger('lock-change', true);
+	}
+
+	/** After unlocking: locked notes are read again, so links, search and outline see them. */
+	private async learnUnlocked(): Promise<void> {
+		for (const f of this.vault.getMarkdownFiles()) {
+			if (!this.isEncrypted(f)) continue;
+			try {
+				await this.metadataCache.update(f);
+				await this.search.reindex(f);
+			} catch {
+				console.error('Could not read a locked note after unlocking');
+			}
+		}
+		this.trigger('lock-change', false);
 	}
 
 	/**
 	 * Whether the homebase, or `file`, is locked. Nothing can be locked until the locking phase; commands
 	 * and search already ask, so they need no change then.
 	 */
-	isLocked(_file?: TFile | null): boolean {
-		return false;
+	isLocked(file?: TFile | null): boolean {
+		return !!file && this.lock.isLocked(file.path);
 	}
+
+	/** Whether a note is locked on disk (encrypted), whether or not the homebase is unlocked now. */
+	isEncrypted(file?: TFile | null): boolean {
+		return !!file && this.lock.isEncrypted(file.path);
+	}
+
+	/** Locking: setting up, unlocking, locking notes and folders (lock/service.ts). */
+	lock: LockService;
 
 	/** The homebase: the folder of notes Quire has open. (The API calls it `vault`, as plugins expect.) */
 	get homebase(): Vault { return this.vault; }
@@ -576,6 +636,7 @@ export class App extends Events {
 		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.applyConfig());
 		await this.vault.load();
 		await this.customCss.load();
+		await this.lock.load();
 		await this.metadataCache.indexAll();
 		await this.search.usage.load();
 		await this.plugins.initialize();

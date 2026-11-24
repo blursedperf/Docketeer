@@ -38,3 +38,12 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab in the pane |
 
 Layouts: Layout panel (Mod+6) or `>layout`: Single, Brief + Source, Revision, Exam, and layouts you save.
+
+## Locking
+
+| Keys | Action |
+|---|---|
+| Mod+L | Lock now |
+
+Lock a note or folder from its actions (→ in the Docket), or with "Lock note" / "Lock folder". Unlock by
+opening a locked note, from the status bar lock, or with "Unlock".

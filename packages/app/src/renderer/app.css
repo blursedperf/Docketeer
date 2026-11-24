@@ -880,3 +880,12 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 .docket-help { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); padding: var(--space-1) var(--space-3) var(--space-2); font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
 .docket-help-key { white-space: nowrap; }
 .docket-folder .docket-option-title { font-weight: var(--font-medium); }
+
+/* Locking. */
+.lock-error { min-height: 1.4em; padding: 0 var(--space-3); font-size: var(--text-sm); color: var(--doom-orange, var(--text-error, var(--text-normal))); }
+.lock-recovery-key {
+	margin: var(--space-3) 0; padding: var(--space-3); text-align: center; letter-spacing: 0.08em; user-select: all;
+	font-family: var(--font-monospace); font-size: var(--text-lg); color: var(--doom-blue-text); background: var(--doom-base0); border: var(--border-width) dashed var(--doom-blue); border-radius: var(--radius-s);
+}
+.lock-indicator.is-unlocked { color: var(--doom-orange, var(--text-normal)); }
+.markdown-embed.mod-locked { opacity: 0.8; }

@@ -284,3 +284,27 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 77. **Mouse clicks inside the Docket keep it open** (fixed after 0.5.0): clicking a panel tab or a row that redraws the panel removed the clicked element, focus fell to the page, and peek mode took that for leaving. Focus dropping to the page now returns to the Docket's input; a click outside (on anything, focusable or not) still dismisses it in peek mode.
 83. **"Create note" is its own group, last** (caught by the 0.5.1 screenshot check): in the Notes group it could be the first, selected row when no note name matched but headings or text did, so Enter made a note instead of opening the best match. It now comes first only when nothing else matches.
 84. **The index benchmark in `npm test` keeps each keystroke's best of three runs**: CI's shared machine once put the 90th percentile at 17 ms (8 ms locally) and failed the build on noise. Best of three measures the code (now about 1–5 ms); `npm run bench` still measures the whole app under real conditions.
+
+## Locking phase
+
+85. **Decided with the user**: notes and folders can be locked; a passphrase plus a recovery key shown once;
+    PBKDF2-SHA-256 (600,000 iterations, built in, no new dependency); auto-lock after idle time (15 minutes)
+    and on sleep or screen lock, each can be turned off; always locked after Quire closes (turning that off
+    would need the key on disk, through the system keychain, which was not chosen). Design: `locking.md`.
+86. **A locked note keeps its file name and `.md`**, with a readable header for other apps and the ciphertext
+    in a comment (AES-256-GCM, fresh IV per write). Links, folders and Units keep working; names stay visible.
+87. **Encryption sits under the vault** (`Vault.crypt`): reads of a sealed note decrypt or throw `LockedError`;
+    writes to a locked note (or a note in a locked folder) are sealed. Plugins using the vault get the same.
+    Writing straight through `vault.adapter` bypasses it (documented).
+88. **Locking clears memory**: tabs of locked notes are saved and closed, then their text, links, search index
+    entries and usage are dropped. **Unlocking** reads them again. Quire starts locked and does not reopen
+    locked notes' tabs at start.
+89. **While locked**, Units lists locked notes by name with a lock (Enter asks for the passphrase, no actions);
+    search, Authorities, links, mentions, embeds and the usage record show nothing of them. Opening one asks
+    for the passphrase; without it nothing opens.
+90. **Plugins may read unlocked notes** through the vault (that is how they work on them); `app.isEncrypted`
+    tells them a note is locked. The AGLC4 plugin keeps no version history of locked notes and erases a note's
+    history when it is locked; its Word/HTML export of a locked note asks first (the file is not encrypted).
+    The Homebase export says the same.
+91. **Fixed while testing**: choosing "Use the recovery key…" reported "not unlocked" to whatever was waiting
+    (a note being opened) before the recovery key was typed.

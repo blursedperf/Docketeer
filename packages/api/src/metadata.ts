@@ -4,6 +4,7 @@ import { TFile, TFolder, type TAbstractFile } from './files';
 import type { App } from './app';
 import { attachmentFolder, availablePath, safeFileName } from './attachments';
 import { errorSummary, normalizePath } from './util';
+import { LockedError } from './lock/service';
 
 export interface Loc { line: number; col: number; offset: number; }
 export interface Pos { start: Loc; end: Loc; }
@@ -204,7 +205,11 @@ export class MetadataCache extends Events {
 		const batch = 32;
 		for (let i = 0; i < files.length; i += batch) {
 			await Promise.all(files.slice(i, i + batch).map(async (f) => {
-				try { this.caches.set(f.path, parseMetadata(await vault.cachedRead(f))); } catch (e) { console.error('Could not index a note:', errorSummary(e)); }
+				try { this.caches.set(f.path, parseMetadata(await vault.cachedRead(f))); } catch (e) {
+					// A locked note while locked: known by name only, nothing parsed.
+					if (e instanceof LockedError) this.caches.set(f.path, parseMetadata(''));
+					else console.error('Could not index a note:', errorSummary(e));
+				}
 			}));
 		}
 		for (const f of files) this.resolveLinksOf(f);
@@ -232,7 +237,13 @@ export class MetadataCache extends Events {
 
 	/** Re-parse from `text` (the editor's) or from disk. */
 	async update(file: TFile, text?: string): Promise<void> {
-		const data = text ?? await this.app.vault.cachedRead(file);
+		let data: string;
+		try {
+			data = text ?? await this.app.vault.cachedRead(file);
+		} catch (e) {
+			if (!(e instanceof LockedError)) throw e;
+			data = ''; // locked: nothing of it is kept
+		}
 		const cache = parseMetadata(data);
 		this.caches.set(file.path, cache);
 		this.resolveLinksOf(file);

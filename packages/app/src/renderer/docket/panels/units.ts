@@ -59,6 +59,8 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		const list = [
 			{ title: 'New note here (N)', icon: 'square-pen', run: () => newNote(folder) },
 			{ title: `New ${UNIT_LABELS.level2.toLowerCase()} here (T)`, icon: 'folder-plus', run: () => newTopic(folder) },
+			cmd('app:lock-folder', 'Lock folder', { folder }),
+			cmd('app:remove-folder-lock', 'Remove lock from folder', { folder }),
 			cmd('app:rename-file', 'Rename…', { file: folder }),
 			cmd('app:move-file', 'Move to…', { file: folder }),
 			cmd('app:delete-file', 'Delete…', { file: folder }),
@@ -86,7 +88,8 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			if (where === 'insert') return;
 			docket.close();
 			void openFileIn(app, f, where);
-		}, { icon: 'file-text', level, detail, actions: () => noteActions(app, docket, f) });
+		}, { icon: app.isEncrypted(f) ? (app.isLocked(f) ? 'lock' : 'lock-open') : 'file-text', level, detail, actions: () => (app.isLocked(f) ? [] : noteActions(app, docket, f)) });
+		if (app.isLocked(f)) { r.addClass('is-locked'); r.setAttribute('aria-description', 'Locked: Enter asks for the passphrase'); }
 		keys(r, f.parent ?? app.vault.getRoot());
 		return r;
 	};
@@ -95,12 +98,13 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		// The attachments folder (pictures and files pasted into notes) is not a subject.
 		const attachments = String(app.config.attachmentFolder ?? '').replace(/^\/+|\/+$/g, '');
 		const folders = items.filter((c): c is TFolder => c instanceof TFolder && !c.name.startsWith('.') && !(attachments && !attachments.startsWith('.') && c.path === attachments)).sort(byName);
-		const notes = items.filter((c): c is TFile => c instanceof TFile && c.extension === 'md' && !app.isLocked(c))
+		// Locked notes are listed by name, with a lock: Enter asks for the passphrase. Nothing else of them shows.
+		const notes = items.filter((c): c is TFile => c instanceof TFile && c.extension === 'md')
 			.sort((a, b) => byName({ name: a.basename }, { name: b.basename }));
 		for (const c of folders) {
 			const expanded = open.has(c.path);
 			const r = row(parent, docket, c.name, () => { if (expanded) open.delete(c.path); else open.add(c.path); void docket.refreshPanel(); }, {
-				icon: expanded ? 'chevron-down' : 'chevron-right', level, badge: String(countNotes(c)), actions: () => folderActions(c), cls: 'docket-folder',
+				icon: expanded ? 'chevron-down' : 'chevron-right', level, badge: `${app.lock.isFolderLocked(c) ? 'locked · ' : ''}${countNotes(c)}`, actions: () => folderActions(c), cls: 'docket-folder',
 			});
 			r.setAttribute('aria-expanded', String(expanded));
 			keys(r, c);

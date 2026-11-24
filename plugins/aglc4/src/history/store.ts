@@ -220,6 +220,26 @@ export class HistoryStore {
 	// --- public operations ---------------------------------------------------------------------------------
 
 	/**
+	 * Erase a file's whole history: every version and its entry (used when a note is locked, so no readable
+	 * copy of it is left behind).
+	 */
+	purge(path: string): Promise<void> {
+		return this.run(async () => {
+			const index = await this.loadIndex();
+			const id = index[path];
+			if (!id) return;
+			delete index[path];
+			await this.saveIndex();
+			this.entries.delete(id);
+			const folder = this.entryFolder(id);
+			if (!(await this.fs.exists(folder))) return;
+			const { files } = await this.fs.list(folder);
+			for (const f of files) await this.fs.remove(f);
+			await this.fs.remove(folder).catch(() => undefined);
+		});
+	}
+
+	/**
 	 * Save a version of a file. Returns the new version, or null when the content is the same as the
 	 * newest version (which is then given the name, if one was asked for).
 	 */

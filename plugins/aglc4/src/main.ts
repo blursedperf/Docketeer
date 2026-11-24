@@ -977,7 +977,14 @@ export default class Aglc4Plugin extends Plugin {
 		return !written || written.mtime !== stat.mtime || written.size !== stat.size;
 	}
 
-	private async exportFile(file: TFile, format: 'docx' | 'html') {
+	private async exportFile(file: TFile, format: 'docx' | 'html', lockedOk = false) {
+		// A locked (encrypted) note: the export is readable by anyone, so ask first.
+		if (!lockedOk && (this.app as unknown as { isEncrypted?: (f: TFile) => boolean }).isEncrypted?.(file)) {
+			new ChoiceModal(this.app, `${file.basename} is locked`, `The ${format === 'docx' ? 'Word' : 'HTML'} file will not be encrypted: anyone who can open it can read it.`, [
+				{ label: 'Export anyway', cta: true, action: () => { void this.exportFile(file, format, true); } },
+			]).open();
+			return;
+		}
 		const folder = this.settings.exportFolder || file.parent?.path || '';
 		if (this.settings.exportFolder && !this.app.vault.getAbstractFileByPath(folder)) {
 			await this.app.vault.createFolder(folder);

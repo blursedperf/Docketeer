@@ -86,6 +86,10 @@ export interface HostBridge {
 		dictionary(lang: string): Promise<{ aff: string; dic: string } | null>;
 		/** Licences of the libraries and dictionaries the app ships. */
 		notices(): Promise<string>;
+		/** The computer is going to sleep or its screen locked (for locking the homebase). */
+		onSystemLock?(cb: () => void): void;
+		/** Smoke test only: as if the computer went to sleep. */
+		smokeSystemLock?(): void;
 		/** Called before the window closes; it waits for the promise (to save open notes). */
 		onBeforeQuit(cb: () => Promise<void>): void;
 	};

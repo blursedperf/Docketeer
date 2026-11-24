@@ -85,6 +85,8 @@ export function noteActions(app: App, docket: Docket, file: TFile): ActionItem[]
 		cmd('app:move-file', 'Move to…'),
 		cmd('app:copy-file'),
 		cmd('app:archive-note'),
+		cmd('app:lock-note'),
+		cmd('app:remove-note-lock'),
 		cmd('app:delete-file', 'Delete…'),
 		cmd('app:show-in-folder'),
 		...pluginFileActions(app, file),

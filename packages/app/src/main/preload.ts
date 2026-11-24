@@ -61,6 +61,8 @@ contextBridge.exposeInMainWorld('quire', {
 		smokeReport: (report: unknown) => ipcRenderer.send('smoke:report', report),
 		dictionary: (lang: string) => call('spell:dictionary', lang),
 		notices: () => call('app:notices'),
+		onSystemLock: (cb: () => void) => { ipcRenderer.on('app:system-lock', () => cb()); },
+		smokeSystemLock: () => { if (info.isSmoke) ipcRenderer.send('smoke:system-lock'); },
 	},
 	clipboard: {
 		writeText: (text: string) => { void call('clipboard:writeText', text); },

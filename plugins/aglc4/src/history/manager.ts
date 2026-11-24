@@ -43,13 +43,26 @@ export class HistoryManager {
 		return this.store;
 	}
 
-	/** Notes are tracked; the history folder itself never is. */
+	/** Notes are tracked; the history folder itself never is, nor locked notes (no readable copies of them). */
 	tracks(file: TAbstractFile | null): file is TFile {
-		return file instanceof TFile && file.extension === 'md' && !file.path.startsWith(`${this.root()}/`) && this.include(file);
+		return file instanceof TFile && file.extension === 'md' && !file.path.startsWith(`${this.root()}/`) && !this.encrypted(file) && this.include(file);
+	}
+
+	private encrypted(file: TFile): boolean {
+		return (this.app as unknown as { isEncrypted?: (f: TFile) => boolean }).isEncrypted?.(file) === true;
+	}
+
+	/** Erase a note's history (when it is locked). */
+	purge(path: string): Promise<void> {
+		return this.get().purge(path);
 	}
 
 	register(plugin: Plugin) {
 		const { vault, workspace } = this.app;
+		// A note that is locked loses its history: the versions are readable copies.
+		// (Quire's app has events; Obsidian's and the tests' stand-ins may not.)
+		const events = this.app as unknown as { on?: (name: string, cb: (f: TFile) => void) => ReturnType<typeof vault.on> };
+		if (typeof events.on === 'function') plugin.registerEvent(events.on('note-locked', (f: TFile) => { void this.purge(f.path).catch((e) => this.fail(e)); }));
 		plugin.registerEvent(vault.on('modify', (f) => { if (this.enabled && this.tracks(f)) this.schedule(f); }));
 		plugin.registerEvent(vault.on('rename', (f, old) => {
 			if (!this.enabled) return;
@@ -111,6 +124,8 @@ export class HistoryManager {
 	 */
 	async snapshot(path: string, data: string | ArrayBuffer, opts: SnapshotOptions = {}): Promise<boolean> {
 		if (!this.enabled) return false;
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (file instanceof TFile && this.encrypted(file)) return false;
 		try {
 			await this.get().snapshot(path, data, opts);
 			this.last.set(path, Date.now());

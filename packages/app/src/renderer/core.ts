@@ -10,6 +10,7 @@ import {
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
+import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
 import { LinkSuggest } from './link-suggest';
 
@@ -557,6 +558,7 @@ export function registerCore(app: App): { reveal(): void } {
 	setIcon(docketBtn, 'panel-top');
 	docketBtn.addEventListener('click', () => app.commands.executeCommandById('app:docket'));
 
+	registerLocking(app);
 	const tiling = registerTiling(app);
 	(app as unknown as { tiling: typeof tiling }).tiling = tiling;
 	const docket = registerDocket(app);

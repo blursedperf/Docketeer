@@ -283,6 +283,8 @@ export class WorkspaceLeaf extends Events {
 	}
 
 	async openFile(file: TFile, openState: OpenViewState = {}): Promise<void> {
+		// A locked note asks for the passphrase first; without it, nothing opens.
+		if (this.workspace.app.isLocked(file) && !(await this.workspace.app.lock.requestUnlock())) return;
 		const type = this.workspace.viewTypeForFile(file);
 		if (this.view instanceof FileView && this.view.getViewType() === type) {
 			await this.setViewState({ type, state: { ...this.view.getState(), ...(openState.state ?? {}), file: file.path } }, openState.eState);
@@ -884,6 +886,9 @@ export class Workspace extends Events {
 				if (!this.viewCreators.has(st.type) || st.type === 'empty') continue;
 				const file = typeof st.state?.file === 'string' ? st.state.file : null;
 				if (file !== null && !this.app.vault.getAbstractFileByPath(file)) continue;
+				// Locked notes stay closed at start (Quire starts locked; no passphrase prompt on launch).
+				const f = file !== null ? this.app.vault.getFileByPath(file) : null;
+				if (f && this.app.isLocked(f)) continue;
 				const leaf = this.createLeafInTabs(tabs, tabs.children.length);
 				try {
 					await leaf.setViewState({ type: st.type, state: st.state, pinned: st.pinned });

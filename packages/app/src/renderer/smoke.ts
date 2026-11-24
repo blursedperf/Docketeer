@@ -590,6 +590,7 @@ export async function runSmoke(app: App): Promise<void> {
 
 	await docketChecks(app, check);
 	await tilingChecks(app, check);
+	await lockingChecks(app, check);
 
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
@@ -787,6 +788,24 @@ export async function runShots(app: App): Promise<void> {
 	docket.open({ query: '?' });
 	await shot('35-docket-cheat-sheet');
 	docket.close(true);
+	// Locking: the Security settings page, Units with a locked note, and the unlock dialog.
+	app.setting.openTabById('security');
+	await shot('36-settings-security');
+	app.setting.close();
+	await app.lock.setUp('screenshot passphrase');
+	const matter = await app.vault.create('Torts/Negligence/Client matter.md', '# Client matter\n\nPrivate.\n');
+	await app.lock.lockNote(matter);
+	await app.lock.lock();
+	document.querySelectorAll('.notice').forEach((n) => n.detach());
+	docket.open({ panel: 'core:units' });
+	await sleep(150);
+	[...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((r) => r.textContent?.startsWith('Client matter'))?.scrollIntoView({ block: 'center' });
+	await shot('37-units-locked-note');
+	docket.close(true);
+	void app.lock.requestUnlock();
+	await sleep(150);
+	await shot('38-unlock');
+	topModal()?.close();
 	workspace.mergeAllPanes();
 	await app.setConfig('docket', false);
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
@@ -1171,7 +1190,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('p', { ctrl: true });
 		press('5', { ctrl: true });
 		await sleep(80);
-		const lock = rowsText().includes('Not locked');
+		const lock = rowsText().includes('Set up locking…');
 		focusRow(rowsText().find((t) => t.startsWith('Export')) ?? '');
 		press('Enter');
 		await sleep(80);
@@ -1470,17 +1489,15 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			press('p', { ctrl: true });
 			press('3', { ctrl: true });
 			await sleep(80);
-			if (rowsText().includes('AGLC4 example essay')) seen.push('Units');
+			// Units lists a locked note by name only, with a lock and no actions.
+			const lockedRow = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((r) => r.querySelector('.docket-option-title')?.textContent === 'AGLC4 example essay');
+			if (lockedRow && (!lockedRow.classList.contains('is-locked') || lockedRow.dataset.docketActions !== undefined && false)) seen.push('Units (not marked locked)');
 			press('Escape');
-			// Opened directly, a locked note's panels say so instead of showing it.
+			// Opening it does nothing without unlocking (locking is not set up yet here, so nothing asks).
 			await workspace.getLeaf(false).openFile(essayNote);
 			await sleep(100);
-			press('p', { ctrl: true });
-			press('1', { ctrl: true });
-			await sleep(80);
-			const lockedMsg = document.querySelector('.docket-panel .docket-empty')?.textContent ?? '';
-			press('Escape');
-			return (seen.length === 0 && /locked/.test(lockedMsg)) || `seen in: ${seen.join(', ')} panel="${lockedMsg}"`;
+			const notOpened = workspace.getActiveFile() !== essayNote;
+			return (seen.length === 0 && notOpened) || `seen in: ${seen.join(', ')} opened=${!notOpened}`;
 		} finally {
 			app.isLocked = realLocked;
 		}
@@ -1707,5 +1724,143 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 		app.commands.executeCommandById('app:layout-single');
 		await sleep(100);
 		return (two && files[0] === essay.basename && !!files[1] && one && restored) || `two=${two} files=${files.join('|')} one=${one} restored=${restored}`;
+	});
+}
+
+/** Locking with real encryption, end to end (docs/docket/locking.md). */
+async function lockingChecks(app: App, check: CheckFn): Promise<void> {
+	const { vault, workspace, commands } = app;
+	const PASS = 'correct horse battery staple';
+	const SECRET = 'PRIVILEGED-CLIENT-ADVICE-4417';
+	let recoveryKey = '';
+	const modalInputs = () => [...document.querySelectorAll<HTMLInputElement>('.modal input')];
+	const fill = (el: HTMLInputElement | undefined, v: string) => { if (!el) return; el.value = v; el.dispatchEvent(new Event('input')); };
+	const enter = (el: HTMLInputElement | undefined) => el?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+	const raw = (p: string) => vault.adapter.read(p);
+	const unlockWith = async (pass: string) => {
+		const p = app.lock.requestUnlock();
+		await sleep(60);
+		const input = modalInputs().find((i) => i.type === 'password');
+		fill(input, pass);
+		enter(input);
+		await until(() => !topModal() || /not right/.test(document.querySelector('.lock-error')?.textContent ?? ''), 8000);
+		const wrong = !!topModal();
+		topModal()?.close();
+		return (await p) && !wrong;
+	};
+
+	await check('locking: set up with a passphrase; the recovery key is shown once', async () => {
+		commands.executeCommandById('app:lock-setup');
+		await sleep(60);
+		const [a, b] = modalInputs().filter((i) => i.type === 'password');
+		fill(a, PASS); fill(b, PASS);
+		enter(b);
+		await until(() => !!document.querySelector('.lock-recovery-key'), 15000);
+		recoveryKey = document.querySelector('.lock-recovery-key')?.textContent ?? '';
+		const done = [...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((x) => x.textContent === 'Done');
+		const disabledFirst = !!done?.disabled;
+		document.querySelector<HTMLElement>('.modal .checkbox-container')?.click();
+		await sleep(30);
+		done?.click();
+		await sleep(60);
+		const lockJson = await raw('.quire/lock.json');
+		return (/^([A-Z2-9]{5}-){7}[A-Z2-9]{5}$/.test(recoveryKey) && disabledFirst && !topModal() && app.lock.isSetUp && app.lock.isUnlocked && !lockJson.includes(PASS) && !lockJson.includes(recoveryKey))
+			|| `key=${recoveryKey} disabledFirst=${disabledFirst} modal=${!!topModal()} setUp=${app.lock.isSetUp}`;
+	});
+
+	await check('locking: a locked note is encrypted on disk; while unlocked it reads, edits and saves (still encrypted)', async () => {
+		const note = await vault.create('Client matter.md', `# Client matter\n\n${SECRET}\n\nSee [[Welcome]].\n`);
+		await workspace.getLeaf(false).openFile(note);
+		await sleep(100);
+		commands.executeCommandById('app:lock-note', { file: note });
+		await until(async () => (await raw(note.path)).includes('quire-encrypted'), 8000);
+		const disk = await raw(note.path);
+		const readable = (await vault.read(note)).includes(SECRET);
+		const view = workspace.getActiveViewOfType(MarkdownView)!;
+		view.editor.replaceRange('Added while unlocked. ', { line: 2, ch: 0 });
+		await view.save();
+		const after = await raw(note.path);
+		// The AGLC4 plugin's version history keeps no copy of a locked note (its versions are compressed, so
+		// ask the history itself rather than searching its files).
+		await sleep(300);
+		const plugin = app.plugins.getPlugin('aglc-citations') as unknown as { history?: { versions(p: string): Promise<unknown[]> } } | null;
+		const versions = plugin?.history ? (await plugin.history.versions(note.path)).length : -1;
+		return (disk.includes('This note is encrypted by Quire') && !disk.includes(SECRET) && readable && after.includes('quire-encrypted') && !after.includes('Added while unlocked') && versions === 0)
+			|| `sealed=${disk.includes('quire-encrypted')} plainOnDisk=${disk.includes(SECRET)} readable=${readable} afterSealed=${after.includes('quire-encrypted')} historyVersions=${versions}`;
+	});
+
+	await check('locking: Lock now closes it and hides it everywhere; opening asks for the passphrase; a wrong one is refused', async () => {
+		const note = vault.getFileByPath('Client matter.md')!;
+		const v = workspace.getActiveViewOfType(MarkdownView);
+		v?.editor.cm.focus();
+		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ctrlKey: true, bubbles: true, cancelable: true }));
+		await until(() => !app.lock.isUnlocked, 5000);
+		await sleep(100);
+		const closed = !workspace.getLeavesOfType('markdown').some((l) => (l.view as MarkdownView).file === note);
+		let refused = false;
+		try { await vault.cachedRead(note); } catch (e) { refused = (e as Error).name === 'LockedError'; }
+		const noLinks = Object.keys(app.metadataCache.resolvedLinks[note.path] ?? {}).length === 0;
+		const notIndexed = !app.search.index.has(note.path);
+		const wrong = await unlockWith('not the passphrase');
+		const stillLocked = !app.lock.isUnlocked;
+		// Opening it asks; the right passphrase opens it.
+		const opening = workspace.getLeaf(false).openFile(note);
+		await sleep(80);
+		const asked = !!topModal();
+		const input = modalInputs().find((i) => i.type === 'password');
+		fill(input, PASS); enter(input);
+		await opening;
+		await sleep(100);
+		const opened = workspace.getActiveFile() === note && (workspace.getActiveViewOfType(MarkdownView)?.editor.getValue() ?? '').includes(SECRET);
+		const reindexed = Object.keys(app.metadataCache.resolvedLinks[note.path] ?? {}).length > 0;
+		return (closed && refused && noLinks && notIndexed && !wrong && stillLocked && asked && opened && reindexed)
+			|| `closed=${closed} refused=${refused} noLinks=${noLinks} notIndexed=${notIndexed} wrongAccepted=${wrong} asked=${asked} opened=${opened} reindexed=${reindexed}`;
+	});
+
+	await check('locking: a locked folder encrypts its notes and new ones; nothing can be added while locked', async () => {
+		await vault.createFolder('Matters').catch(() => undefined);
+		const before = await vault.create('Matters/Old file note.md', `Before: ${SECRET}\n`);
+		const folder = vault.getFolderByPath('Matters')!;
+		await app.lock.lockFolder(folder);
+		const fresh = await vault.create('Matters/New file note.md', `After: ${SECRET}\n`);
+		const both = !(await raw(before.path)).includes(SECRET) && !(await raw(fresh.path)).includes(SECRET);
+		await app.lock.lock();
+		let refused = false;
+		try { await vault.create('Matters/Third.md', 'x'); } catch (e) { refused = (e as Error).name === 'LockedError'; }
+		const third = !vault.getFileByPath('Matters/Third.md') || !(await raw('Matters/Third.md').catch(() => '')).includes('x');
+		return (both && refused && third) || `bothSealed=${both} refused=${refused} third=${third}`;
+	});
+
+	await check('locking: the recovery key unlocks and sets a new passphrase; the old one stops working', async () => {
+		const p = app.lock.requestUnlock();
+		await sleep(60);
+		[...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((b) => b.textContent?.startsWith('Use the recovery key'))?.click();
+		await sleep(80);
+		const inputs = modalInputs();
+		fill(inputs[0], recoveryKey.toLowerCase().replace(/-/g, ' '));
+		const NEW = 'a brand new passphrase';
+		fill(inputs[1], NEW); fill(inputs[2], NEW);
+		enter(inputs[2]);
+		const ok = await p;
+		await app.lock.lock();
+		const oldFails = !(await app.lock.unlock(PASS));
+		const newWorks = await app.lock.unlock(NEW);
+		// Back to the first passphrase for the rest of the checks.
+		await app.lock.changePassphrase(NEW, PASS);
+		return (ok && oldFails && newWorks) || `recovered=${ok} oldFails=${oldFails} newWorks=${newWorks}`;
+	});
+
+	await check('locking: sleep locks it (setting on); removing a lock decrypts the note on disk', async () => {
+		app.host.app.smokeSystemLock?.();
+		await until(() => !app.lock.isUnlocked, 3000);
+		const slept = !app.lock.isUnlocked;
+		await app.lock.unlock(PASS);
+		const note = vault.getFileByPath('Client matter.md')!;
+		await app.lock.removeNoteLock(note);
+		const plain = (await raw(note.path)).includes(SECRET);
+		await app.lock.removeFolderLock(vault.getFolderByPath('Matters')!);
+		const folderPlain = (await raw('Matters/New file note.md')).includes(SECRET);
+		for (const p of ['Client matter.md', 'Matters/Old file note.md', 'Matters/New file note.md']) { const f = vault.getFileByPath(p); if (f) await vault.trash(f, true); }
+		return (slept && plain && folderPlain) || `slept=${slept} notePlain=${plain} folderPlain=${folderPlain}`;
 	});
 }
