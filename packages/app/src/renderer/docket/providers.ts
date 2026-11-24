@@ -151,7 +151,8 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 				if ((!only || only === 'Notes') && !/[\\/:]/.test(text) && !vault.getMarkdownFiles().some((f) => f.basename.toLowerCase() === text.toLowerCase())) {
 					const parent = app.fileManager.getNewFileParent(activePath());
 					results.push({
-						id: `create:${text}`, type: 'Notes', title: `Create note “${text}”`, detail: `in ${placeName(parent)} · → to choose another place`, icon: 'file-plus', score: -1e6,
+						// Its own group, last: Enter opens the best match, never makes a note by accident.
+						id: `create:${text}`, type: 'New note', title: `Create note “${text}”`, detail: `in ${placeName(parent)} · → to choose another place`, icon: 'file-plus', score: -1e6,
 						open: async (where) => {
 							const file = await createNote(app, parent, text);
 							if (file && where !== 'current') await openFileIn(app, file, where);

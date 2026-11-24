@@ -213,3 +213,14 @@ describe('shifted keys', () => {
 		expect(order).toEqual(['docket']);
 	});
 });
+
+describe('"New note" goes last', () => {
+	it('is never the first, selected result when something matches', () => {
+		const g = groupResults([
+			{ id: 'create:x', type: 'New note', title: 'Create note' },
+			{ id: 'h', type: 'Headings', title: 'H' },
+			{ id: 'p', type: 'Plugin things', title: 'P' },
+		]);
+		expect(g.map((x) => x.type)).toEqual(['Headings', 'Plugin things', 'New note']);
+	});
+});

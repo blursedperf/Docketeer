@@ -1407,6 +1407,17 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (help && order && plusRow && noLabels && !!topicModal && topic && sel === 'Torts/Negligence') || `help=${help} order=${order} plus=${plusRow} noLabels=${noLabels} topicModal=${!!topicModal} topic=${topic} preselected=${sel}`;
 	});
 
+	await check('search: Enter opens the best match; "Create note" is last unless nothing matches', async () => {
+		press('p', { ctrl: true });
+		await type('welc');
+		const first = document.querySelector('.docket-option.is-selected .docket-option-title')?.textContent ?? '';
+		const groups = [...document.querySelectorAll('.docket-group')].map((g) => g.getAttribute('aria-label'));
+		await type('zzqx nothing matches');
+		const only = document.querySelector('.docket-option.is-selected .docket-option-title')?.textContent ?? '';
+		press('Escape'); press('Escape');
+		return (!first.startsWith('Create') && groups[groups.length - 1] === 'New note' && only.startsWith('Create note')) || `first=${first} groups=${groups.join('|')} only=${only}`;
+	});
+
 	await check('search: "Create note" says where, and → puts it somewhere else', async () => {
 		press('p', { ctrl: true });
 		await type('Remedies overview');

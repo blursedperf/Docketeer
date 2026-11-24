@@ -282,3 +282,4 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 82. **Fixed: two saves of the same file at once** (two settings changed together) shared a temporary file
     name, so one failed and could lose a change. Each write now has its own.
 77. **Mouse clicks inside the Docket keep it open** (fixed after 0.5.0): clicking a panel tab or a row that redraws the panel removed the clicked element, focus fell to the page, and peek mode took that for leaving. Focus dropping to the page now returns to the Docket's input; a click outside (on anything, focusable or not) still dismisses it in peek mode.
+83. **"Create note" is its own group, last** (caught by the 0.5.1 screenshot check): in the Notes group it could be the first, selected row when no note name matched but headings or text did, so Enter made a note instead of opening the best match. It now comes first only when nothing else matches.

@@ -48,7 +48,7 @@ export function contextPanel(line: string, ch: number): { panel: 'authorities'; 
 }
 
 /** Group heading order for the unprefixed search. Other types follow, alphabetically. */
-const TYPE_ORDER = ['In the Docket', 'Prefixes', 'Docket', 'Notes', 'Headings', 'Commands', 'Authorities', 'In notes', 'Folders', 'Tags', 'Settings', 'Search', 'Edit', 'View', 'Layout', 'Homebase', 'App', 'Shortcuts'];
+const TYPE_ORDER = ['In the Docket', 'Prefixes', 'Docket', 'Notes', 'Headings', 'Commands', 'Authorities', 'In notes', 'Folders', 'Tags', 'Settings', 'Search', 'Edit', 'View', 'Layout', 'Homebase', 'App', 'Shortcuts', 'New note'];
 
 /**
  * Results grouped by type, best first within a group, groups in a fixed order; `perGroup` limits each
@@ -61,7 +61,8 @@ export function groupResults(results: SearchResult[], perGroup = Infinity, total
 		list.push(r);
 		by.set(r.type, list);
 	}
-	const rank = (t: string) => { const i = TYPE_ORDER.indexOf(t); return i === -1 ? TYPE_ORDER.length : i; };
+	// Known groups in order, then any others A–Z, then "New note" last of all.
+	const rank = (t: string) => (t === 'New note' ? TYPE_ORDER.length + 1 : (() => { const i = TYPE_ORDER.indexOf(t); return i === -1 ? TYPE_ORDER.length : i; })());
 	return [...by.entries()]
 		.sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
 		.map(([type, items]) => {
