@@ -437,10 +437,17 @@ async function finishSmoke(report: Record<string, unknown>) {
 		// The main process tries the network itself, through the same session: it must be refused.
 		let mainFetchBlocked = false;
 		try { await session.defaultSession.fetch('https://example.com/'); } catch { mainFetchBlocked = true; }
-		const shot = path.join(process.env.QUIRE_SMOKE_OUT ?? os.tmpdir(), 'quire-smoke.png');
-		if (win) await fsp.writeFile(shot, (await win.webContents.capturePage()).toPNG());
+		// The screenshot is for review, not a check: a capture that fails (some CI GPUs) is reported only.
+		let shot: string | null = path.join(process.env.QUIRE_SMOKE_OUT ?? os.tmpdir(), 'quire-smoke.png');
+		let screenshotError: string | null = null;
+		try {
+			if (win) await fsp.writeFile(shot, (await win.webContents.capturePage()).toPNG());
+		} catch (e) {
+			screenshotError = e instanceof Error ? e.message : String(e);
+			shot = null;
+		}
 		const errors = smokeConsole.filter((m) => m.level === 'error' || m.level === '3');
-		const out = { ...report, mainFetchBlocked, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot };
+		const out = { ...report, mainFetchBlocked, blockedRequests: blocked, consoleErrors: errors.map((m) => m.message), screenshot: shot, screenshotError };
 		if (!mainFetchBlocked) exitCode = 1;
 		console.log(`QUIRE_SMOKE ${JSON.stringify(out, null, 2)}`);
 	} catch (e) {
