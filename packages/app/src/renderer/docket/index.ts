@@ -38,6 +38,23 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 
 	registerNoteCommands(app);
 
+	/** The note or folder of the focused Docket row, if any (rows in Units and other panels set data-path). */
+	const rowTarget = () => {
+		const el = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.docket-panel [data-path]');
+		const path = el?.dataset.path;
+		return path ? app.vault.getAbstractFileByPath(path) : null;
+	};
+	add({
+		id: 'app:docket-delete-row', name: 'Docket: delete the selected note or folder', icon: 'trash-2', context: 'docket',
+		hotkeys: [{ modifiers: [], key: 'Delete' }, { modifiers: ['Mod'], key: 'Backspace' }],
+		when: () => !!rowTarget(), run: () => { app.commands.executeCommandById('app:delete-file', { file: rowTarget() }); },
+	});
+	add({
+		id: 'app:docket-rename-row', name: 'Docket: rename the selected note or folder', icon: 'pencil', context: 'docket',
+		hotkeys: [{ modifiers: [], key: 'F2' }],
+		when: () => !!rowTarget(), run: () => { app.commands.executeCommandById('app:rename-file', { file: rowTarget() }); },
+	});
+
 	/**
 	 * The old palette, switcher and sidebar commands, kept by id (so remapped keys and plugins calling them
 	 * still work) and now opening the Docket where each feature lives.
@@ -67,6 +84,10 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 			cleanup = [];
 		}
 	};
+	// Notes and folders made, renamed, moved or deleted: what the Docket shows follows (once things settle).
+	let pending = 0;
+	const follow = () => { if (!docket?.isOpen) return; window.clearTimeout(pending); pending = window.setTimeout(() => { void docket?.refresh(); }, 120); };
+	for (const ev of ['create', 'delete', 'rename'] as const) app.vault.on(ev, follow);
 	// Locking or unlocking changes what panels may show.
 	app.on('lock-change', () => { if (docket?.isOpen) void docket.refreshPanel(); });
 	app.on('config-changed', (key: string) => {

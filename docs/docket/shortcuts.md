@@ -11,7 +11,8 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 | Mod+Shift+P | Switch between peek and pinned |
 | Mod+1 … Mod+9 | Show a panel (while the Docket has the keyboard) |
 | Mod+Alt+↓ / ↑ | Taller / shorter |
-| ↑ ↓ | Move through results |
+| ↑ ↓ | Move through results and panel rows; ↑ at the top goes back to the search |
+| ← → (nothing typed) | Previous / next panel |
 | Enter / Mod+Enter / Alt+Enter | Open here / to the right / below |
 | Shift+Enter | Insert as a link at the cursor |
 | → or Mod+. | More actions for the result |
@@ -47,3 +48,11 @@ Layouts: Layout panel (Mod+6) or `>layout`: Single, Brief + Source, Revision, Ex
 
 Lock a note or folder from its actions (→ in the Docket), or with "Lock note" / "Lock folder". Unlock by
 opening a locked note, from the status bar lock, or with "Unlock".
+
+## In Units
+
+| Keys | Action |
+|---|---|
+| N / T | New note / new topic in the selected folder |
+| F2 | Rename the selected note or folder |
+| Delete (⌘⌫ on macOS) | Delete the selected note or folder (asks first; a folder says how many notes it holds) |

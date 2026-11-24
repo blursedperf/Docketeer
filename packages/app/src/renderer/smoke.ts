@@ -1483,6 +1483,57 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			|| `first=${firstGroup} counted=${counted} named=${named} inNotesDup=${inNotesDup} groups=${groups.slice(0, 6).join('|')} preview=${dupPreview} history=${dupHistory}`;
 	});
 
+	await check('keys: ↑ from the top goes back to the search; ← → switch panels; Units deletes and renames, and follows changes', async () => {
+		const input = () => document.querySelector<HTMLInputElement>('.docket-input')!;
+		// ↑ from the first result (keyboard in the list) and from the first panel row: back to the input.
+		press('p', { ctrl: true });
+		await type('welcome');
+		press('Tab'); // into the results list
+		press('ArrowUp');
+		const fromResults = document.activeElement === input();
+		await type('');
+		press('3', { ctrl: true }); // Units always has rows
+		await sleep(80);
+		press('ArrowDown');
+		const inRow = !!document.activeElement?.closest('.docket-panel');
+		press('ArrowUp');
+		const fromPanel = inRow && document.activeElement === input();
+		// ← and → with nothing typed: previous and next panel.
+		const active = () => document.querySelector('.docket-tab.is-active')?.textContent ?? '';
+		press('ArrowRight');
+		const next = active().includes('Cite');
+		press('ArrowLeft'); press('ArrowLeft');
+		const prev = active().includes('Outline');
+		// Units: Delete on a folder says what it holds; confirming deletes it; the list follows.
+		await vault.createFolder('Old subject/Old topic').catch(() => undefined);
+		await vault.create('Old subject/Old topic/Old note.md', 'x').catch(() => undefined);
+		await vault.create('Old subject/Rename me.md', 'y').catch(() => undefined);
+		press('3', { ctrl: true });
+		await sleep(150);
+		const appeared = rowsText().includes('Old subject');
+		focusRow('Old subject');
+		press('Enter'); // open it
+		await sleep(100);
+		focusRow('Rename me');
+		press('F2');
+		await sleep(80);
+		const ri = document.querySelector<HTMLInputElement>('.modal input');
+		if (ri) { ri.value = 'Renamed here'; ri.dispatchEvent(new Event('input')); ri.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); }
+		await sleep(300);
+		const renamed = !!vault.getFileByPath('Old subject/Renamed here.md') && rowsText().includes('Renamed here');
+		focusRow('Old subject');
+		press('Delete');
+		await sleep(80);
+		const question = document.querySelector('.modal p')?.textContent ?? '';
+		[...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((b) => b.textContent === 'Continue')?.click();
+		await sleep(400);
+		const gone = !vault.getFolderByPath('Old subject') && !rowsText().includes('Old subject');
+		const keyboardBack = !!document.activeElement?.closest('.docket-panel');
+		press('Escape'); press('Escape');
+		return (fromResults && fromPanel && next && prev && appeared && renamed && /2 notes/.test(question) && gone && keyboardBack)
+			|| `fromResults=${fromResults} fromPanel=${fromPanel} next=${next} prev=${prev} appeared=${appeared} renamed=${renamed} question="${question}" gone=${gone} keyboardBack=${keyboardBack}`;
+	});
+
 	await check('cheat sheet: "?" lists the Docket keys, prefixes and every shortcut by section', async () => {
 		press('p', { ctrl: true });
 		await type('?');
@@ -1490,7 +1541,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const docketKeys = titles().includes('Open to the right');
 		const split = [...document.querySelectorAll('.docket-option')].some((o) => o.textContent?.includes('Split right') && /\\/.test(o.querySelector('.docket-option-hint')?.textContent ?? ''));
 		press('Escape'); press('Escape');
-		return (groups[0] === 'In the Docket' && groups[1] === 'Prefixes' && groups.includes('Layout') && docketKeys && split) || `groups=${groups.join('|')} keys=${docketKeys} split=${split}`;
+		return (groups[0] === 'In the Docket' && groups[1] === 'In Units' && groups[2] === 'Prefixes' && groups.includes('Layout') && docketKeys && split) || `groups=${groups.join('|')} keys=${docketKeys} split=${split}`;
 	});
 
 	await check('security: locked notes stay out of search, authorities, links and Units', async () => {

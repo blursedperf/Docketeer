@@ -329,3 +329,19 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     shows "Recently used" then commands by section; authorities and note text come before commands (which
     are a ">" away); ribbon-made commands are dropped when the plugin has the same command (compared without
     the plugin's name); headings read "in <note>" and places "Torts / Negligence".
+
+## Arrow keys and deleting from the Docket (user request, before 0.7.0)
+
+95. **↑ at the top goes back to the search**: from the first result (with the results list focused) and from
+    the first row of a panel. Results no longer wrap from the top to the bottom.
+96. **← and → switch panels** when nothing is typed (with text, they move the caret as usual); in the panel
+    tabs they did already.
+97. **Delete (⌘⌫ on macOS) and F2 on a Units row** delete or rename that note or folder. They are Docket-only
+    commands, so they never act while typing in the search. Deleting a folder says how many notes it holds;
+    locked notes are only deleted with the homebase unlocked. After a confirmation closes, the keyboard goes
+    to the row where the deleted one was.
+98. **The Docket follows the homebase**: notes and folders made, renamed, moved or deleted while it is open
+    show at once (results and panels redraw, keeping the keyboard where it was). Before, Units stayed as it
+    was until reopened.
+99. **Checked, no change needed**: after creating a note (search, Mod+N or Units) or opening one, the keyboard
+    is in that note's editor.

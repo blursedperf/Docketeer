@@ -430,6 +430,13 @@ export function registerCore(app: App): { reveal(): void } {
 
 	add({ id: 'app:open-settings', name: 'Open settings', icon: 'settings', section: 'App', aliases: ['Preferences', 'Options'], hotkeys: [{ modifiers: ['Mod'], key: ',' }], callback: () => app.setting.open() });
 	add({ id: 'app:open-homebase', name: 'Open another homebase', icon: 'folder-open', section: 'Homebase', aliases: ['Switch homebase', 'Open vault'], callback: () => { void app.host.app.chooseVault(false); } });
+	/** Every note in a folder and the folders inside it. */
+	const notesIn = (folder: TFolder): TFile[] => {
+		const out: TFile[] = [];
+		const visit = (x: TFolder) => { for (const c of x.children) { if (c instanceof TFolder) visit(c); else if (c instanceof TFile && c.extension === 'md') out.push(c); } };
+		visit(folder);
+		return out;
+	};
 	/** The file a command acts on: the one a menu passed, or the open note. */
 	const fileArg = (ctx: CommandContext): TAbstractFile | null => (ctx.args.file instanceof TAbstractFile ? ctx.args.file : ctx.file);
 	const leafArg = (ctx: CommandContext): WorkspaceLeaf | null => (ctx.args.leaf instanceof WorkspaceLeaf ? ctx.args.leaf : workspace.activeLeaf);
@@ -506,8 +513,20 @@ export function registerCore(app: App): { reveal(): void } {
 	add({
 		id: 'app:delete-file', name: 'Delete file', icon: 'trash-2', section: 'Notes', aliases: ['Remove', 'Trash'],
 		when: (ctx) => { const f = fileArg(ctx); return !!f && !(f instanceof TFolder && f.isRoot()); },
-		confirm: (ctx) => `Move "${fileArg(ctx)?.name}" to the system trash?`,
-		run: (ctx) => vault.trash(fileArg(ctx)!, true).catch(report),
+		confirm: (ctx) => {
+			const f = fileArg(ctx);
+			if (f instanceof TFolder) {
+				const n = notesIn(f).length;
+				return `Move the folder “${f.name}”${n ? ` and the ${n} note${n === 1 ? '' : 's'} in it` : ''} to the system trash?`;
+			}
+			return `Move “${f instanceof TFile && f.extension === 'md' ? f.basename : f?.name}” to the system trash?`;
+		},
+		run: async (ctx) => {
+			const f = fileArg(ctx)!;
+			// Locked notes are only deleted with the homebase unlocked.
+			if ((f instanceof TFile ? [f] : f instanceof TFolder ? notesIn(f) : []).some((x) => app.isLocked(x)) && !(await app.lock.requestUnlock())) return;
+			await vault.trash(f, true).catch(report);
+		},
 	});
 	add({
 		id: 'app:move-file', name: 'Move file to another folder', icon: 'folder-input', section: 'Notes',

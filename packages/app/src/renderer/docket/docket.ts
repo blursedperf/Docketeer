@@ -54,6 +54,8 @@ export class Docket {
 	private seq = 0;
 	/** "Show all" of one group. */
 	private only: string | null = null;
+	/** The index of the panel row that last had the keyboard (to return to it after a dialog). */
+	private lastPanelRow = -1;
 	/** A list a panel or action asked to show ("Notes citing Mabo"); Esc returns. */
 	private custom: { title: string; items: SearchResult[] } | null = null;
 	private detach: (() => void)[] = [];
@@ -90,7 +92,7 @@ export class Docket {
 		this.panelEl = body.createDiv({ cls: 'docket-panel', attr: { role: 'tabpanel', tabindex: '-1' } });
 		const foot = this.el.createDiv({ cls: 'docket-foot', attr: { 'aria-hidden': 'true' } });
 		const mod = Platform.isMacOS ? '⌘' : 'Ctrl+';
-		for (const [k, t] of [['↑↓', 'move'], ['↵', 'open'], [`${mod}↵`, 'right'], [Platform.isMacOS ? '⌥↵' : 'Alt+↵', 'below'], [Platform.isMacOS ? '⇧↵' : 'Shift+↵', 'insert'], ['→', 'actions'], [`${mod}1–6`, 'panels'], ['Esc', 'back']] as const) {
+		for (const [k, t] of [['↑↓', 'move'], ['↵', 'open'], [`${mod}↵`, 'right'], [Platform.isMacOS ? '⌥↵' : 'Alt+↵', 'below'], [Platform.isMacOS ? '⇧↵' : 'Shift+↵', 'insert'], ['→', 'actions'], ['← →', 'panels (empty search)'], ['Esc', 'back']] as const) {
 			const s = foot.createSpan({ cls: 'docket-foot-item' });
 			s.createEl('kbd', { text: k });
 			s.appendText(` ${t}`);
@@ -107,7 +109,12 @@ export class Docket {
 
 		this.inputEl.addEventListener('input', () => { this.actions = null; this.actionsOf = null; if (!this.inputEl.value) this.only = null; void this.update(); });
 		this.el.addEventListener('keydown', (e) => this.onKey(e));
-		this.el.addEventListener('focusin', () => { app.docketOpen = true; });
+		this.el.addEventListener('focusin', (e) => {
+			app.docketOpen = true;
+			const rows = Array.from(this.panelEl.querySelectorAll('[data-docket-item]'));
+			const i = rows.indexOf(e.target as Element);
+			if (i >= 0) this.lastPanelRow = i;
+		});
 		this.el.addEventListener('focusout', () => window.setTimeout(() => this.onFocusOut(), 0));
 		this.resizeEl.addEventListener('mousedown', (e) => this.startResize(e));
 		document.addEventListener('mousedown', this.onOutsideMouseDown, true);
@@ -401,11 +408,21 @@ export class Docket {
 		}
 	}
 
+	/** Draw again what is showing (results or the panel), keeping the keyboard where it was. */
+	async refresh(): Promise<void> {
+		if (!this.opened || this.actions) return;
+		if (!this.panelEl.hasAttribute('hidden')) await this.refreshPanel();
+		else { const sel = this.selected; await this.update(); this.select(sel, false); }
+	}
+
 	/** Draw the panel again (after a change it made), keeping the keyboard on the same row. */
 	async refreshPanel(focusIndex?: number): Promise<void> {
 		const rows = () => Array.from(this.panelEl.querySelectorAll<HTMLElement>('[data-docket-item]'));
-		const at = focusIndex ?? rows().indexOf(document.activeElement as HTMLElement);
-		const wasPanel = this.panelEl.contains(document.activeElement);
+		const now = rows().indexOf(document.activeElement as HTMLElement);
+		// Focus may have dropped to the page (a confirmation closed, its row deleted): use the last row it was on.
+		const dropped = !this.el.contains(document.activeElement) && (document.activeElement === document.body || !document.activeElement) && this.lastPanelRow >= 0;
+		const at = focusIndex ?? (now >= 0 ? now : dropped ? this.lastPanelRow : -1);
+		const wasPanel = this.panelEl.contains(document.activeElement) || dropped;
 		await this.renderPanel();
 		const list = rows();
 		if ((wasPanel || focusIndex !== undefined) && list.length) list[Math.max(0, Math.min(list.length - 1, at))]!.focus();
@@ -514,7 +531,7 @@ export class Docket {
 	private select(i: number, scroll = true): void {
 		const count = this.actions ? this.actions.length : this.items.length;
 		if (!count) { this.inputEl.removeAttribute('aria-activedescendant'); return; }
-		this.selected = (i + count) % count;
+		this.selected = Math.max(0, Math.min(count - 1, i));
 		for (const el of Array.from(this.resultsEl.querySelectorAll('.docket-option'))) {
 			const on = el.id === `docket-opt-${this.selected}`;
 			el.toggleClass('is-selected', on);
@@ -675,13 +692,23 @@ export class Docket {
 				if (zone === 'panel' && /^(INPUT|SELECT|TEXTAREA)$/.test((document.activeElement as HTMLElement | null)?.tagName ?? '')) return;
 				if (zone === 'panel' && e.altKey) return; // panels use Alt+arrows (moving sections)
 				if (e.altKey && mod) return; // resize: a command
-				if (listy && !this.resultsEl.hasAttribute('hidden')) { handled(); this.select(this.selected + step); return; }
+				if (listy && !this.resultsEl.hasAttribute('hidden')) {
+					handled();
+					// Up from the first result goes back to the search input (no wrapping round to the bottom).
+					if (step === -1 && this.selected === 0) { if (zone === 'results') this.focusZone('input'); return; }
+					this.select(Math.min(this.selected + step, (this.actions ? this.actions.length : this.items.length) - 1));
+					return;
+				}
 				if (zone === 'panel' || (zone === 'input' && step === 1 && !this.panelEl.hasAttribute('hidden'))) {
 					const items = Array.from(this.panelEl.querySelectorAll<HTMLElement>('[data-docket-item]'));
 					if (!items.length) return;
 					handled();
 					const at = items.indexOf(document.activeElement as HTMLElement);
-					items[at === -1 ? 0 : Math.min(items.length - 1, Math.max(0, at + step))]!.focus();
+					// Up from the first row goes back to the search input.
+					if (step === -1 && at <= 0) { this.focusZone('input'); return; }
+					const next = items[at === -1 ? 0 : Math.min(items.length - 1, at + step)]!;
+					next.focus();
+					next.scrollIntoView({ block: 'nearest' });
 				}
 				return;
 			}
@@ -701,6 +728,15 @@ export class Docket {
 					return;
 				}
 				if (e.key === 'ArrowLeft' && this.actions && (zone !== 'input' || this.inputEl.selectionStart === 0)) { handled(); this.leaveActions(); return; }
+				// With nothing typed, ← and → move to the previous or next panel.
+				if (zone === 'input' && !this.inputEl.value && !this.actions && !this.custom && !this.panelEl.hasAttribute('hidden') && !e.shiftKey && !mod && !e.altKey) {
+					handled();
+					const panels = this.app.docket.orderedPanels();
+					const at = panels.findIndex((p) => p.id === this.panelId);
+					const next = panels[(at + (e.key === 'ArrowRight' ? 1 : -1) + panels.length) % panels.length];
+					if (next) this.showPanel(next.id);
+					return;
+				}
 				if (e.key === 'ArrowRight' && listy && !this.actions && !this.resultsEl.hasAttribute('hidden')) {
 					const atEnd = zone === 'results' || (this.inputEl.selectionStart === this.inputEl.value.length && this.inputEl.selectionEnd === this.inputEl.value.length);
 					if (atEnd && this.showActions()) handled();

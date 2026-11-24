@@ -7,7 +7,7 @@
  *
  * Words for the levels live in UNIT_LABELS so subjects and topics can become clients and matters.
  */
-import { type App, type DocketPanel, Notice, TFile, TFolder } from '@quire/api';
+import { type App, type DocketPanel, Notice, Platform, TFile, TFolder } from '@quire/api';
 import type { ActionItem, Docket } from '../docket';
 import { archiveRoot, isArchived, noteActions, pluginFileActions } from '../actions';
 import { NameModal, NewNoteModal, notePlaces, placeName } from '../../dialogs';
@@ -90,6 +90,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			void openFileIn(app, f, where);
 		}, { icon: app.isEncrypted(f) ? (app.isLocked(f) ? 'lock' : 'lock-open') : 'file-text', level, detail, actions: () => (app.isLocked(f) ? [] : noteActions(app, docket, f)) });
 		if (app.isLocked(f)) { r.addClass('is-locked'); r.setAttribute('aria-description', 'Locked: Enter asks for the passphrase'); }
+		r.dataset.path = f.path;
 		keys(r, f.parent ?? app.vault.getRoot());
 		return r;
 	};
@@ -107,6 +108,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 				icon: expanded ? 'chevron-down' : 'chevron-right', level, badge: `${app.lock.isFolderLocked(c) ? 'locked · ' : ''}${countNotes(c)}`, actions: () => folderActions(c), cls: 'docket-folder',
 			});
 			r.setAttribute('aria-expanded', String(expanded));
+			r.dataset.path = c.path;
 			keys(r, c);
 			if (expanded) {
 				folderTree(parent, c.children, level + 1);
@@ -127,7 +129,8 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 
 			const help = el.createDiv({ cls: 'docket-help' });
 			help.createSpan({ text: `${UNIT_LABELS.plural1} are your top folders; ${UNIT_LABELS.level2.toLowerCase()}s are folders inside them.` });
-			for (const [k, t] of [['Enter', 'open'], ['N', 'new note here'], ['T', `new ${UNIT_LABELS.level2.toLowerCase()} here`], ['→', 'more']] as const) {
+			const del = Platform.isMacOS ? '⌘⌫' : 'Del';
+			for (const [k, t] of [['Enter', 'open'], ['N', 'new note here'], ['T', `new ${UNIT_LABELS.level2.toLowerCase()} here`], ['F2', 'rename'], [del, 'delete'], ['→', 'more']] as const) {
 				const s = help.createSpan({ cls: 'docket-help-key' });
 				s.createEl('kbd', { text: k });
 				s.appendText(` ${t}`);

@@ -301,7 +301,8 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 				const out: SearchResult[] = [];
 				const mod = Platform.isMacOS ? '⌘' : 'Ctrl+';
 				const fixed: [string, string, string][] = [
-					['In the Docket', '↑ ↓', 'Move through results'],
+					['In the Docket', '↑ ↓', 'Move through results and panel rows (↑ at the top: back to the search)'],
+					['In the Docket', '← →', 'Previous or next panel (with nothing typed)'],
 					['In the Docket', '↵', 'Open here'],
 					['In the Docket', `${mod}↵`, 'Open to the right'],
 					['In the Docket', Platform.isMacOS ? '⌥↵' : 'Alt+↵', 'Open below'],
@@ -309,6 +310,9 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 					['In the Docket', `→ or ${mod}.`, 'More actions'],
 					['In the Docket', 'Tab', 'Input, results or panel, panel tabs'],
 					['In the Docket', 'Esc', 'Back one step, or close'],
+					['In Units', 'N / T', 'New note / new topic in the selected folder'],
+					['In Units', 'F2', 'Rename the selected note or folder'],
+					['In Units', Platform.isMacOS ? '⌘⌫' : 'Delete', 'Delete the selected note or folder (asks first)'],
 					['Prefixes', '>', 'Commands'],
 					['Prefixes', '#', 'Folders and tags'],
 					['Prefixes', '/', 'Headings in this note'],
