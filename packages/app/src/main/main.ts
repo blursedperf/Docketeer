@@ -13,7 +13,8 @@ const APP_DIR = __dirname; // dist/
 const RENDERER_DIR = path.join(APP_DIR, 'renderer');
 const BUILTIN_PLUGINS = path.join(APP_DIR, 'plugins');
 const SHOTS = process.argv.includes('--shots');
-const SMOKE = process.argv.includes('--smoke') || SHOTS;
+const BENCH = process.argv.includes('--bench');
+const SMOKE = process.argv.includes('--smoke') || SHOTS || BENCH;
 const ALLOWED_SCHEMES = ['quire:', 'devtools:', 'data:', 'blob:', 'chrome-extension:'];
 
 // -------------------------------------------------------------------------------------------------
@@ -177,6 +178,7 @@ function registerIpc() {
 			vault: vaultRoot ? { path: vaultRoot, name: path.basename(vaultRoot) } : null,
 			isSmoke: SMOKE,
 			isShots: SHOTS,
+			isBench: BENCH,
 		};
 	});
 	handle('fs:tree', async (rel: string) => tree(await resolvePath(rel)));
@@ -525,7 +527,7 @@ app.whenReady().then(async () => {
 	if (SMOKE) await setVault(arg ?? (await smokeVault()));
 	else await setVault(arg ?? config.last);
 	createWindow();
-	if (SMOKE) setTimeout(() => { console.error('Smoke test timed out'); app.exit(2); }, 60_000);
+	if (SMOKE) setTimeout(() => { console.error('Smoke test timed out'); app.exit(2); }, BENCH ? 180_000 : 60_000);
 }).catch((e) => {
 	console.error(e);
 	app.exit(1);

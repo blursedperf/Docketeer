@@ -175,8 +175,27 @@ export class MetadataCache extends Events {
 	unresolvedLinks: Record<string, Record<string, number>> = {};
 	private ready = false;
 
+	/** Files by lowercased name ("note.md" and, for notes, "note"), for resolving links without a scan. */
+	private byName: Map<string, TFile[]> | null = null;
+
 	constructor(private app: App) {
 		super();
+		const stale = () => { this.byName = null; };
+		app.vault.on('create', stale);
+		app.vault.on('delete', stale);
+		app.vault.on('rename', stale);
+	}
+
+	private filesNamed(name: string): TFile[] {
+		if (!this.byName) {
+			this.byName = new Map();
+			const add = (k: string, f: TFile) => { const l = this.byName!.get(k); if (l) l.push(f); else this.byName!.set(k, [f]); };
+			for (const f of this.app.vault.getFiles()) {
+				add(f.name.toLowerCase(), f);
+				if (f.extension === 'md') add(f.basename.toLowerCase(), f);
+			}
+		}
+		return this.byName.get(name) ?? [];
 	}
 
 	async indexAll(): Promise<void> {
@@ -189,7 +208,9 @@ export class MetadataCache extends Events {
 			}));
 		}
 		for (const f of files) this.resolveLinksOf(f);
-		vault.on('create', (f) => { if (f instanceof TFile && f.extension === 'md') void this.update(f); else this.resolveAll(); });
+		// A new file can be what other notes' unresolved links pointed to: resolve everything again (cheap
+		// now that files are found by name). Backlinks rely on resolvedLinks being current.
+		vault.on('create', (f) => { if (f instanceof TFile && f.extension === 'md') void this.update(f).then(() => this.resolveAll()); else this.resolveAll(); });
 		vault.on('modify', (f) => { if (f instanceof TFile && f.extension === 'md') void this.update(f); });
 		vault.on('delete', (f) => {
 			this.caches.delete(f.path);
@@ -240,10 +261,11 @@ export class MetadataCache extends Events {
 			const f = vault.getFileByPath(c);
 			if (f) return f;
 		}
-		target = target.toLowerCase();
-		const name = target.includes('/') ? target : target;
+		// Anywhere in the homebase: the file with that name (and trailing folders, if given) and the shortest path.
+		const name = target.toLowerCase();
+		const last = name.slice(name.lastIndexOf('/') + 1);
 		let best: TFile | null = null;
-		for (const f of vault.getFiles()) {
+		for (const f of this.filesNamed(last)) {
 			const p = f.path.toLowerCase();
 			const matches = p === name || p === `${name}.md` || p.endsWith(`/${name}`) || p.endsWith(`/${name}.md`);
 			if (matches && (!best || f.path.length < best.path.length)) best = f;
@@ -262,6 +284,8 @@ export class MetadataCache extends Events {
 	getBacklinksForFile(file: TFile): Map<string, LinkCache[]> {
 		const out = new Map<string, LinkCache[]>();
 		for (const [path, cache] of this.caches) {
+			// Only notes whose resolved links include this one (resolvedLinks is kept up to date).
+			if (!this.resolvedLinks[path]?.[file.path]) continue;
 			const hits = [...(cache.links ?? []), ...(cache.embeds ?? [])].filter((l) => this.getFirstLinkpathDest(parseLinktext(l.link).path, path) === file);
 			if (hits.length) out.set(path, hits);
 		}

@@ -38,8 +38,11 @@ export {
 } from './ui';
 export { Plugin, type Command, type CommandContext, type Hotkey, type Modifier, type PluginManifest } from './plugin';
 export { type KeyContext, hotkeyString, eventString, parseHotkey, reservedFor } from './keymap';
-export { parsePrefix, caseNameAt, inFootnote, contextPanel, groupResults, clampHeight, DOCKET_PREFIXES } from './docket-logic';
-export { DocketRegistry, type DocketPanel, type SearchProvider, type SearchResult, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
+export { parsePrefix, caseNameAt, inFootnote, contextPanel, groupResults, mergeResults, clampHeight, DOCKET_PREFIXES } from './docket-logic';
+export { SearchIndex, tokenize, type TextHit, type NameHit, type HeadingHit, type RankContext, type IndexedHeading } from './search-index';
+export { SearchService } from './search-service';
+export { Usage, frecency, type UsageEntry } from './usage';
+export { DocketRegistry, type DocketPanel, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
 export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';

@@ -63,6 +63,26 @@ export class SettingsModal extends Modal {
 	 * Show the settings of every page whose name or description has all the words of `query`, grouped
 	 * by page. The rows are the pages' own, so their controls work as usual.
 	 */
+	/**
+	 * Every setting by page: its name and description, read by drawing each page off screen (as the
+	 * settings search does). For the Docket's search. Empty while the dialog is open.
+	 */
+	listSettings(): { tabId: string; tabName: string; name: string; desc: string }[] {
+		if (this.isOpen) return [];
+		const out: { tabId: string; tabName: string; name: string; desc: string }[] = [];
+		for (const tab of [...this.coreTabs, ...this.pluginTabs]) {
+			tab.containerEl.empty();
+			try { tab.display(); } catch { console.error(`Settings page ${tab.name} failed`); continue; }
+			for (const row of tab.containerEl.querySelectorAll<HTMLElement>('.setting-item:not(.setting-item-heading):not(.mod-buttons)')) {
+				const name = row.querySelector('.setting-item-name')?.textContent?.trim() ?? '';
+				if (name) out.push({ tabId: tab.id, tabName: tab.name, name, desc: row.querySelector('.setting-item-description')?.textContent?.trim() ?? '' });
+			}
+			try { tab.hide(); } catch { /* nothing to undo */ }
+			tab.containerEl.empty();
+		}
+		return out;
+	}
+
 	search(query: string): void {
 		const words = query.toLowerCase().split(/\s+/).filter(Boolean);
 		if (words.length === 0) {

@@ -79,6 +79,8 @@ export interface HostBridge {
 		isSmoke: boolean;
 		/** Screenshot mode (--shots), and a capture of the window in smoke modes. */
 		isShots?: boolean;
+		/** Benchmark mode (--bench): time the Docket on the open homebase and report. */
+		isBench?: boolean;
 		capture?(name: string): Promise<string | null>;
 		/** A spelling dictionary shipped with the app (Hunspell .aff and .dic), or null. */
 		dictionary(lang: string): Promise<{ aff: string; dic: string } | null>;

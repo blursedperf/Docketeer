@@ -731,6 +731,12 @@ export async function runShots(app: App): Promise<void> {
 	await shot('27-docket-pinned-outline');
 	docket.toggleMode();
 	docket.close(true);
+	for (const n of document.querySelectorAll(".notice")) n.remove(); // the "pinned" notices
+	docket.open({ query: 'native title' });
+	await sleep(50);
+	(docket as unknown as { showAll(type: string): void }).showAll('In notes');
+	await shot('28-docket-full-text');
+	docket.close(true);
 	await app.setConfig('docket', false);
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }
@@ -932,6 +938,60 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (help && plugin) || `help=${help} plugin=${plugin}`;
 	});
 
+	await check('search: full text, with the matching words marked', async () => {
+		await app.search.ready;
+		press('p', { ctrl: true });
+		await type('footnote');
+		const groups = [...document.querySelectorAll('.docket-group')].map((g) => g.getAttribute('aria-label'));
+		const marked = [...document.querySelectorAll('.docket-group[aria-label="In notes"] mark')].some((m) => m.textContent?.toLowerCase() === 'footnote');
+		press('Escape'); press('Escape');
+		return (groups.includes('In notes') && marked) || `groups=${groups.join('|')} marked=${marked}`;
+	});
+
+	await check('search: the index follows edits, and leaves out nothing it should not', async () => {
+		const f = await vault.create('Zebra crossing.md', 'Pedestrians have priority at a zebra crossing.\n');
+		await sleep(100);
+		const found = app.search.index.searchText('pedestrians prio').hits.some((h) => h.path === f.path);
+		await vault.modify(f, 'Nothing about that any more.\n');
+		await sleep(50);
+		const gone = app.search.index.searchText('pedestrians').total === 0;
+		await vault.trash(f, true);
+		await sleep(50);
+		return (found && gone && !app.search.index.has(f.path)) || `found=${found} gone=${gone}`;
+	});
+
+	await check('search: "show all" lists a whole group; Esc comes back', async () => {
+		press('p', { ctrl: true });
+		await type('e');
+		const more = [...document.querySelectorAll('.docket-option.mod-more')];
+		const target = more[0];
+		if (!target) { press('Escape'); press('Escape'); return 'no "show all" row'; }
+		const before = document.querySelectorAll('.docket-option').length;
+		(target as HTMLElement).click();
+		await sleep(50);
+		const groups = document.querySelectorAll('.docket-group').length;
+		const label = document.querySelector('.docket-prefix')?.textContent;
+		const after = document.querySelectorAll('.docket-option').length;
+		press('Escape');
+		await sleep(50);
+		const back = document.querySelectorAll('.docket-group').length > 1;
+		press('Escape'); press('Escape');
+		return (groups === 1 && after > 0 && !!label && back && before > 0) || `groups=${groups} label=${label} after=${after} back=${back}`;
+	});
+
+	await check('search: settings and used notes rank in', async () => {
+		press('p', { ctrl: true });
+		await type('vim');
+		await sleep(50);
+		await type('vim');
+		const settings = [...document.querySelectorAll('.docket-group[aria-label="Settings"] .docket-option-title')].map((e) => e.textContent);
+		press('Escape'); press('Escape');
+		const welcome = vault.getFileByPath('Welcome.md')!;
+		for (let i = 0; i < 5; i++) app.search.usage.record('note', welcome.path);
+		const used = app.search.usage.score('note', welcome.path) > 0;
+		return (settings.some((t) => /vim/i.test(t ?? '')) && used) || `settings=${settings.join('|')} used=${used}`;
+	});
+
 	await check('docket: turning it off removes it and gives Mod+P back to the palette', async () => {
 		await app.setConfig('docket', false);
 		await app.setConfig('docketPanel', 'core:outline');
@@ -940,4 +1000,65 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const noProviders = app.docket.providers.size === 0 && app.docket.panels.size === 0;
 		return (gone && palette && noProviders) || `gone=${gone} palette=${palette} providers=${app.docket.providers.size}`;
 	});
+}
+
+/**
+ * Performance budgets on a large homebase (npm run bench: 10,000 generated notes): the Docket opens in
+ * under 50 ms, each keystroke filters in under 16 ms, a pane split opens in under 100 ms.
+ */
+export async function runBench(app: App): Promise<void> {
+	const { workspace, vault } = app;
+	const checks: Check[] = [];
+	const t0 = performance.now();
+	await app.search.ready;
+	const indexMs = performance.now() - t0;
+	await app.setConfig('docket', true);
+	type DocketUI = { open(o?: object): number; close(hide?: boolean): void; update(): Promise<void> };
+	const ui = (app as unknown as { docketUI: DocketUI }).docketUI;
+	const input = () => document.querySelector<HTMLInputElement>('.docket-input')!;
+	const note = vault.getMarkdownFiles()[0]!;
+	await workspace.getLeaf(false).openFile(note);
+	await sleep(300);
+	const stats = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return { median: s[Math.floor(s.length / 2)]!, p90: s[Math.floor(s.length * 0.9)]!, worst: s[s.length - 1]! }; };
+	const round = (n: number) => Math.round(n * 10) / 10;
+
+	const opens: number[] = [];
+	for (let i = 0; i < 12; i++) { opens.push(ui.open()); await sleep(20); ui.close(true); await sleep(20); }
+	const open = stats(opens.slice(2));
+	checks.push({ name: `Docket opens in under 50 ms (median ${round(open.median)}, worst ${round(open.worst)})`, ok: open.worst < 50 });
+
+	const typed = ['s', 'sm', 'smi', 'smit', 'smith', 'smith v', 'smith v j', 'n', 'ne', 'neg', 'negl', 'neglig', 'negligence', 'negligence b', 'negligence breach', 'pro', 'proximate', 'proximate rel', '>sp', '>split', '#to', '#torts'];
+	const keys: number[] = [];
+	ui.open();
+	for (const q of typed) {
+		input().value = q;
+		const t = performance.now();
+		await ui.update(); // what the input event runs: search every provider and draw the results
+		keys.push(performance.now() - t);
+		await sleep(10);
+	}
+	const results = document.querySelectorAll('.docket-option').length;
+	ui.close(true);
+	const key = stats(keys);
+	const slow = typed.map((q, i) => `${q}: ${round(keys[i]!)}`).filter((_, i) => keys[i]! > 12).join(', ');
+	checks.push({ name: `(slowest keystrokes: ${slow || 'none over 12 ms'})`, ok: true });
+	checks.push({ name: `Filtering takes under 16 ms a keystroke (median ${round(key.median)}, 90th percentile ${round(key.p90)}, worst ${round(key.worst)})`, ok: key.p90 < 16 && results > 0 });
+
+	const splits: number[] = [];
+	for (let i = 0; i < 5; i++) {
+		const leaf = workspace.activeLeaf!;
+		const t = performance.now();
+		const next = await workspace.duplicateLeaf(leaf, 'vertical'); // what Split right runs
+		next.view.containerEl.getBoundingClientRect(); // laid out
+		splits.push(performance.now() - t);
+		await sleep(100);
+		next.detach();
+		workspace.setActiveLeaf(leaf, { focus: true });
+		await sleep(50);
+	}
+	const split = stats(splits);
+	checks.push({ name: `A pane split opens in under 100 ms (median ${round(split.median)}, worst ${round(split.worst)})`, ok: split.worst < 100 });
+	checks.push({ name: `Index of ${app.search.index.size} notes ready ${Math.round(indexMs)} ms after the window`, ok: app.search.index.size === vault.getMarkdownFiles().length });
+	await app.setConfig('docket', false);
+	app.host.app.smokeReport?.({ ok: checks.every((c) => c.ok), checks, notices: [] });
 }

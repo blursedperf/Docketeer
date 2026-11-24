@@ -87,3 +87,35 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     selected. Detection is deliberately simple until the Authorities parser (Phase 4).
 28. **Budget check**: the smoke test opens the Docket five times and requires each open under 50 ms (with the
     small test homebase; the 10,000-note fixture comes in Phase 3).
+
+## Phase 3
+
+29. **The index lives in memory only** (`SearchIndex`, `packages/api/src/search-index.ts`): an inverted index of
+    words for full text, plus names and headings. Nothing with note text is written to disk, so the rule
+    "stored with the same encryption as the notes" never arises. It is built from the notes' text, which
+    the vault already holds in memory, in batches after the window appears (about 0.7 s for 10,000 notes),
+    and follows every create, change, rename and delete. Locked notes are never added (`app.isLocked`).
+30. **Full text matches every word as a prefix** (the last word is usually half typed). Results show the line
+    of the first match with the words marked. Ranking: a cheap score for every match (use, same folder or
+    unit, name matching), then the costly checks (whole phrase present, match near the top) for the best
+    300 only, which keeps keystrokes inside the budget when thousands of notes match.
+31. **Use is recorded in `.quire/usage.json`**: note paths and command ids with a count and the last time,
+    no note text. Frecency halves every week. This is on disk like `workspace.json` (which already lists
+    open notes); the locking phase must decide whether locked notes' paths may appear there.
+32. **Context**: notes in the same folder as the open note rank higher than notes in the same unit (top
+    folder), which rank higher than the rest, per decision 7 (units are folders).
+33. **Groups**: Notes (names), Headings (all notes), Commands, In notes (full text), Settings; `/` still
+    searches only the open note's headings. The unprefixed search shows up to five of each group, with a
+    "Show all N" row; choosing it lists that group alone (up to 200) and Esc returns. Providers may return
+    only their best results with `totals`, so counts are right without building every result.
+34. **Settings search** draws each settings page off screen once per session, when the Docket first opens,
+    and matches names (descriptions only for close matches).
+35. **Benchmark**: `scripts/fixture.mjs` generates a deterministic homebase (10,000 notes, 22 MB, subject
+    and topic folders). `npm test` includes an index benchmark (90% of keystrokes under 16 ms); `npm run
+    bench` runs the app on the fixture and checks all three budgets. CI runs it and reports, without failing
+    the build, since shared machines vary.
+36. **Found by the benchmark and fixed**: opening any note took about 10 s with 10,000 notes because the
+    Backlinks pane resolved every link in every note, and each resolution scanned the whole file list.
+    Links are now resolved through a name map, backlinks start from `resolvedLinks` (now re-resolved when
+    a note is created), and unlinked mentions only check the notes the index says contain the name's
+    words, a few at a time, stopping when a newer render starts. A split now takes about 11 ms.

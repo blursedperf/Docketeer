@@ -15,6 +15,8 @@ export interface SearchResult {
 	type: string;
 	title: string;
 	detail?: string;
+	/** Parts of `detail` to highlight (the matched words in a line of text). */
+	detailRanges?: [number, number][];
 	icon?: string;
 	/** Higher is better; providers score their own results. */
 	score?: number;
@@ -30,16 +32,24 @@ export interface SearchResult {
 export interface SearchQuery {
 	/** The text after any prefix. */
 	text: string;
+	/** Only this group is wanted ("show all"): providers may return more of it. */
+	only?: string;
 	/** "", ">", "@", "#", "/" or "?". */
 	prefix: string;
 }
+
+export type SearchResults = SearchResult[] | { results: SearchResult[]; totals?: Record<string, number> };
 
 export interface SearchProvider {
 	id: string;
 	title: string;
 	/** Prefixes it answers ("" is the unprefixed search). */
 	prefixes: string[];
-	search(q: SearchQuery): SearchResult[] | Promise<SearchResult[]>;
+	/**
+	 * Results for the query. A provider may return only its best results with `totals` saying how many
+	 * there are in each group, so "show all" can say "12 of 340" without building them all.
+	 */
+	search(q: SearchQuery): SearchResults | Promise<SearchResults>;
 	source?: string;
 }
 

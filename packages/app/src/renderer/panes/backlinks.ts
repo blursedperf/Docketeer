@@ -40,8 +40,13 @@ export class BacklinksView extends ItemView {
 		void this.render();
 	}
 
+	/** Bumped on every render: a render that has been overtaken stops. */
+	private generation = 0;
+
 	private async render(): Promise<void> {
 		const file = this.file;
+		const gen = ++this.generation;
+		const stale = () => gen !== this.generation;
 		this.bodyEl.empty();
 		if (!file) { this.bodyEl.createDiv({ cls: 'pane-empty', text: 'Open a note to see what links to it.' }); return; }
 		const { vault, metadataCache } = this.app;
@@ -57,6 +62,7 @@ export class BacklinksView extends ItemView {
 			const src = vault.getFileByPath(path);
 			if (!src) continue;
 			const text = await vault.cachedRead(src);
+			if (stale()) return;
 			linkedBody.createDiv({ cls: 'pane-file', text: src.basename, attr: { title: src.path } }).addEventListener('click', (e) => openAt(this.app, src, {}, e));
 			for (const l of links) {
 				const from = l.position.start.offset;
@@ -80,8 +86,17 @@ export class BacklinksView extends ItemView {
 		unlinkedBody.toggle(this.showUnlinked);
 		const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(file.basename)}(?![\\p{L}\\p{N}])`, 'giu');
 		let found = 0;
-		for (const src of vault.getMarkdownFiles()) {
-			if (src === file) continue;
+		// Only notes that contain every word of the name can mention it: the search index narrows a large
+		// homebase to a few. Until the index is built, every note is checked.
+		const search = this.app.search;
+		const paths = search.isReady ? search.index.candidates(file.basename) : null;
+		const sources = paths ? paths.map((p) => vault.getFileByPath(p)).filter((f): f is TFile => !!f) : vault.getMarkdownFiles();
+		let checked = 0;
+		for (const src of sources) {
+			if (src === file || this.app.isLocked(src)) continue;
+			// Let the window draw between batches, and stop if a newer render started.
+			if (++checked % 200 === 0) { await new Promise((r) => setTimeout(r, 0)); }
+			if (stale()) return;
 			const text = await vault.cachedRead(src);
 			const cache = metadataCache.getFileCache(src);
 			const skip: [number, number][] = [

@@ -25,6 +25,16 @@ export function plainHeading(h: string): string {
 	return h.replace(/(\*\*|__|\*|_|`|~~|==)(?=\S)(.+?)(?<=\S)\1/g, '$2').replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1');
 }
 
+/** Open `file` with the cursor on `line`. */
+export async function openFileAtLine(app: App, file: TFile, line: number, where: OpenWhere): Promise<void> {
+	await openFileIn(app, file, where);
+	const view = app.workspace.getActiveViewOfType(MarkdownView);
+	if (view?.file === file && view.getMode() === 'source') {
+		view.editor.setCursor({ line, ch: 0 });
+		view.editor.scrollIntoView({ from: { line, ch: 0 }, to: { line, ch: 0 } }, true);
+	}
+}
+
 /** Open `file` here, in a new pane to the right, or below. */
 export function openFileIn(app: App, file: TFile, where: OpenWhere, subpath?: string): Promise<void> {
 	const leaf = where === 'current' ? app.workspace.getLeaf(false) : app.workspace.getLeaf('split', where === 'right' ? 'vertical' : 'horizontal');
@@ -35,60 +45,124 @@ export function openFileIn(app: App, file: TFile, where: OpenWhere, subpath?: st
 }
 
 export function registerCoreProviders(app: App): () => void {
-	const { docket, commands, vault, metadataCache, workspace } = app;
-	const recent: string[] = [];
-	const ref = app.on('command-run', (id: string) => { recent.splice(0, recent.length, id, ...recent.filter((x) => x !== id).slice(0, 29)); });
+	const { docket, commands, vault, metadataCache, workspace, search } = app;
 	const hint = (c: Command) => { const k = commands.hotkeysFor(c)[0]; return k ? formatHotkey(k) : undefined; };
 	const activePath = () => workspace.getActiveFile()?.path ?? '';
+	const fileAt = (path: string) => vault.getFileByPath(path);
+	const many = (only: string | undefined, type: string) => (only === type ? 200 : 8);
 
 	const commandResult = (c: Command, score: number): SearchResult => ({
 		id: c.id, type: 'Commands', title: c.name, detail: c.section, icon: c.icon ?? 'terminal', score, hint: hint(c),
 		open: () => { commands.executeCommand(c); },
 	});
 
+	const noteResult = (f: TFile, score: number): SearchResult => ({
+		id: f.path, type: 'Notes', title: f.basename, detail: f.parent && !f.parent.isRoot() ? f.parent.path : undefined,
+		icon: 'file-text', file: f, score,
+		open: (where) => openFileIn(app, f, where),
+		insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}]]`,
+	});
+
+	// Settings: read once a session, when the Docket first opens (drawing every page takes a moment).
+	let settings: ReturnType<typeof app.setting.listSettings> | null = null;
+	const warm = app.on('docket-open', () => { if (!settings) window.setTimeout(() => { settings ??= app.setting.listSettings(); }, 0); });
+
 	const removers = [
 		docket.addSearchProvider({
 			id: 'core:commands', title: 'Commands', prefixes: ['', '>'], source: 'core',
 			search: ({ text, prefix }) => {
 				const out: SearchResult[] = [];
+				const now = Date.now();
 				for (const c of commands.listCommands()) {
 					if (c.id === 'app:docket' || !commands.isAvailable(c)) continue;
+					const used = search.usage.score('command', c.id, now);
 					if (!text) {
-						if (prefix !== '>') continue;
-						const r = recent.indexOf(c.id);
-						out.push(commandResult(c, r === -1 ? -1000 - c.name.charCodeAt(0) / 1000 : 1000 - r));
+						if (prefix === '>') out.push(commandResult(c, used * 10 - c.name.charCodeAt(0) / 1000));
 						continue;
 					}
 					const s = best(text, [c.name, ...(c.aliases ?? []), ...(c.keywords ?? []), c.section]);
-					if (s !== null) out.push(commandResult(c, s + (recent.includes(c.id) ? 20 - recent.indexOf(c.id) / 2 : 0)));
+					if (s !== null) out.push(commandResult(c, s + used));
 				}
 				return out;
 			},
 		}),
 		docket.addSearchProvider({
 			id: 'core:notes', title: 'Notes', prefixes: [''], source: 'core',
-			search: ({ text }) => {
+			search: ({ text, only }) => {
 				if (!text) return [];
+				const ctx = search.rankContext();
+				const results: SearchResult[] = [];
+				const totals: Record<string, number> = {};
+				// Names (fuzzy). Until the index is built, straight from the file list.
+				if (!only || only === 'Notes') {
+					if (search.isReady) {
+						const r = search.index.searchNames(text, many(only, 'Notes'), ctx);
+						totals.Notes = r.total;
+						for (const h of r.hits) { const f = fileAt(h.path); if (f) results.push(noteResult(f, h.score)); }
+					} else {
+						for (const f of vault.getMarkdownFiles()) {
+							if (app.isLocked(f)) continue;
+							const s = best(text, [f.basename, f.path]);
+							if (s !== null) results.push(noteResult(f, s + (ctx.usage?.(f.path) ?? 0)));
+						}
+					}
+				}
+				// Full text: every word, as a prefix, anywhere in a note.
+				if (search.isReady && text.length >= 2 && (!only || only === 'In notes')) {
+					const r = search.index.searchText(text, many(only, 'In notes'), ctx);
+					totals['In notes'] = r.total;
+					for (const h of r.hits) {
+						const f = fileAt(h.path);
+						if (!f) continue;
+						results.push({
+							id: `${h.path}:${h.line}`, type: 'In notes', title: f.basename, detail: h.snippet, detailRanges: h.ranges,
+							icon: 'text-search', file: f, score: h.score,
+							open: (where) => openFileAtLine(app, f, h.line, where),
+							insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}]]`,
+						});
+					}
+				}
+				// Headings in every note.
+				if (search.isReady && text.length >= 2 && (!only || only === 'Headings')) {
+					const r = search.index.searchHeadings(text, many(only, 'Headings'), ctx);
+					totals.Headings = r.total;
+					for (const h of r.hits) {
+						const f = fileAt(h.path);
+						if (!f) continue;
+						const title = plainHeading(h.heading.text);
+						results.push({
+							id: `${h.path}#${h.heading.line}`, type: 'Headings', title, detail: `${'#'.repeat(h.heading.level)} in ${f.basename}`,
+							icon: 'hash', file: f, score: h.score,
+							open: (where) => openFileIn(app, f, where, `#${h.heading.text}`),
+							insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}#${h.heading.text}]]`,
+						});
+					}
+				}
+				return { results, totals };
+			},
+		}),
+		docket.addSearchProvider({
+			id: 'core:settings', title: 'Settings', prefixes: [''], source: 'core',
+			search: ({ text }) => {
+				if (text.length < 2) return [];
+				settings ??= app.setting.listSettings();
 				const out: SearchResult[] = [];
-				for (const f of vault.getMarkdownFiles()) {
-					if (app.isLocked(f)) continue;
-					const s = best(text, [f.basename, f.path]);
-					if (s === null) continue;
+				for (const st of settings) {
+					const s = best(text, [st.name, st.tabName, st.desc]);
+					if (s === null || s < 50) continue; // close matches only: descriptions are long
 					out.push({
-						id: f.path, type: 'Notes', title: f.basename, detail: f.parent && !f.parent.isRoot() ? f.parent.path : undefined,
-						icon: 'file-text', file: f, score: s,
-						open: (where) => openFileIn(app, f, where),
-						insert: () => `[[${metadataCache.fileToLinktext(f, activePath())}]]`,
+						id: `${st.tabId}:${st.name}`, type: 'Settings', title: st.name, detail: st.tabName, icon: 'settings', score: s,
+						open: () => { app.setting.open(); app.setting.search(st.name); },
 					});
 				}
 				return out;
 			},
 		}),
 		docket.addSearchProvider({
-			id: 'core:headings', title: 'Headings in this note', prefixes: ['', '/'], source: 'core',
-			search: ({ text, prefix }) => {
+			id: 'core:headings', title: 'Headings in this note', prefixes: ['/'], source: 'core',
+			search: ({ text }) => {
 				const file = workspace.getActiveFile();
-				if (!file || app.isLocked(file) || (!text && prefix !== '/')) return [];
+				if (!file || app.isLocked(file)) return [];
 				const out: SearchResult[] = [];
 				(metadataCache.getFileCache(file)?.headings ?? []).forEach((h, i) => {
 					const title = plainHeading(h.heading);
@@ -165,6 +239,6 @@ export function registerCoreProviders(app: App): () => void {
 			},
 		}),
 	];
-	return () => { app.offref(ref); for (const r of removers) r(); };
+	return () => { app.offref(warm); for (const r of removers) r(); };
 }
 

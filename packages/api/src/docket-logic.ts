@@ -48,13 +48,13 @@ export function contextPanel(line: string, ch: number): { panel: 'authorities'; 
 }
 
 /** Group heading order for the unprefixed search. Other types follow, alphabetically. */
-const TYPE_ORDER = ['Notes', 'Headings', 'Commands', 'Authorities', 'Folders', 'Tags', 'Settings', 'Shortcuts'];
+const TYPE_ORDER = ['Notes', 'Headings', 'Commands', 'Authorities', 'In notes', 'Folders', 'Tags', 'Settings', 'Shortcuts'];
 
 /**
  * Results grouped by type, best first within a group, groups in a fixed order; `perGroup` limits each
  * group (the unprefixed search shows a few of each).
  */
-export function groupResults(results: SearchResult[], perGroup = Infinity): { type: string; items: SearchResult[]; total: number }[] {
+export function groupResults(results: SearchResult[], perGroup = Infinity, totals: Record<string, number> = {}): { type: string; items: SearchResult[]; total: number }[] {
 	const by = new Map<string, SearchResult[]>();
 	for (const r of results) {
 		const list = by.get(r.type) ?? [];
@@ -66,11 +66,23 @@ export function groupResults(results: SearchResult[], perGroup = Infinity): { ty
 		.sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
 		.map(([type, items]) => {
 			const sorted = [...items].sort((x, y) => (y.score ?? 0) - (x.score ?? 0));
-			return { type, items: sorted.slice(0, perGroup), total: items.length };
+			return { type, items: sorted.slice(0, perGroup), total: Math.max(items.length, totals[type] ?? 0) };
 		});
 }
 
 /** Clamp the Docket's height (a fraction of the window) to 20–60 %. */
 export function clampHeight(f: number): number {
 	return Math.min(0.6, Math.max(0.2, Math.round(f * 100) / 100));
+}
+
+/** Merge what providers returned (plain lists or lists with totals). */
+export function mergeResults(lists: (SearchResult[] | { results: SearchResult[]; totals?: Record<string, number> })[]): { results: SearchResult[]; totals: Record<string, number> } {
+	const results: SearchResult[] = [];
+	const totals: Record<string, number> = {};
+	for (const l of lists) {
+		if (Array.isArray(l)) { results.push(...l); continue; }
+		results.push(...l.results);
+		for (const [k, v] of Object.entries(l.totals ?? {})) totals[k] = (totals[k] ?? 0) + v;
+	}
+	return { results, totals };
 }

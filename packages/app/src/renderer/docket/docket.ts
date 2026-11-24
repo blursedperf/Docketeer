@@ -7,7 +7,7 @@ import type { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import {
 	type App, type DocketPanel, type OpenWhere, type SearchResult,
-	MarkdownView, Notice, Platform, clampHeight, contextPanel, formatHotkey, groupResults, parsePrefix, setIcon, topModal,
+	MarkdownView, Notice, Platform, clampHeight, contextPanel, formatHotkey, groupResults, mergeResults, parsePrefix, setIcon, topModal,
 } from '@quire/api';
 
 type Zone = 'input' | 'results' | 'panel' | 'tabs';
@@ -50,6 +50,8 @@ export class Docket {
 	private shownPanel: DocketPanel | null = null;
 	private saved: { cm: EditorView | null; selection: EditorSelection | null; el: Element | null } | null = null;
 	private seq = 0;
+	/** "Show all" of one group. */
+	private only: string | null = null;
 	private detach: (() => void)[] = [];
 
 	constructor(private app: App) {
@@ -98,7 +100,7 @@ export class Docket {
 		this.applyMode();
 		this.applyHeight();
 
-		this.inputEl.addEventListener('input', () => { this.actions = null; this.actionsOf = null; void this.update(); });
+		this.inputEl.addEventListener('input', () => { this.actions = null; this.actionsOf = null; if (!this.inputEl.value) this.only = null; void this.update(); });
 		this.el.addEventListener('keydown', (e) => this.onKey(e));
 		this.el.addEventListener('focusin', () => { app.docketOpen = true; });
 		this.el.addEventListener('focusout', () => window.setTimeout(() => this.onFocusOut(), 0));
@@ -156,12 +158,14 @@ export class Docket {
 		this.el.addClass('is-open');
 		this.handleEl.addClass('is-open');
 		this.inputEl.value = opts.query ?? '';
+		this.only = null;
 		this.actions = null;
 		this.actionsOf = null;
 		this.renderTabs();
 		void this.update();
 		this.inputEl.focus();
 		this.app.docketOpen = true;
+		this.app.trigger('docket-open');
 		return performance.now() - t0;
 	}
 
@@ -320,8 +324,8 @@ export class Docket {
 	/** Show the panel (empty input) or search the providers for the prefix. */
 	async update(): Promise<void> {
 		const q = parsePrefix(this.inputEl.value);
-		this.prefixEl.setText(PREFIX_LABEL[q.prefix] ?? '');
-		this.prefixEl.toggleClass('is-filtered', q.prefix !== '');
+		this.prefixEl.setText(this.only ?? PREFIX_LABEL[q.prefix] ?? '');
+		this.prefixEl.toggleClass('is-filtered', q.prefix !== '' || !!this.only);
 		if (this.actions) { this.renderActions(); return; }
 		if (!q.prefix && !q.text) {
 			this.resultsEl.setAttribute('hidden', '');
@@ -334,14 +338,26 @@ export class Docket {
 		}
 		const seq = ++this.seq;
 		const providers = [...this.app.docket.providers.values()].filter((p) => p.prefixes.includes(q.prefix));
+		const only = this.only ?? undefined;
 		const lists = await Promise.all(providers.map(async (p) => {
-			try { return await p.search(q); } catch { console.error(`Docket search provider ${p.id} failed`); return []; }
+			try { return await p.search({ ...q, only }); } catch { console.error(`Docket search provider ${p.id} failed`); return []; }
 		}));
 		if (seq !== this.seq || !this.opened) return;
+		const merged = mergeResults(lists);
 		// Locked notes never reach the results, whichever provider found them.
-		const all = lists.flat().filter((r) => !(r.file && this.app.isLocked(r.file)));
-		const groups = groupResults(all, q.prefix ? 200 : 5);
-		this.items = groups.flatMap((g) => g.items);
+		let all = merged.results.filter((r) => !(r.file && this.app.isLocked(r.file)));
+		if (only) all = all.filter((r) => r.type === only);
+		const groups = groupResults(all, only || q.prefix ? 200 : 5, merged.totals);
+		// A "show all" row closes each group that has more.
+		this.items = [];
+		for (const g of groups) {
+			this.items.push(...g.items);
+			if (!only && g.total > g.items.length) {
+				const more: SearchResult = { id: `docket:more:${g.type}`, type: g.type, title: `Show all ${g.total}`, icon: 'chevrons-down', open: () => this.showAll(g.type) };
+				g.items = [...g.items, more];
+				this.items.push(more);
+			}
+		}
 		this.selected = 0;
 		this.renderResults(groups, q.prefix);
 	}
@@ -357,8 +373,12 @@ export class Docket {
 			const group = this.resultsEl.createDiv({ cls: 'docket-group', attr: { role: 'group', 'aria-label': g.type } });
 			const head = group.createDiv({ cls: 'docket-group-title', attr: { 'aria-hidden': 'true' } });
 			head.createSpan({ text: g.type });
-			if (g.total > g.items.length) head.createSpan({ cls: 'docket-group-more', text: `${g.items.length} of ${g.total}` });
-			for (const r of g.items) this.renderOption(group, i++, r.title, r.detail, r.icon, r.hint);
+			const shown = g.items.filter((r) => !r.id.startsWith('docket:more:')).length;
+			if (g.total > shown) head.createSpan({ cls: 'docket-group-more', text: `${shown} of ${g.total}` });
+			for (const r of g.items) {
+				const el = this.renderOption(group, i++, r.title, r.detail, r.icon, r.hint, r.detailRanges);
+				if (r.id.startsWith('docket:more:')) el.addClass('mod-more');
+			}
 		}
 		if (!this.items.length) this.resultsEl.createDiv({ cls: 'docket-empty', text: EMPTY[prefix] ?? 'No matches.' });
 		this.select(0);
@@ -366,15 +386,26 @@ export class Docket {
 		this.liveEl.setText(n ? `${n} result${n === 1 ? '' : 's'}` : EMPTY[prefix] ?? 'No matches.');
 	}
 
-	private renderOption(parent: HTMLElement, i: number, title: string, detail?: string, icon?: string, hint?: string): void {
+	private renderOption(parent: HTMLElement, i: number, title: string, detail?: string, icon?: string, hint?: string, ranges?: [number, number][]): HTMLElement {
 		const opt = parent.createDiv({ cls: 'docket-option', attr: { role: 'option', id: `docket-opt-${i}`, 'aria-selected': 'false' } });
 		if (icon) setIcon(opt.createSpan({ cls: 'docket-option-icon' }), icon);
 		const text = opt.createDiv({ cls: 'docket-option-text' });
 		text.createDiv({ cls: 'docket-option-title', text: title });
-		if (detail) text.createDiv({ cls: 'docket-option-detail', text: detail });
+		if (detail) {
+			const d = text.createDiv({ cls: 'docket-option-detail' });
+			let at = 0;
+			for (const [a, b] of ranges ?? []) {
+				if (a < at) continue;
+				d.appendText(detail.slice(at, a));
+				d.createEl('mark', { text: detail.slice(a, b) });
+				at = b;
+			}
+			d.appendText(detail.slice(at));
+		}
 		if (hint) opt.createEl('kbd', { cls: 'docket-option-hint', text: hint });
 		opt.addEventListener('mousemove', () => { if (this.selected !== i) this.select(i); });
 		opt.addEventListener('click', (e) => { this.select(i); this.choose(this.whereFor(e)); });
+		return opt;
 	}
 
 	private select(i: number): void {
@@ -409,6 +440,7 @@ export class Docket {
 		}
 		const r = this.items[this.selected];
 		if (!r) return;
+		if (r.id.startsWith('docket:more:')) { this.showAll(r.type); return; }
 		if (where === 'insert') {
 			const text = r.insert?.() ?? null;
 			if (!text) { new Notice(`"${r.title}" cannot be inserted as a link.`); return; }
@@ -424,10 +456,17 @@ export class Docket {
 		void Promise.resolve(r.open(where)).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
 	}
 
+	/** Every result of one group. Esc returns to all groups. */
+	showAll(type: string): void {
+		this.only = type;
+		void this.update();
+		this.liveEl.setText(`All ${type}`);
+	}
+
 	/** → or Mod+.: the actions for the selected result. */
 	private showActions(): boolean {
 		const r = this.items[this.selected];
-		if (!r || this.actions) return false;
+		if (!r || this.actions || r.id.startsWith('docket:more:')) return false;
 		const list: ActionItem[] = [];
 		if (r.open) {
 			list.push({ title: 'Open', icon: 'arrow-right', run: () => r.open!('current') });
@@ -501,6 +540,7 @@ export class Docket {
 				handled();
 				if (this.actions) this.leaveActions();
 				else if (zone !== 'input') this.focusZone('input');
+				else if (this.only) { this.only = null; void this.update(); }
 				else if (this.inputEl.value) { this.inputEl.value = ''; void this.update(); }
 				else this.close();
 				return;

@@ -18,7 +18,8 @@
     "dist": "npm run build && npm run dist -w @quire/app",
     "shots": "npm run build && npm run shots -w @quire/app",
     "lint:css": "node scripts/css-lint.mjs",
-    "shots:diff": "node scripts/shots-diff.mjs"
+    "shots:diff": "node scripts/shots-diff.mjs",
+    "bench": "npm run build && node scripts/bench.mjs"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.2.0",

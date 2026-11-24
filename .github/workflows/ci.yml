@@ -28,6 +28,10 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           sudo apt-get update && sudo apt-get install -y xvfb
           xvfb-run -a npm run smoke
+      - name: Performance budgets with 10,000 generated notes
+        # Reported, not enforced: shared CI machines vary too much for a hard limit. Run locally: npm run bench.
+        continue-on-error: true
+        run: xvfb-run -a node scripts/bench.mjs
 
   screenshots:
     # Every screen in several palettes, densities and icon sets, compared with test/visual/linux/.

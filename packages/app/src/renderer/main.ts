@@ -17,7 +17,7 @@ import * as lezerMarkdown from '@lezer/markdown';
 import { App, getHost, setIcon, setIconPack } from '@quire/api';
 import { registerCore } from './core';
 import { registerBundledIconPacks } from './icon-packs';
-import { runShots, runSmoke } from './smoke';
+import { runBench, runShots, runSmoke } from './smoke';
 
 (globalThis as Record<string, unknown>).__quireModules = {
 	'@quire/api': api,
@@ -82,6 +82,7 @@ async function start() {
 		document.body.addClass('is-shots');
 		await runShots(app);
 	}
+	else if (host.app.isBench) await runBench(app);
 	else if (host.app.isSmoke) await runSmoke(app);
 }
 

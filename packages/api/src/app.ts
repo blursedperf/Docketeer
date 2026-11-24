@@ -8,6 +8,7 @@ import { FileManager, MetadataCache } from './metadata';
 import type { Command, CommandContext, Hotkey, Plugin, PluginManifest } from './plugin';
 import { type KeyContext, eventString, formatHotkey as formatHotkeyFor, hotkeyString, reservedFor } from './keymap';
 import { DocketRegistry } from './docket-registry';
+import { SearchService } from './search-service';
 import type { TFile } from './files';
 import { SettingsModal } from './settings-modal';
 import { Modal, Notice, topModal } from './ui';
@@ -410,6 +411,8 @@ export class App extends Events {
 	spellchecker: Spellchecker;
 	/** Docket panels, search providers and result actions (core and plugins). */
 	docket: DocketRegistry;
+	/** The in-memory search index and the record of what is used (for ranking). */
+	search: SearchService;
 	/** True while the Docket is open (for shortcuts that only work there). */
 	docketOpen = false;
 	statusBarEl: HTMLElement;
@@ -434,6 +437,7 @@ export class App extends Events {
 		this.customCss = new CustomCss(this);
 		this.spellchecker = new Spellchecker(this);
 		this.docket = new DocketRegistry();
+		this.search = new SearchService(this);
 	}
 
 	/**
@@ -555,6 +559,7 @@ export class App extends Events {
 		await this.vault.load();
 		await this.customCss.load();
 		await this.metadataCache.indexAll();
+		await this.search.usage.load();
 		await this.plugins.initialize();
 		let layout: unknown = null;
 		try {
@@ -565,6 +570,8 @@ export class App extends Events {
 		}
 		await this.workspace.loadLayout(layout);
 		this.workspace.setLayoutReady();
+		// The search index builds in the background (the notes' text is already in memory).
+		void this.search.build();
 		// The dictionary loads in the background; editors are marked when it is ready.
 		if (this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage).catch((e: unknown) => console.error('Spellcheck', e));
 		this.host.app.onBeforeQuit(async () => {
