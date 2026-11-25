@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.10.0
 
 - **Properties as a table while you write.** A note's properties (the YAML at the top) show as the same small
   table as in reading view, instead of `---` and raw YAML. Click the table, or move into it from the text below,
