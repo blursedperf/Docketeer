@@ -989,3 +989,23 @@ input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: no
 .cm-table-add:hover { color: var(--doom-blue-text); border-color: var(--doom-blue); }
 .cm-table-add-column { top: 0; right: 0; bottom: var(--space-6); width: var(--space-4); }
 .cm-table-add-row { left: 0; right: var(--space-6); bottom: 0; height: var(--space-4); }
+
+/* Stacked tabs (WorkspaceTabs.stacked): side by side at a reading width, scrolling sideways; each tab sticks after the
+   spines before it and before the spines after it, so tabs fold into spines at either edge. */
+.workspace-tabs.mod-stacked { --stack-width: min(44rem, 85%); --spine-width: var(--space-8); }
+.workspace-tabs.mod-stacked .workspace-tab-header-container-inner { display: none; }
+.workspace-tabs.mod-stacked .workspace-tab-container { display: flex; overflow-x: auto; overflow-y: hidden; }
+.workspace-tabs.mod-stacked .workspace-tab-container > .workspace-leaf {
+	display: flex; flex: 0 0 var(--stack-width); flex-direction: row; position: sticky;
+	left: calc(var(--stack-before) * var(--spine-width));
+	right: calc(var(--stack-after) * var(--spine-width) - var(--stack-width) + var(--spine-width));
+	background: var(--doom-bg); border-left: var(--border-width) solid var(--doom-border-subtle); box-shadow: -2px 0 6px rgb(0 0 0 / 0.25);
+}
+.workspace-tabs.mod-stacked .workspace-leaf > .workspace-leaf-content { flex: 1; min-width: 0; }
+.workspace-leaf-spine {
+	flex: 0 0 var(--spine-width); writing-mode: vertical-rl; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+	padding: var(--space-2) 0; font-family: var(--font-chrome); font-size: var(--text-sm); color: var(--text-muted);
+	cursor: var(--cursor); border-right: var(--border-width) solid var(--doom-hairline); display: flex; align-items: center;
+}
+.workspace-leaf-spine:hover { color: var(--doom-blue-text); background: var(--doom-base2); }
+.workspace-leaf.is-stack-active > .workspace-leaf-spine { color: var(--doom-blue-text); }

@@ -379,6 +379,8 @@ export interface AppConfig {
 	/** Where pasted and dropped files go: a folder from the root, "./" (the note's folder) or "./name". */
 	attachmentFolder: string;
 	alwaysUpdateLinks: boolean;
+	/** Notes opened from the Docket go in a new tab (or the tab already showing them), not over the note in use. */
+	docketNewTab: boolean;
 	vimMode: boolean;
 	/** Show Markdown formatted while writing (raw on the lines being edited). */
 	livePreview: boolean;
@@ -437,6 +439,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 	newFileFolderPath: '',
 	attachmentFolder: 'attachments',
 	alwaysUpdateLinks: true,
+	docketNewTab: true,
 	vimMode: false,
 	livePreview: true,
 	inlineTitle: true,

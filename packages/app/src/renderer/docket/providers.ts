@@ -4,7 +4,7 @@
  */
 import {
 	type App, type Command, type OpenWhere, type SearchResult, MarkdownView, Platform, TFile,
-	formatHotkey, fuzzyScore, getAllTags, wordMatch,
+	formatHotkey, fuzzyScore, getAllTags, wordMatch, FileView, type WorkspaceLeaf,
 } from '@quire/api';
 import type { Docket } from './docket';
 import { countNotes, revealInUnits } from './panels/units';
@@ -38,7 +38,21 @@ export async function openFileAtLine(app: App, file: TFile, line: number, where:
 
 /** Open `file` here, in a new pane to the right, or below. */
 export function openFileIn(app: App, file: TFile, where: OpenWhere, subpath?: string): Promise<void> {
-	const leaf = where === 'current' ? app.workspace.getLeaf(false) : app.workspace.getLeaf('split', where === 'right' ? 'vertical' : 'horizontal');
+	let leaf: WorkspaceLeaf;
+	if (where === 'current') {
+		// The tab already showing it, if any; otherwise a new tab (an empty one in front is reused), so the note in
+		// use is not replaced. With the setting off, over the note in use, as before.
+		let open: WorkspaceLeaf | null = null;
+		app.workspace.iterateAllLeaves((l) => { if (!open && l.view instanceof FileView && l.view.file === file) open = l; });
+		if (open) {
+			const found: WorkspaceLeaf = open;
+			found.parent?.selectTab(found);
+			app.workspace.setActiveLeaf(found, { focus: true });
+			if (subpath && found.view instanceof MarkdownView) found.view.scrollToSubpath(subpath);
+			return Promise.resolve();
+		}
+		leaf = app.workspace.getLeaf(app.config.docketNewTab !== false ? 'tab' : false);
+	} else leaf = app.workspace.getLeaf('split', where === 'right' ? 'vertical' : 'horizontal');
 	return leaf.openFile(file).then(() => {
 		if (subpath && leaf.view instanceof MarkdownView) leaf.view.scrollToSubpath(subpath);
 		app.workspace.setActiveLeaf(leaf, { focus: true });

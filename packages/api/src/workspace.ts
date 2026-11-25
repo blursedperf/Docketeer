@@ -17,6 +17,9 @@ function opensBeside(path: string): boolean {
 }
 
 export type ViewCreator = (leaf: WorkspaceLeaf) => View;
+
+/** A place in a pane's history: what it showed, and where in it (the cursor). */
+export interface LeafHistoryEntry { state: ViewState; eState: Record<string, unknown> }
 export type SplitDirection = 'vertical' | 'horizontal';
 export type PaneType = 'tab' | 'split' | 'window';
 
@@ -182,8 +185,22 @@ export class WorkspaceTabs extends WorkspaceItem {
 		leaf.parent = this;
 		this.children.splice(index, 0, leaf);
 		this.tabsEl.insertBefore(leaf.tabHeaderEl, this.tabsEl.children[index] ?? null);
-		this.contentEl.appendChild(leaf.containerEl);
+		this.contentEl.insertBefore(leaf.containerEl, this.contentEl.children[index] ?? null);
 		this.selectTab(leaf);
+	}
+
+	/**
+	 * Stacked tabs: every tab shown side by side at a reading width, scrolling sideways, each with a spine carrying
+	 * its title; as they scroll, earlier tabs fold into spines at the left and later ones at the right.
+	 */
+	stacked = false;
+
+	setStacked(on: boolean): void {
+		this.stacked = on;
+		this.containerEl.toggleClass('mod-stacked', on);
+		const current = this.activeLeaf;
+		if (current) this.selectTab(current);
+		this.workspace.requestSaveLayout();
 	}
 
 	removeChild(leaf: WorkspaceLeaf): void {
@@ -198,11 +215,18 @@ export class WorkspaceTabs extends WorkspaceItem {
 
 	selectTab(leaf: WorkspaceLeaf): void {
 		this.currentTab = Math.max(0, this.children.indexOf(leaf));
+		const n = this.children.length;
 		this.children.forEach((l, i) => {
 			const on = i === this.currentTab;
-			l.containerEl.toggle(on);
+			l.containerEl.toggle(on || this.stacked);
 			l.tabHeaderEl.toggleClass('is-active', on);
+			l.containerEl.toggleClass('is-stack-active', this.stacked && on);
+			l.setSpine(this.stacked);
+			// Where it sticks while scrolling: after the spines before it, before the spines after it.
+			l.containerEl.style.setProperty('--stack-before', String(i));
+			l.containerEl.style.setProperty('--stack-after', String(n - 1 - i));
 		});
+		if (this.stacked) leaf.containerEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 		if (leaf.view) leaf.view.onResize();
 	}
 
@@ -219,6 +243,29 @@ export class WorkspaceLeaf extends Events {
 	private tabIconEl: HTMLElement;
 	private tabTitleEl: HTMLElement;
 	pinned = false;
+	/**
+	 * Where this pane has been, for Back and Forward (newest last): a note replaced by another is one Back away,
+	 * at the place the cursor was.
+	 */
+	history: { back: LeafHistoryEntry[]; forward: LeafHistoryEntry[] } = { back: [], forward: [] };
+	private navigating = false;
+	/** The spine a stacked tab shows its title on (see WorkspaceTabs.stacked). */
+	private spineEl: HTMLElement | null = null;
+
+	setSpine(on: boolean): void {
+		if (!on) { this.spineEl?.remove(); this.spineEl = null; return; }
+		if (!this.spineEl) {
+			this.spineEl = createDiv({ cls: 'workspace-leaf-spine', attr: { role: 'button', tabindex: '-1' } });
+			this.spineEl.addEventListener('mousedown', (e) => {
+				e.preventDefault();
+				this.parent?.selectTab(this);
+				this.workspace.setActiveLeaf(this, { focus: true });
+			});
+			this.containerEl.prepend(this.spineEl);
+		}
+		this.spineEl.setText(this.view.getDisplayText());
+		this.spineEl.setAttribute('aria-label', `Show ${this.view.getDisplayText()}`);
+	}
 	/** When it was last active, for getMostRecentLeaf. */
 	activeTime = 0;
 	private working: Promise<void> = Promise.resolve();
@@ -254,6 +301,7 @@ export class WorkspaceLeaf extends Events {
 			menu.addItem((i) => i.setTitle('Close').setIcon('x').onClick(run('app:close-tab', () => this.detach())));
 			menu.addItem((i) => i.setTitle('Split right').setIcon('separator-vertical').onClick(run('app:split-right', () => this.workspace.duplicateLeaf(this, 'vertical'))));
 			menu.addItem((i) => i.setTitle('Split down').setIcon('separator-horizontal').onClick(run('app:split-down', () => this.workspace.duplicateLeaf(this, 'horizontal'))));
+			menu.addItem((i) => i.setTitle(this.parent?.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => this.parent?.setStacked(!this.parent.stacked)));
 			this.view.onPaneMenu(menu, 'tab-header');
 			menu.showAtMouseEvent(e);
 		});
@@ -278,6 +326,15 @@ export class WorkspaceLeaf extends Events {
 	/** Show a view of `state.type` with `state.state`. Calls are queued, so they never overlap. */
 	setViewState(state: ViewState, eState?: Record<string, unknown>): Promise<void> {
 		const run = async () => {
+			// Leaving a note or file for another: remember it for Back (not while going Back or Forward).
+			if (!this.navigating && this.view instanceof FileView && this.view.file) {
+				const next = (state.state as { file?: unknown } | undefined)?.file;
+				if (state.type !== this.view.getViewType() || next !== this.view.file.path) {
+					this.history.back.push({ state: this.getViewState(), eState: this.view.getEphemeralState() });
+					if (this.history.back.length > 50) this.history.back.shift();
+					this.history.forward = [];
+				}
+			}
 			if (this.view.getViewType() !== state.type) {
 				const creator = this.workspace.getViewCreator(state.type);
 				if (!creator) throw new Error(`No view of type "${state.type}" is registered`);
@@ -320,6 +377,34 @@ export class WorkspaceLeaf extends Events {
 		if (openState.active !== false && !this.isSidebar()) this.workspace.setActiveLeaf(this, { focus: true });
 	}
 
+	get canGoBack(): boolean { return this.history.back.some((e) => this.stillThere(e)); }
+	get canGoForward(): boolean { return this.history.forward.some((e) => this.stillThere(e)); }
+
+	private stillThere(e: LeafHistoryEntry): boolean {
+		const file = (e.state.state as { file?: unknown } | undefined)?.file;
+		return typeof file !== 'string' || !!this.workspace.app.vault.getAbstractFileByPath(file);
+	}
+
+	/** Back to what this pane showed before (true if it went). Files since deleted are skipped. */
+	goBack(): Promise<boolean> { return this.travel(this.history.back, this.history.forward); }
+	/** Forward again after going Back. */
+	goForward(): Promise<boolean> { return this.travel(this.history.forward, this.history.back); }
+
+	private async travel(from: LeafHistoryEntry[], to: LeafHistoryEntry[]): Promise<boolean> {
+		let e = from.pop();
+		while (e && !this.stillThere(e)) e = from.pop();
+		if (!e) { this.updateHeader(); return false; }
+		if (this.view instanceof FileView && this.view.file) to.push({ state: this.getViewState(), eState: this.view.getEphemeralState() });
+		this.navigating = true;
+		try {
+			await this.setViewState(e.state, e.eState);
+		} finally {
+			this.navigating = false;
+		}
+		this.workspace.setActiveLeaf(this, { focus: true });
+		return true;
+	}
+
 	getDisplayText(): string { return this.view.getDisplayText(); }
 	getIcon(): string { return this.view.getIcon(); }
 
@@ -327,6 +412,7 @@ export class WorkspaceLeaf extends Events {
 		setIcon(this.tabIconEl, this.view.getIcon());
 		this.tabTitleEl.setText(this.view.getDisplayText());
 		this.tabHeaderEl.setAttribute('aria-label', this.view.getDisplayText());
+		if (this.spineEl) this.spineEl.setText(this.view.getDisplayText());
 		if (this.view instanceof ItemView) this.view.updateTitle();
 	}
 
@@ -1092,7 +1178,7 @@ export class Workspace extends Events {
 
 	private serialize(x: WorkspaceItem): unknown {
 		if (x instanceof WorkspaceTabs) {
-			return { type: 'tabs', weight: x.weight, current: x.currentTab, children: x.children.map((l) => ({ ...l.getViewState(), active: l === this.activeLeaf })) };
+			return { type: 'tabs', weight: x.weight, current: x.currentTab, ...(x.stacked ? { stacked: true } : {}), children: x.children.map((l) => ({ ...l.getViewState(), active: l === this.activeLeaf })) };
 		}
 		const s = x as WorkspaceSplit;
 		return { type: 'split', direction: s.direction, weight: s.weight, children: s.children.map((c) => this.serialize(c)) };
@@ -1140,6 +1226,7 @@ export class Workspace extends Events {
 				const tabs = new WorkspaceTabs(this);
 				tabs.weight = Number(data.weight) || 1;
 				await fillTabs(tabs, data);
+				if (data.stacked === true) tabs.setStacked(true);
 				return tabs.children.length ? tabs : null;
 			}
 			if (data?.type === 'split') {

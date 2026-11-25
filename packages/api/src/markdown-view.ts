@@ -463,6 +463,12 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	 * Go to a place in the note: `{ line }` (0-based), or `{ from, to }` offsets to select (as search
 	 * results and backlinks do), or `{ subpath: "#Heading" }`.
 	 */
+	/** Where the cursor is (for Back and Forward). */
+	override getEphemeralState(): Record<string, unknown> {
+		const sel = this.editor.cm.state.selection.main;
+		return { from: sel.anchor, to: sel.head };
+	}
+
 	override setEphemeralState(state: unknown): void {
 		const s = (state ?? {}) as { line?: number; from?: number; to?: number; subpath?: string; focus?: boolean };
 		if (this.mode !== 'source' && (s.line !== undefined || s.from !== undefined)) void this.setMode('source');

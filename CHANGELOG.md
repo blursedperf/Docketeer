@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Back and Forward.** Each pane remembers what it showed: when a note is replaced by another (a link followed, a
+  note chosen), **Back** brings it back, with the cursor where it was, and **Forward** returns. ← and → at the left
+  of the header band, **Alt+←** and **Alt+→** (**⌘[** and **⌘]** on a Mac, where ⌥← moves by word), and the mouse's
+  back and forward buttons. Notes deleted since are skipped.
+- **The Docket opens notes in a new tab.** A note chosen in the Docket no longer replaces the one you are in: it opens
+  in a new tab, or goes to the tab already showing it (an empty tab is reused). Settings → Files and links → *Open
+  notes from the Docket in a new tab* turns this off.
+- **Stacked tabs.** *Toggle stacked tabs* (a command, and *Stack tabs* in a tab's right-click menu) lays a pane's
+  tabs side by side at a reading width, scrolling sideways; each has a spine with its title, and tabs fold into
+  spines at the edges as you scroll. Click a spine to bring its tab into view. Kept with the layout.
 - **Tables while you write.** In live preview a table is drawn as a table (with its bold, italics and links) until you
   click into it; clicking a cell puts the cursor in that cell of the Markdown. Hover it for **+** at the right edge (a
   column) and the foot (a row). Editing a table, **Tab** and **Shift+Tab** go to the next and previous cell and line

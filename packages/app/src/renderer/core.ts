@@ -80,6 +80,8 @@ class FilesTab extends SettingTab {
 		const el = this.containerEl;
 		const c = this.app.config;
 		new Setting(el).setName('Files and links').setHeading();
+		new Setting(el).setName('Open notes from the Docket in a new tab').setDesc('A note chosen in the Docket opens in a new tab (or the tab already showing it), so the note you were in stays where it is. Off: it replaces the note in the tab in use. Back (Alt+←, ⌘[ on a Mac) returns to what a tab showed before either way.')
+			.addToggle((t) => t.setValue(c.docketNewTab !== false).onChange((v) => { void this.app.setConfig('docketNewTab', v); }));
 		new Setting(el).setName('Default location for new notes')
 			.addDropdown((d) => d.addOptions({ root: 'Homebase folder', current: 'Same folder as current file', folder: 'In the folder below' })
 				.setValue(c.newFileLocation).onChange((v) => { void this.app.setConfig('newFileLocation', v as typeof c.newFileLocation); this.display(); }));

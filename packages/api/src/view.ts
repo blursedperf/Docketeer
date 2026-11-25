@@ -46,10 +46,23 @@ export abstract class ItemView extends View {
 	protected _headerEl: HTMLElement;
 	protected _titleEl: HTMLElement;
 	protected _actionsEl: HTMLElement;
+	protected _navEl: HTMLElement;
+	private _backEl: HTMLButtonElement;
+	private _forwardEl: HTMLButtonElement;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 		this._headerEl = this.containerEl.createDiv({ cls: 'view-header' });
+		// Back and Forward through what this pane has shown (for views of files: see `navigation`).
+		this._navEl = this._headerEl.createDiv({ cls: 'view-header-nav' });
+		const nav = (icon: string, label: string, go: () => unknown) => {
+			const b = this._navEl.createEl('button', { cls: 'clickable-icon view-action', attr: { 'aria-label': label, title: label, type: 'button' } });
+			setIcon(b, icon);
+			b.addEventListener('click', () => { void go(); });
+			return b;
+		};
+		this._backEl = nav('arrow-left', 'Back', () => this.leaf.goBack());
+		this._forwardEl = nav('arrow-right', 'Forward', () => this.leaf.goForward());
 		this._titleEl = this._headerEl.createDiv({ cls: 'view-header-title' });
 		this._actionsEl = this._headerEl.createDiv({ cls: 'view-actions' });
 		this.contentEl = this.containerEl.createDiv({ cls: 'view-content' });
@@ -66,6 +79,16 @@ export abstract class ItemView extends View {
 	/** Refresh the header title (and the tab). */
 	updateTitle(): void {
 		this._titleEl.setText(this.getDisplayText());
+		this.updateNav();
+	}
+
+	/** Show Back and Forward for views of files, greyed out when there is nowhere to go. */
+	updateNav(): void {
+		this._navEl.toggle(this.navigation);
+		this._backEl.toggleClass('is-disabled', !this.leaf.canGoBack);
+		this._backEl.disabled = !this.leaf.canGoBack;
+		this._forwardEl.toggleClass('is-disabled', !this.leaf.canGoForward);
+		this._forwardEl.disabled = !this.leaf.canGoForward;
 	}
 }
 

@@ -2,7 +2,7 @@
  * Tiling from the keyboard: split, move between panes, move tabs between panes, resize, equalise, zoom,
  * reopen a closed tab; layout presets and saved layouts. All are commands, so they are in the Docket.
  */
-import { type App, type Direction, type Hotkey, Notice, PRESETS, Platform, type Preset, TFile } from '@quire/api';
+import { type App, type Direction, type Hotkey, Notice, PRESETS, Platform, type Preset, TFile, type WorkspaceLeaf } from '@quire/api';
 import { NameModal } from './dialogs';
 
 const ARROW: Record<Direction, string> = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' };
@@ -38,6 +38,32 @@ export function registerTiling(app: App): { applyPreset(p: Preset): Promise<void
 	resize('app:pane-shorter', 'Make the pane shorter', 'shorter', 'height', -0.05);
 	add({ id: 'app:equalise-panes', name: 'Make all panes the same size', icon: 'columns-3', aliases: ['Equalize panes'], hotkeys: [{ modifiers: ['Mod', 'Shift'], key: '=' }], when: hasPanes, run: () => workspace.equalisePanes() });
 	add({ id: 'app:zoom-pane', name: 'Zoom the pane (and back)', icon: 'maximize-2', aliases: ['Maximise pane', 'Full screen pane'], hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'Enter' }], when: () => hasPanes() || workspace.zoomed, run: () => { workspace.toggleZoom(); } });
+	// Back and Forward through what the pane has shown: ⌘[ ⌘] on macOS (⌥← moves by word there), Alt+← Alt+→ elsewhere.
+	const pane = () => workspace.activeLeaf && !workspace.activeLeaf.isSidebar() ? workspace.activeLeaf : null;
+	add({
+		id: 'app:go-back', name: 'Go back', icon: 'arrow-left', aliases: ['Back', 'Previous note', 'Navigate back'],
+		hotkeys: [Platform.isMacOS ? { modifiers: ['Mod'], key: '[' } : { modifiers: ['Alt'], key: 'ArrowLeft' }],
+		when: () => !app.docketOpen && !!pane()?.canGoBack, run: () => pane()?.goBack(),
+	});
+	add({
+		id: 'app:go-forward', name: 'Go forward', icon: 'arrow-right', aliases: ['Forward', 'Navigate forward'],
+		hotkeys: [Platform.isMacOS ? { modifiers: ['Mod'], key: ']' } : { modifiers: ['Alt'], key: 'ArrowRight' }],
+		when: () => !app.docketOpen && !!pane()?.canGoForward, run: () => pane()?.goForward(),
+	});
+	// The mouse's back and forward buttons, over a pane.
+	workspace.containerEl.addEventListener('mouseup', (e) => {
+		if (e.button !== 3 && e.button !== 4) return;
+		const el = (e.target as HTMLElement).closest('.workspace-leaf');
+		let target: WorkspaceLeaf | null = null;
+		workspace.iterateAllLeaves((l) => { if (l.containerEl === el) target = l; });
+		if (!target) return;
+		e.preventDefault();
+		void (e.button === 3 ? (target as WorkspaceLeaf).goBack() : (target as WorkspaceLeaf).goForward());
+	});
+	add({
+		id: 'app:toggle-stacked-tabs', name: 'Toggle stacked tabs', icon: 'layers', aliases: ['Stack tabs', 'Sliding panes', 'Unstack tabs'],
+		when: () => !!pane()?.parent, run: () => { const t = pane()?.parent; if (t) t.setStacked(!t.stacked); },
+	});
 	add({ id: 'app:reopen-closed-tab', name: 'Reopen closed tab', icon: 'rotate-ccw', hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 't' }], when: () => workspace.closedTabs.length > 0, run: () => workspace.reopenClosed() });
 	// Split right and down get their planned shortcuts (the commands exist already).
 	const split = (id: string, keys: Hotkey[]) => { const c = app.commands.findCommand(id); if (c) c.hotkeys = keys; };

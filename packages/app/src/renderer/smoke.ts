@@ -9,6 +9,7 @@ import { type App, MarkdownView, Platform, formatHotkey, paneRects, type TFile, 
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { genericPanels } from './docket/panels-model';
+import { openFileIn } from './docket/providers';
 
 const splitCells = (line: string) => line.trim().replace(/^\||\|$/g, '').split('|');
 import { revealInUnits } from './docket/panels/units';
@@ -1941,6 +1942,66 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await view.save();
 		workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file === note)?.detach();
 		await vault.delete(note);
+		return problems.length === 0 || problems.join('; ');
+	});
+	await check('Back and Forward in a pane; the Docket opens notes in a new tab; stacked tabs', async () => {
+		const problems: string[] = [];
+		const a = await vault.create('Nav A.md', 'First note\nline two\nline three');
+		const b = await vault.create('Nav B.md', 'Second note');
+		const c = await vault.create('Nav C.md', 'Third note');
+		// Back and Forward: B replaced A in the pane; Back brings A back at its cursor.
+		const leaf = workspace.getLeaf('tab');
+		await leaf.openFile(a);
+		(leaf.view as MarkdownView).editor.setCursor({ line: 2, ch: 4 });
+		await leaf.openFile(b);
+		if (!leaf.canGoBack) problems.push('no Back after a note was replaced');
+		const backBtn = leaf.view.containerEl.querySelector<HTMLButtonElement>('.view-header-nav button');
+		if (!backBtn || backBtn.disabled) problems.push('the Back button is not there or not enabled');
+		commands.executeCommandById('app:go-back');
+		await sleep(150);
+		if ((leaf.view as MarkdownView).file !== a) problems.push(`Back showed ${(leaf.view as MarkdownView).file?.path}`);
+		const cur = (leaf.view as MarkdownView).editor.getCursor();
+		if (cur.line !== 2 || cur.ch !== 4) problems.push(`Back put the cursor at ${cur.line}:${cur.ch}`);
+		commands.executeCommandById('app:go-forward');
+		await sleep(150);
+		if ((leaf.view as MarkdownView).file !== b) problems.push('Forward did not return to B');
+		// The Docket: a note opens in a new tab; one already open is brought forward, not opened again.
+		workspace.setActiveLeaf(leaf, { focus: true });
+		const leaves = () => { let n = 0; workspace.iterateAllLeaves(() => { n++; }); return n; };
+		const before = leaves();
+		await openFileIn(app, c, 'current');
+		await sleep(100);
+		if ((leaf.view as MarkdownView).file !== b) problems.push('the Docket replaced the note in use');
+		if (leaves() !== before + 1 || workspace.getActiveFile() !== c) problems.push('the Docket did not open a new tab');
+		const count = leaves();
+		await openFileIn(app, b, 'current');
+		await sleep(100);
+		if (leaves() !== count || workspace.activeLeaf !== leaf) problems.push('an open note was opened again instead of brought forward');
+		// Stacked tabs: all side by side with spines; click one; off again.
+		const tabs = leaf.parent!;
+		await workspace.getLeaf('tab').openFile(a);
+		workspace.setActiveLeaf(leaf, { focus: true });
+		commands.executeCommandById('app:toggle-stacked-tabs');
+		await sleep(150);
+		if (!tabs.stacked || !tabs.containerEl.classList.contains('mod-stacked')) problems.push('not stacked');
+		const shown = tabs.children.filter((l) => l.containerEl.getClientRects().length > 0).length;
+		if (shown !== tabs.children.length) problems.push(`stacked shows ${shown} of ${tabs.children.length}`);
+		const spines = [...tabs.contentEl.querySelectorAll<HTMLElement>('.workspace-leaf-spine')];
+		if (spines.length !== tabs.children.length || !spines.some((sp) => sp.textContent === 'Nav C')) problems.push(`spines: ${spines.map((sp) => sp.textContent).join(', ')}`);
+		const firstSpine = tabs.children[0]!.containerEl.querySelector<HTMLElement>('.workspace-leaf-spine');
+		firstSpine?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+		await sleep(100);
+		if (workspace.activeLeaf !== tabs.children[0]) problems.push('a spine did not bring its tab forward');
+		if (!JSON.stringify(workspace.getLayout()).includes('"stacked":true')) problems.push('stacking is not saved');
+		commands.executeCommandById('app:toggle-stacked-tabs');
+		await sleep(100);
+		if (tabs.stacked || tabs.contentEl.querySelector('.workspace-leaf-spine')) problems.push('not unstacked');
+		if (tabs.children.filter((l) => l.containerEl.getClientRects().length > 0).length !== 1) problems.push('unstacked shows more than one tab');
+		// Clean up.
+		await vault.delete(a);
+		await sleep(100);
+		for (const f of [b, c]) await vault.delete(f);
+		await sleep(150);
 		return problems.length === 0 || problems.join('; ');
 	});
 	await check('units: pin, archive and folders from the keyboard', async () => {
