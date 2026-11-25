@@ -248,3 +248,16 @@ describe('app-wide hotkeys (the Docket key)', () => {
 		expect(app.trigger).toHaveBeenCalledWith('hotkeys-changed', 'a:x');
 	});
 });
+
+describe('panel arrangement', () => {
+	const panel = (id: string, order?: number) => ({ id, title: id, order, render: () => undefined });
+	it('orders the chosen panels first, hides the hidden ones, and keeps the rest in their default order', () => {
+		const r = new DocketRegistry();
+		for (const p of [panel('a', 1), panel('b', 2), panel('c', 3), panel('plugin')]) r.addPanel(p);
+		expect(r.orderedPanels().map((p) => p.id)).toEqual(['a', 'b', 'c', 'plugin']);
+		r.setArrangement({ order: ['c', 'missing', 'a'], hidden: ['b'] });
+		expect(r.allPanels().map((p) => p.id)).toEqual(['c', 'a', 'b', 'plugin']);
+		expect(r.orderedPanels().map((p) => p.id)).toEqual(['c', 'a', 'plugin']);
+		expect(r.panels.has('b')).toBe(true);
+	});
+});

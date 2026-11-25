@@ -79,6 +79,15 @@ export interface DocketPanel {
 	source?: string;
 }
 
+/** How the user arranged the Docket's tabs (saved by the app in .quire/panels.json). */
+export interface PanelArrangement { order: string[]; hidden: string[] }
+
+/** `panels` (in their default order) with those named in `order` first, in that order; the rest keep theirs. */
+export function arrangePanels<T extends { id: string }>(panels: T[], order: string[]): T[] {
+	const at = new Map(order.map((id, i) => [id, i]));
+	return panels.map((p, i) => ({ p, key: at.has(p.id) ? at.get(p.id)! : order.length + i })).sort((a, b) => a.key - b.key).map((x) => x.p);
+}
+
 export class DocketRegistry extends Events {
 	panels = new Map<string, DocketPanel>();
 	providers = new Map<string, SearchProvider>();
@@ -99,9 +108,25 @@ export class DocketRegistry extends Events {
 	addResultAction(a: ResultAction): () => void { return this.add(this.actions, a); }
 
 	/** Panels in Mod+number order: those with an order first, then the rest by when they were added. */
-	orderedPanels(): DocketPanel[] {
+	/** The user's arrangement of the tabs: panel ids in the order chosen, and the ids not shown as tabs. */
+	arrangement: PanelArrangement = { order: [], hidden: [] };
+
+	setArrangement(a: PanelArrangement): void {
+		this.arrangement = { order: [...a.order], hidden: [...a.hidden] };
+		this.trigger('changed');
+	}
+
+	/** Every panel, shown or not: in the order chosen, then the rest in their default order. */
+	allPanels(): DocketPanel[] {
 		const all = [...this.panels.values()];
-		return [...all.filter((p) => p.order !== undefined).sort((a, b) => a.order! - b.order!), ...all.filter((p) => p.order === undefined)];
+		const byDefault = [...all.filter((p) => p.order !== undefined).sort((a, b) => a.order! - b.order!), ...all.filter((p) => p.order === undefined)];
+		return arrangePanels(byDefault, this.arrangement.order);
+	}
+
+	/** The panels shown as tabs (Mod+1 … Mod+9), in order. A hidden panel can still be opened by its id. */
+	orderedPanels(): DocketPanel[] {
+		const hidden = new Set(this.arrangement.hidden);
+		return this.allPanels().filter((p) => !hidden.has(p.id));
 	}
 
 	actionsFor(r: SearchResult): ResultAction[] {

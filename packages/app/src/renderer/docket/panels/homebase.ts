@@ -97,7 +97,7 @@ function countFiles(folder: TFolder): number {
  * marking a folder as a subject (unit) or topic. N and F on a row make a new note or folder there (in a folder
  * row's folder, beside a file); each opened folder, and the top, end with "+ New note" and "+ New folder".
  */
-function filesTree(app: App, docket: Docket, parent: HTMLElement, open: Set<string>): void {
+export function filesTree(app: App, docket: Docket, parent: HTMLElement, open: Set<string>, root: TFolder = app.vault.getRoot(), showKeys = true): void {
 	const store = unitsStore(app);
 	/** New note in `folder`: the name first (the same dialog as Ctrl+N, with the place chosen). */
 	const newNote = (folder: TFolder) => {
@@ -181,13 +181,12 @@ function filesTree(app: App, docket: Docket, parent: HTMLElement, open: Set<stri
 			keys(r, folder);
 		}
 	};
-	const help = parent.createDiv({ cls: 'docket-help' });
+	const help = showKeys ? parent.createDiv({ cls: 'docket-help' }) : createDiv();
 	for (const [k, t] of [['Enter', 'open'], ['N', 'new note here'], ['F', 'new folder here'], ['F2', 'rename'], [Platform.isMacOS ? '⌘⌫' : 'Del', 'delete'], ['→', 'more']] as const) {
 		const s = help.createSpan({ cls: 'docket-help-key' });
 		s.createEl('kbd', { text: k });
 		s.appendText(` ${t}`);
 	}
-	const root = app.vault.getRoot();
 	draw(root, 0);
 	addRows(root, 0);
 }
@@ -245,6 +244,7 @@ export function homebasePanel(app: App, docket: Docket): DocketPanel {
 			cmd('app:show-in-folder', 'Show this note in the file manager');
 			row(tools, docket, 'Open the homebase folder', () => { void app.host.app.showItemInFolder(''); }, { icon: 'folder-open' });
 			cmd('app:switch-homebase', 'Switch homebase…', 'Recent homebases, another folder, or the example');
+			cmd('app:arrange-panels', 'Arrange and customise the Docket\'s panels…', 'Hide, reorder, or build your own from commands, file trees and note lists');
 			cmd('app:open-settings', 'Settings');
 		},
 	};

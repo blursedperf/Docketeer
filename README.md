@@ -9,7 +9,8 @@ The first plugin, **AGLC4 Citations** (`plugins/aglc4`), is a port of
 
 Everything is reached from the keyboard through **the Docket**, a tray that drops from the top of the window
 (**Ctrl+P**, ⌘P on macOS): search across notes, commands, and panels for authorities, the outline, units
-(subjects and topics), citations, the homebase and the layout. Notes tile into panes from the keyboard. See
+(subjects and topics), citations, the homebase and the layout. Panels can be hidden, reordered, and built from
+commands, file trees, note lists and sections ([docs/docket/panels.md](docs/docket/panels.md)). Notes tile into panes from the keyboard. See
 [docs/docket/shortcuts.md](docs/docket/shortcuts.md) and [docs/docket/walkthrough.md](docs/docket/walkthrough.md).
 
 To look around first, choose *Try the example homebase* on the welcome screen (or *Switch homebase* → *Open the

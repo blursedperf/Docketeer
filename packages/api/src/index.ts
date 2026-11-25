@@ -46,7 +46,7 @@ export { outlineHeadings, moveSection, shiftLevel, isCaseBrief, addBriefField, B
 export { PRESETS, neighbour, paneRects, resizePane, equalise, zoomChain, type LayoutNode, type Direction, type Preset } from './layout-tree';
 export { CITATION_STYLES, AGLC4, planCitation, footnoteChanges, noteFootnotes, type CitationStyle, type FieldDef, type Source, type SourceKind, type SourceKindDef } from './cite';
 export { Usage, frecency, type UsageEntry } from './usage';
-export { DocketRegistry, type DocketPanel, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
+export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
 export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';

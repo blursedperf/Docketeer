@@ -1699,6 +1699,69 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(100);
 		return problems.length === 0 || problems.join('; ');
 	});
+	await check('custom panels: build one in the Docket from commands, a file tree, a note list and a section; hide and reorder panels', async () => {
+		const problems: string[] = [];
+		const ui = (app as unknown as { docketUI?: { close(hide?: boolean): void; showPanel(id: string): void } }).docketUI!;
+		const visible = () => titles().filter((t): t is string => !!t);
+		/** Choose the list item called `title` (or starting with it), with the keys. */
+		const pick = async (title: string) => {
+			await until(() => visible().some((t) => t === title || t.startsWith(title)), 2000);
+			const i = visible().findIndex((t) => t === title || t.startsWith(title));
+			if (i < 0) { problems.push(`no "${title}" in ${visible().slice(0, 8).join(' | ')}`); return false; }
+			for (let k = 0; k < i; k++) press('ArrowDown');
+			press('Enter');
+			await sleep(200);
+			return true;
+		};
+		const typeName = async (name: string) => {
+			const input = document.querySelector<HTMLInputElement>('.modal input');
+			if (!input) { problems.push('no name dialog'); return; }
+			input.value = name;
+			input.dispatchEvent(new Event('input'));
+			input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+			await sleep(250);
+		};
+		commands.executeCommandById('app:new-panel');
+		await sleep(100);
+		await typeName('My week');
+		if (await pick('Add commands…')) {
+			const newNote = commands.findCommand('app:new-note')?.name ?? 'New note';
+			await pick(newNote);
+			await pick('Done');
+		}
+		if (await pick('Add a file tree…')) await pick('Folder');
+		if (await pick('Add a note list…')) await pick('Recent notes');
+		if (await pick('Add a built-in section…')) await pick('Outline');
+		await pick('Show “My week”');
+		await sleep(200);
+		const tabs = () => [...document.querySelectorAll<HTMLElement>('.docket-tab')].map((t) => t.getAttribute('data-panel'));
+		if (!tabs().includes('custom:my-week')) problems.push(`no tab: ${tabs().join(',')}`);
+		const headings = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
+		for (const h of ['Commands', 'Folder', 'Recent notes', 'Outline']) if (!headings.includes(h)) problems.push(`no "${h}" heading: ${headings.join(' | ')}`);
+		if (!rowsText().includes('Inside')) problems.push('the file tree does not show Folder\'s note');
+		if (!rowsText().includes('Customise this panel…')) problems.push('no way to customise it');
+		const saved = await vault.adapter.read('.quire/panels.json').catch(() => '');
+		if (!saved.includes('"id": "my-week"') || !saved.includes('"type": "files"') || !saved.includes('"kind": "recent"')) problems.push(`panels.json: ${saved.slice(0, 200)}`);
+		// Hide Cite: it leaves the tabs (and Mod+number), but can still be opened.
+		commands.executeCommandById('app:arrange-panels');
+		await sleep(150);
+		if (await pick('Cite')) await pick('Hide it');
+		await sleep(100);
+		if (tabs().includes('core:cite')) problems.push('Cite still a tab');
+		if (app.docket.orderedPanels().some((p) => p.id === 'core:cite')) problems.push('Cite still in the order');
+		if (!app.docket.panels.has('core:cite')) problems.push('Cite unregistered');
+		// Put things back: every panel in its usual order, and the panel deleted.
+		await pick('Back to all panels');
+		await pick('Show every panel in its usual order');
+		await pick('My week');
+		await pick('Delete this panel…');
+		document.querySelector<HTMLElement>('.modal .mod-cta, .modal button.mod-warning')?.click();
+		await sleep(250);
+		if (app.docket.panels.has('custom:my-week')) problems.push('panel not deleted');
+		if (!app.docket.orderedPanels().some((p) => p.id === 'core:cite')) problems.push('Cite not back');
+		ui.close(true);
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('units: pin, archive and folders from the keyboard', async () => {
 		const brief = vault.getFileByPath('Brief test.md')!;
 		commands.executeCommandById('app:toggle-pin-note', { file: brief });

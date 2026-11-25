@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **Your own Docket panels.** Build panels from **commands** (any command, a plugin's too, with its key), **file
+  trees** (any folder, or the whole homebase), **note lists** (in a folder, with a tag, recent, pinned, or matching
+  words) and **built-in sections** (Units, Outline, Authorities, Layout …), in any order, each under its own heading.
+  *New Docket panel…* asks for a name and shows what it holds, with ways to add each kind; *Customise this panel…* at
+  the end of one changes it. All from lists in the Docket, so from the keyboard.
+- **Arrange the panels.** *Arrange the Docket's panels* (a command, and in Homebase) lists every panel, yours and the
+  built-in ones: hide one (Authorities and Cite, say, for notes that are not legal), or move it earlier or later; the
+  Mod+number keys follow. *Show every panel in its usual order* undoes it.
+- Panels and their arrangement are kept in `.quire/panels.json`, which can also be edited by hand
+  ([docs/docket/panels.md](docs/docket/panels.md)).
+- **Plugin API**: `app.docket.allPanels()`, `setArrangement()` and `arrangePanels()`; `orderedPanels()` leaves out hidden
+  panels.
+
 ## v0.12.1
 
 - **New notes and folders from Homebase › Files.** Each opened folder, and the top of the homebase, ends with

@@ -9,6 +9,7 @@ import { registerCorePanels } from './panels';
 import { registerCoreProviders } from './providers';
 import { registerNoteCommands, showLinksFrom, showLinksTo, showMentions } from './actions';
 import { revealInUnits } from './panels/units';
+import { registerCustomPanels } from './custom-panels';
 
 const MOD_P: Hotkey = { modifiers: ['Mod'], key: 'p' };
 
@@ -76,7 +77,7 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 		if (on() && !docket) {
 			docket = new Docket(app);
 			(app as unknown as { docketUI?: Docket }).docketUI = docket;
-			cleanup = [registerCoreProviders(app, docket), registerCorePanels(app, docket)];
+			cleanup = [registerCoreProviders(app, docket), registerCorePanels(app, docket), registerCustomPanels(app, docket)];
 		} else if (!on() && docket) {
 			docket.destroy();
 			docket = null;
