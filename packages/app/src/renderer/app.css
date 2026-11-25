@@ -885,7 +885,7 @@ input.docket-input:focus { box-shadow: none; }
 .docket-tab-icon svg, .docket-option-icon svg { width: var(--icon-s, 14px); height: var(--icon-s, 14px); }
 
 .docket-body { flex: 1; min-height: 0; display: flex; }
-.docket-results, .docket-panel { flex: 1; overflow-y: auto; padding: var(--space-1) var(--space-2); outline: none; }
+.docket-results, .docket-panel { flex: 1; overflow-y: auto; padding: var(--space-1) var(--space-2); outline: none; scroll-padding: var(--docket-title-h, 24px) 0 var(--docket-row, 30px); }
 .docket-results[hidden], .docket-panel[hidden] { display: none; }
 .docket-group + .docket-group { margin-top: var(--space-2); }
 .docket-group-title, .docket-section-title {
@@ -898,7 +898,10 @@ input.docket-input:focus { box-shadow: none; }
 	font-size: var(--text-md); text-align: left; color: var(--text-normal); background: transparent; border: none; box-shadow: none;
 	border-left: 2px solid transparent; border-radius: var(--radius-s); cursor: var(--cursor); height: auto;
 }
-.docket-option.is-selected, .docket-item:focus-visible, .docket-item:hover { background: rgba(var(--doom-blue-rgb), 0.16); color: var(--doom-blue-text); border-left-color: var(--doom-blue); outline: none; }
+/* The keyboard's row: tinted, with the accent edge. The mouse's row only lightens, and a panel's "current" row (the
+   active pane, the authority at the cursor) is marked by its name, so neither can be mistaken for where ↑/↓ are. */
+.docket-option.is-selected, .docket-item:focus-visible, .docket-item:focus { background: rgba(var(--doom-blue-rgb), 0.16); color: var(--doom-blue-text); border-left-color: var(--doom-blue); outline: none; }
+.docket-item:hover:not(:focus) { background: var(--doom-base2); }
 .docket-option-icon { display: flex; flex-shrink: 0; color: var(--text-faint); }
 .docket-option-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .docket-option-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -924,7 +927,8 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 .docket-badge { flex-shrink: 0; font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
 .docket-item.is-unconfirmed .docket-badge { color: var(--doom-orange, var(--text-muted)); }
 .docket-item.is-missing { color: var(--text-muted); }
-.docket-item.is-focus { background: rgba(var(--doom-blue-rgb), 0.1); }
+.docket-item.is-focus:not(:focus) .docket-option-title { font-weight: var(--font-semibold); color: var(--doom-blue-text); }
+.docket-item.is-focus:not(:focus) .docket-option-icon { color: var(--doom-blue-text); }
 .docket-item.is-command .docket-option-title { color: var(--text-muted); }
 .docket-filter { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1) var(--space-2) var(--space-2); }
 .docket-item.docket-chip { width: auto; min-height: 0; height: auto; padding: 0 var(--space-2); border: var(--border-width) solid var(--doom-border-subtle); border-left-width: var(--border-width); font-size: var(--text-sm); }

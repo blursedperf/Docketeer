@@ -479,9 +479,16 @@ export class Docket {
 		const dropped = !this.el.contains(document.activeElement) && (document.activeElement === document.body || !document.activeElement) && this.lastPanelRow >= 0;
 		const at = focusIndex ?? (now >= 0 ? now : dropped ? this.lastPanelRow : -1);
 		const wasPanel = this.panelEl.contains(document.activeElement) || dropped;
+		// Drawn again in place: the list keeps its scroll, and the row its focus without the browser scrolling to it.
+		const scroll = this.panelEl.scrollTop;
 		await this.renderPanel();
+		this.panelEl.scrollTop = scroll;
 		const list = rows();
-		if ((wasPanel || focusIndex !== undefined) && list.length) list[Math.max(0, Math.min(list.length - 1, at))]!.focus();
+		if ((wasPanel || focusIndex !== undefined) && list.length) {
+			const row = list[Math.max(0, Math.min(list.length - 1, at))]!;
+			row.focus({ preventScroll: true });
+			revealInList(this.panelEl, row);
+		}
 	}
 
 	// -----------------------------------------------------------------------------------------------
@@ -508,6 +515,9 @@ export class Docket {
 			this.inputEl.setAttribute('aria-expanded', 'false');
 			this.inputEl.removeAttribute('aria-activedescendant');
 			this.items = [];
+			// Entering a panel (opening the Docket, choosing a panel, clearing the search) starts at its top, not where
+			// this or another panel was left.
+			this.panelEl.scrollTop = 0;
 			await this.renderPanel();
 			return;
 		}
@@ -816,23 +826,25 @@ export class Docket {
 }
 
 /**
- * Keep the selected row in view by scrolling its list only (never the window or the panes): one row of context
- * above and below it, clear of its group's title (which stays at the top while its rows scroll). The first row of a
- * group brings the group's title into view with it, so moving past a title never jumps.
+ * Keep the selected row in view by scrolling its list only (never the window or the panes), with a fixed margin of
+ * one row above and below it. A fixed margin, not "the next row", keeps the selection at the same place on screen
+ * step after step while the list moves under it by whatever lies between two rows (a group's title and gap
+ * included), so nothing lurches, also through short groups. A row is shown below its group's title, which stays at the
+ * top while its rows scroll; a group's first row shows the title in its place above it.
  */
 export function revealInList(list: HTMLElement, el: HTMLElement): void {
-	const box = list.getBoundingClientRect();
 	const r = el.getBoundingClientRect();
+	const margin = r.height;
 	const group = el.closest<HTMLElement>('.docket-group, .docket-section-wrap');
+	const first = group?.querySelector('.docket-option, [data-docket-item]') === el;
 	const head = group?.querySelector<HTMLElement>(':scope > .docket-group-title, :scope > .docket-section-title');
-	const isRow = (n: Element | null) => !!n && (n.classList.contains('docket-option') || n.hasAttribute('data-docket-item'));
-	const prev = isRow(el.previousElementSibling) ? el.previousElementSibling!.getBoundingClientRect() : null;
-	const next = isRow(el.nextElementSibling) ? el.nextElementSibling!.getBoundingClientRect() : null;
-	// The highest point to show: the row before (below the sticky title), or the group's own top (its title).
-	const top = prev ? prev.top - (head?.offsetHeight ?? 0) : group ? group.getBoundingClientRect().top : r.top;
-	const bottom = (next ?? r).bottom;
+	const top = (group && first ? group.getBoundingClientRect().top : r.top - (head?.offsetHeight ?? 0)) - margin;
+	const bottom = r.bottom + margin;
+	const box = list.getBoundingClientRect();
 	let delta = 0;
 	if (bottom > box.bottom) delta = bottom - box.bottom;
 	if (top - delta < box.top) delta = top - box.top;
+	// Going up with less than a row left above: go right to the top rather than stop just short of it.
+	if (delta < 0 && list.scrollTop + delta < margin) delta = -list.scrollTop;
 	if (delta) list.scrollTop += delta;
 }

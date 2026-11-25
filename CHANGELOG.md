@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **Panels start at the top**: opening the Docket on a panel, choosing a panel or clearing the search shows it from
+  its first row, and ↓ goes to that row. Before, a panel could open scrolled to where another one was left.
+- **Moving through short sections is smooth**: the selected row keeps a margin of one row above and below it, so it
+  stays at the same place on screen while the list moves under it, by exactly what lies between two rows (a title
+  and its gap included). Before, the room kept below it depended on whether the next row was in the same section,
+  so the list lurched at sections of a title and one or two rows.
+- The mouse's row only lightens, and a panel's "current" row (the active pane in Layout, the authority at the
+  cursor) is marked by its name in the accent colour, so neither looks like the keyboard's row.
+- A panel drawn again after a change (a folder opened, a note renamed) keeps its scroll and its row, without the
+  browser scrolling the row to an edge.
+
 ## v0.17.0
 
 - **Tables stay tables while you type in them** (live preview). Click a cell, or arrow into the table from the line

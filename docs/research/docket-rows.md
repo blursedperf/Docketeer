@@ -22,10 +22,12 @@
 | Full-text matches (*In notes*) | 1.6 rows, every row of the group | the matching line is the point of the result, so it keeps its own line, but the whole group shares one height |
 | Group and section title | 24 px, sticky at the top of the list while its rows scroll | you always see which group you are in; the next title pushes the last away |
 | Gap between groups | 8 px | unchanged |
-| Scrolling | the list only, keeping one row of context above (below the sticky title) and below; a group's first row brings its title fully into view | within a group the list moves at most one row a step; crossing into a group it moves that row, the title and the gap, once |
+| Scrolling | the list only, keeping a fixed margin of one row above (below the sticky title) and below the selection; a group's first row brings its title fully into view | the selection stays at the same place on screen while the list moves under it by the real distance between two rows. A margin of "the next row" (0.17.0) made the selection bounce by a title and gap at every section boundary, which showed most in short sections |
+| Entering a panel | scrolled to the top; ↓ from the search goes to the first row | a panel no longer inherits where another was left |
 
 A smoke check steps down and back up through a long result list and checks each step:
 
 - the selected row is fully in view, below its group's title;
-- the list moves at most one row within a group, and one row plus a title and gap when crossing into another;
+- the selection never moves back against the key, and never further than the distance between the two rows (at the very top the list may settle up to two rows);
+- each panel opens at its top, and ↓ from the search goes to its first row;
 - every row outside the full-text group is the same height.

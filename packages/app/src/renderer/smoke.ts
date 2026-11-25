@@ -2458,26 +2458,79 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const groups = list.querySelectorAll('.docket-group').length;
 		const titleH = list.querySelector<HTMLElement>('.docket-group-title')?.offsetHeight ?? 24;
 		const step = (key: 'ArrowDown' | 'ArrowUp') => {
-			const before = list.scrollTop;
-			const fromGroup = list.querySelector('.docket-option.is-selected')?.closest('.docket-group');
+			const old = list.querySelector<HTMLElement>('.docket-option.is-selected');
+			const oldTop = old?.getBoundingClientRect().top ?? 0;
 			input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
 			const sel = list.querySelector<HTMLElement>('.docket-option.is-selected');
-			if (!sel) return;
+			if (!sel || sel === old) return;
 			const box = list.getBoundingClientRect();
 			const r = sel.getBoundingClientRect();
 			const title = sel.closest('.docket-group')!.querySelector<HTMLElement>('.docket-group-title')!.getBoundingClientRect();
 			const where = `${sel.textContent?.slice(0, 20)} (${key})`;
 			if (r.top < title.bottom - 1 || r.bottom > box.bottom + 1) problems.push(`${where} not fully in view`);
 			if (title.top < box.top - rowH || title.bottom > r.top + 1) problems.push(`${where}: its group title is not above it`);
-			// Within a group the list moves a row at most; into another, also that group's title and the gap above it.
-			const most = sel.closest('.docket-group') === fromGroup ? rowH * 1.1 : rowH * 2 + titleH + 12;
-			if (Math.abs(list.scrollTop - before) > most) problems.push(`${where} jumped ${Math.round(list.scrollTop - before)}px`);
+			// The selection moves the way of the key, by no more than the distance between the two rows: the list
+			// scrolls under it, never past it (which is what makes a list lurch).
+			const moved = r.top - oldTop;
+			const gap = Math.abs(sel.getBoundingClientRect().top - oldTop) + 1;
+			void gap;
+			// (Reaching the very top, the list may settle the last part of a row.)
+			const settled = list.scrollTop === 0 && Math.abs(moved) <= rowH * 2;
+			if (!settled && (key === 'ArrowDown' ? moved < -1 : moved > 1)) problems.push(`${where}: the selection went back ${Math.round(moved)}px`);
+			if (Math.abs(moved) > rowH * 1.1 + titleH + 12) problems.push(`${where}: the selection moved ${Math.round(moved)}px`);
 		};
 		for (let i = 0; i < n - 1; i++) step('ArrowDown');
 		for (let i = 0; i < n - 1; i++) step('ArrowUp');
 		press('Escape'); press('Escape');
 		if (n < 12 || groups < 3) problems.push(`only ${n} rows in ${groups} groups to move through`);
 		return problems.length === 0 || problems.slice(0, 4).join('; ');
+	});
+	await check('docket panels: entered at the top, on the first row; ↓/↑ step evenly, the row in view below its title', async () => {
+		const problems: string[] = [];
+		const list = document.querySelector<HTMLElement>('.docket-panel')!;
+		const input = document.querySelector<HTMLInputElement>('.docket-input')!;
+		const panels = app.docket.orderedPanels().filter((p) => p.id !== 'core:cite');
+		for (const [n, p] of panels.entries()) {
+			pressDocketKey();
+			await sleep(60);
+			if (!app.docketOpen) pressDocketKey();
+			press(String(app.docket.orderedPanels().indexOf(p) + 1), { ctrl: true });
+			await sleep(150);
+			const rows = [...list.querySelectorAll<HTMLElement>('[data-docket-item]')];
+			if (list.scrollTop !== 0) problems.push(`${p.title} opened scrolled to ${list.scrollTop}`);
+			if (rows.length < 2) { press('Escape'); press('Escape'); continue; }
+			input.focus();
+			input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+			if (document.activeElement !== rows[0]) problems.push(`${p.title}: ↓ from the search went to row ${rows.indexOf(document.activeElement as HTMLElement)}`);
+			const rowH = rows[0]!.getBoundingClientRect().height;
+			const titleH = list.querySelector<HTMLElement>('.docket-section-title')?.offsetHeight ?? 24;
+			const step = (key: 'ArrowDown' | 'ArrowUp') => {
+				const old = document.activeElement as HTMLElement;
+				const oldTop = old.getBoundingClientRect().top;
+				old.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+				const el = document.activeElement as HTMLElement;
+				if (!list.contains(el) || el === old) return;
+				const box = list.getBoundingClientRect();
+				const r = el.getBoundingClientRect();
+				const wrap = el.closest('.docket-section-wrap');
+				const title = wrap?.querySelector<HTMLElement>(':scope > .docket-section-title')?.getBoundingClientRect();
+				const where = `${p.title} › ${el.textContent?.slice(0, 18)} (${key})`;
+				if (r.top < (title ? title.bottom : box.top) - 1 || r.bottom > box.bottom + 1) problems.push(`${where} not fully in view (row ${Math.round(r.top - box.top)}–${Math.round(r.bottom - box.top)}, title bottom ${title ? Math.round(title.bottom - box.top) : '-'}, list ${Math.round(box.height)})`);
+				const moved = r.top - oldTop;
+				const settled = list.scrollTop === 0 && Math.abs(moved) <= rowH * 2;
+				if (!settled && (key === 'ArrowDown' ? moved < -1 : moved > 1)) problems.push(`${where}: the selection went back ${Math.round(moved)}px (scroll ${list.scrollTop}, top ${Math.round(r.top - box.top)})`);
+				if (Math.abs(moved) > rowH * 1.1 + titleH + 12) problems.push(`${where}: the selection moved ${Math.round(moved)}px`);
+			};
+			for (let i = 0; i < rows.length - 1; i++) step('ArrowDown');
+			for (let i = 0; i < rows.length - 1; i++) step('ArrowUp');
+			// Leave it scrolled down, with a row other than the first focused: the next panel must not inherit that.
+			for (let i = 0; i < Math.min(rows.length - 1, 6); i++) step('ArrowDown');
+			void n;
+			press('Escape'); press('Escape');
+			await sleep(60);
+		}
+		if (app.docketOpen) (app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
+		return problems.length === 0 || problems.slice(0, 6).join('; ');
 	});
 	await check('search: Enter opens the best match; "Create note" is last unless nothing matches', async () => {
 		pressDocketKey();
