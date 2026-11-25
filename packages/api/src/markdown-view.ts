@@ -385,8 +385,38 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		},
 	};
 
+	/**
+	 * The header band says where the note is ("Torts › Negligence"; the homebase for a note at the top), since
+	 * its name is the title above the text. Each part shows that subject or topic in Units. With the title
+	 * turned off, the band shows the note's name as before.
+	 */
+	override updateTitle(): void {
+		const file = this.file;
+		if (!file || this.app.vault.getConfig('inlineTitle') === false) {
+			this._titleEl.removeClass('mod-trail');
+			super.updateTitle();
+			return;
+		}
+		this._titleEl.empty();
+		this._titleEl.addClass('mod-trail');
+		const folder = file.parent && !file.parent.isRoot() ? file.parent.path : '';
+		const parts = folder ? folder.split('/') : [];
+		const crumb = (text: string, path: string) => {
+			const el = this._titleEl.createSpan({ cls: 'view-header-crumb', text, attr: { role: 'button', tabindex: '0', title: path ? `Show ${path.replace(/\//g, ' › ')} in Units` : 'Show the homebase in Units' } });
+			const go = (e: Event) => { e.preventDefault(); e.stopPropagation(); this.app.workspace.trigger('reveal-folder', path); };
+			el.addEventListener('click', go);
+			el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); });
+		};
+		if (parts.length === 0) { crumb(this.app.vault.getName(), ''); return; }
+		parts.forEach((p, i) => {
+			if (i) this._titleEl.createSpan({ cls: 'view-header-crumb-sep', text: '›', attr: { 'aria-hidden': 'true' } });
+			crumb(p, parts.slice(0, i + 1).join('/'));
+		});
+	}
+
 	/** Show (or hide) the title for the open note. */
 	private showTitle(): void {
+		this.updateTitle();
 		const on = this.app.vault.getConfig('inlineTitle') !== false;
 		this.editor.cm.dispatch({ effects: setTitle.of(on && this.file ? this.file.basename : null) });
 		// Measure the title now, so clicks and right-clicks just after opening land on the right line.

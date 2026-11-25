@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Properties as a table while you write.** A note's properties (the YAML at the top) show as the same small
+  table as in reading view, instead of `---` and raw YAML. Click the table, or move into it from the text below,
+  to edit the YAML; move away and the table is back. YAML with a mistake in it stays as written so it can be fixed.
+- **The header says where the note is.** Since the note's name is the title above its text, the band above it
+  now shows its subject and topic (*Torts › Negligence*); click one to see it in Units. A note at the top of the
+  homebase shows the homebase's name. With *Note name as title* off, the band shows the name as before.
+- **Writing and reading look alike.** Bold and italics inside lists now have the same colours as elsewhere (they
+  were plain in the editor), and top-level headings have the same rule under them in both views.
 - **Citations no longer look like links.** In the editor, `[1932]`, pinpoints such as `[78]` and `[2002] HCA 14`
   were drawn as links, because Markdown can read any `[text]` as one. Only links with an address, or with a
   reference defined in the note, look like links now.

@@ -330,6 +330,12 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .mod-root .view-header-title { text-align: center; padding-left: var(--control-h); }
 .workspace-leaf.mod-active .view-header { background: var(--doom-bg); border-bottom-color: rgba(var(--doom-blue-rgb), 0.3); }
 .workspace-leaf.mod-active .view-header-title { color: var(--doom-blue-text); font-weight: var(--font-semibold); }
+/* A note's header band: where it is (subject › topic), each part a way into Units. */
+.view-header-title.mod-trail { font-weight: var(--font-normal); }
+.view-header-crumb { cursor: var(--cursor); border-radius: var(--radius-s); padding: 0 var(--space-1); }
+.view-header-crumb:hover { color: var(--doom-blue-text); background: var(--doom-base2); }
+.view-header-crumb-sep { color: var(--text-faint); }
+.workspace-leaf:not(.mod-active) .view-header-title.mod-trail { color: var(--text-faint); }
 .view-actions { display: flex; gap: 0; }
 .view-action { width: 26px; height: 26px; }
 .view-content { flex: 1; overflow: auto; min-height: 0; position: relative; }
@@ -402,6 +408,9 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .cm-editor .cm-selectionMatch { background: rgba(var(--doom-yellow-rgb), 0.18); }
 
 .cm-header { font-weight: var(--font-bold); line-height: var(--line-height-tight); }
+/* The rule under top-level headings, as in reading view. */
+.cm-line.cm-lp-h1 { border-bottom: 1px solid var(--doom-border-subtle); padding-bottom: 0.22em; }
+.cm-line.cm-lp-h2 { border-bottom: 1px solid var(--doom-hairline); padding-bottom: 0.16em; }
 .cm-header-1 { font-size: var(--h1-size); color: var(--h1-color); }
 .cm-header-2 { font-size: var(--h2-size); color: var(--h2-color); }
 .cm-header-3 { font-size: var(--h3-size); color: var(--h3-color); }
@@ -417,7 +426,6 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .cm-url { color: var(--text-faint); text-decoration: underline; text-decoration-color: var(--doom-border-subtle); }
 .cm-inline-code { font-family: var(--font-monospace); font-size: 0.9em; color: var(--doom-teal-text); background: var(--doom-base1); border-radius: var(--radius-s); padding: 1px 2px; }
 .cm-quote { color: var(--text-muted); font-style: italic; }
-.cm-list { color: inherit; }
 .cm-formatting, .cm-meta { color: var(--text-faint); }
 .cm-hr { color: var(--text-faint); }
 .cm-comment { color: var(--doom-comment); }
@@ -482,6 +490,9 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 	background: var(--doom-base1); border-left: 2px solid var(--doom-magenta);
 }
 .metadata-property { display: contents; }
+/* In the editor (properties-editor.ts): the same table, which opens the YAML for editing when clicked. */
+.metadata-container.cm-properties { margin: 0 0 var(--space-2); cursor: var(--cursor); }
+.metadata-container.cm-properties:hover { border-left-color: var(--doom-blue); }
 .metadata-property-key { color: var(--doom-magenta-text); }
 
 /* ---------------------------------------------------------------------------- popups

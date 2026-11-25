@@ -10,6 +10,7 @@ import type { EditorState, Extension } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 import { isImage } from './attachments';
 import { isMedia } from './media';
+import { propertiesPreview } from './properties-editor';
 
 export interface LivePreviewOptions {
 	/** Open a link clicked in the formatted text. */
@@ -106,6 +107,8 @@ function build(view: EditorView, opts: LivePreviewOptions): DecorationSet {
 			enter: (node) => {
 				const name = node.name;
 				if (name === 'Frontmatter' || name === 'FencedCode' || name === 'CodeBlock' || name === 'Table') return false;
+				// Top-level headings have a rule under them, as in reading view (also while being edited).
+				if (name === 'ATXHeading1' || name === 'ATXHeading2') lineClass(node.from, name === 'ATXHeading1' ? 'cm-lp-h1' : 'cm-lp-h2');
 				if (isActive(node.from)) return;
 				switch (name) {
 					case 'HeaderMark': {
@@ -239,5 +242,5 @@ export function livePreview(opts: LivePreviewOptions): Extension {
 		},
 	});
 
-	return [plugin, clicks, EditorView.editorAttributes.of({ class: 'is-live-preview' })];
+	return [plugin, clicks, propertiesPreview(), EditorView.editorAttributes.of({ class: 'is-live-preview' })];
 }

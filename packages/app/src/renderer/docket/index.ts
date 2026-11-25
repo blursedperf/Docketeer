@@ -8,6 +8,7 @@ import { Docket } from './docket';
 import { registerCorePanels } from './panels';
 import { registerCoreProviders } from './providers';
 import { registerNoteCommands, showLinksFrom, showLinksTo, showMentions } from './actions';
+import { revealInUnits } from './panels/units';
 
 const MOD_P: Hotkey = { modifiers: ['Mod'], key: 'p' };
 
@@ -84,6 +85,12 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 			cleanup = [];
 		}
 	};
+	// A subject or topic clicked in a note's header band: show it in Units.
+	app.workspace.on('reveal-folder', (path: string) => {
+		if (!docket) return;
+		revealInUnits(path);
+		docket.showPanel('core:units');
+	});
 	// Notes and folders made, renamed, moved or deleted: what the Docket shows follows (once things settle).
 	let pending = 0;
 	const follow = () => { if (!docket?.isOpen) return; window.clearTimeout(pending); pending = window.setTimeout(() => { void docket?.refresh(); }, 120); };

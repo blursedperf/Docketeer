@@ -398,6 +398,60 @@ export async function runSmoke(app: App): Promise<void> {
 		await vault.delete(wav);
 		return problems.length === 0 || problems.join('; ');
 	});
+	await check('editor like reading view: properties as a table, the header says where the note is, heading rules, list styles', async () => {
+		const problems: string[] = [];
+		await vault.createFolder('Props smoke');
+		const note = await vault.create('Props smoke/Props smoke.md', '---\ntags: [torts, exam]\ncourt: HCA\n---\n\n# Heading one\n\n- **Bold** in a list and *em*.\n\n**Bold** outside.\n\nEnd\n');
+		const broken = await vault.create('Props broken.md', '---\ntags: [unclosed\n---\n\nBody\n');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		view.editor.setCursor({ line: view.editor.lineCount() - 1, ch: 0 });
+		await sleep(150);
+		const table = () => view.contentEl.querySelector<HTMLElement>('.cm-properties');
+		const shown = () => (view.contentEl.querySelector<HTMLElement>('.cm-content')?.innerText ?? '');
+		// V1: a table, no YAML.
+		if (!table()) problems.push('no properties table');
+		else {
+			const keys = Array.from(table()!.querySelectorAll('.metadata-property-key')).map((e) => e.textContent).join(',');
+			const values = Array.from(table()!.querySelectorAll('.metadata-property-value')).map((e) => e.textContent).join('|');
+			if (keys !== 'tags,court' || values !== 'torts, exam|HCA') problems.push(`table ${keys} = ${values}`);
+		}
+		if (shown().includes('tags:') || shown().includes('---')) problems.push('YAML shows beside the table');
+		table()?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+		await sleep(100);
+		if (table() || !shown().includes('tags: [torts, exam]')) problems.push('clicking the table did not open the YAML');
+		if (cm.state.doc.lineAt(cm.state.selection.main.head).number !== 2) problems.push('the cursor is not on the first property');
+		view.editor.setCursor({ line: view.editor.lineCount() - 1, ch: 0 });
+		await sleep(100);
+		if (!table()) problems.push('the table did not come back');
+		// V3: heading rule, and bold in a list the colour of bold elsewhere.
+		if (!view.contentEl.querySelector('.cm-line.cm-lp-h1')) problems.push('no rule under the heading');
+		const strong = Array.from(view.contentEl.querySelectorAll<HTMLElement>('.cm-strong')).filter((e) => !e.matches('.cm-formatting') && !e.closest('.cm-lp-hidden'));
+		const colours = new Set(strong.map((e) => getComputedStyle(e).color));
+		if (strong.length < 2 || colours.size !== 1) problems.push(`bold colours: ${[...colours].join(' / ')} (${strong.length})`);
+		// V2: the header band says where the note is; clicking a part shows it in Units.
+		const trail = () => Array.from(leaf.view.containerEl.querySelectorAll('.view-header-crumb')).map((e) => e.textContent).join(' › ');
+		if (trail() !== 'Props smoke') problems.push(`header says "${trail()}"`);
+		leaf.view.containerEl.querySelector<HTMLElement>('.view-header-crumb')?.click();
+		await sleep(150);
+		const unitsShown = app.docketOpen && document.querySelector('.docket-tab[aria-selected="true"]')?.getAttribute('data-panel') === 'core:units';
+		if (!unitsShown) problems.push('the header did not show the folder in Units');
+		(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
+		// Broken YAML stays as written, so it can be fixed.
+		await leaf.openFile(broken);
+		view.editor.setCursor({ line: 4, ch: 0 });
+		await sleep(150);
+		if (table() || !shown().includes('tags: [unclosed')) problems.push('broken YAML was hidden');
+		if (trail() !== app.vault.getName()) problems.push(`a note at the top says "${trail()}"`);
+		leaf.detach();
+		await vault.delete(note);
+		await vault.delete(broken);
+		const folder = vault.getFolderByPath('Props smoke');
+		if (folder) await vault.delete(folder, true);
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('reading view embeds notes, sections and pictures', async () => {
 		const pic = vault.getFiles().find((f) => f.path.startsWith('attachments/Pasted image'))!;
 		const file = await vault.create('Embeds.md', `# Embeds\n\n![[Welcome]]\n\n![[Renamed note#Second]]\n\n![[${pic.name}|120]]\n\n![[Embeds]]\n`);

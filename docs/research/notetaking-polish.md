@@ -98,6 +98,10 @@ name teach people to ignore the spellchecker.
 | B5 gap above embeds | **Done.** An embed-only line collapses while not edited; an embed of a missing file stays visible. |
 | B4 / W8 names | **Done.** Words in note and file names, and in the authorities found in the note (parties, short titles, authors), are accepted with their possessives; *Skip names* (on by default) leaves capitalised words mid-sentence alone. Finding authorities costs ~5 ms per edit on a 59,000-character note (cached per document version). |
 
+| V1 properties table | **Done.** `properties-editor.ts`: a block widget over the frontmatter (a state field, as block replacements must be); shown as YAML while the selection is in it; invalid YAML always as written. A cursor at position 0 (where notes open) does not count as editing. |
+| V2 header trail | **Done.** `MarkdownView.updateTitle`: subject › topic, each part firing `reveal-folder`, which the Docket shows in Units. |
+| V3 one set of styles | **Done.** The cause of plain bold and italics in lists was `.cm-list { color: inherit }` overriding them (every token in a list also carries `cm-list`); removed. H1/H2 lines get the reading view's rule. |
+
 Smoke check: *live preview: citation brackets are not links, punctuation stays with its link, embeds take their
 line*.
 
