@@ -59,6 +59,10 @@ export interface Command {
 	requiresUnlocked?: boolean;
 	/** Ask first: true, a question, or a question made from the context (deletes, exports). */
 	confirm?: boolean | string | ((ctx: CommandContext) => string);
+	/** The confirming button's label ("Move to trash"); "Continue" if not given. */
+	confirmAction?: string;
+	/** The confirmation is for something hard to undo: its button is red. */
+	danger?: boolean;
 	/** "core" or "plugin:<id>". Set by the app. */
 	source?: string;
 	repeatable?: boolean;

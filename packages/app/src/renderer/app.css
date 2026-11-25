@@ -219,7 +219,7 @@ button.mod-cta:hover { background: var(--interactive-accent-hover); }
 button.mod-warning { background: var(--doom-red); color: var(--doom-on-accent); border-color: transparent; }
 button.mod-icon { padding: 0 var(--space-2); }
 
-input[type="text"], input[type="search"], input:not([type]), textarea, select {
+input[type="text"], input[type="search"], input[type="number"], input:not([type]), textarea, select {
 	height: var(--control-h);
 	padding: 0 var(--space-2);
 	font: inherit;
@@ -233,6 +233,12 @@ input[type="text"], input[type="search"], input:not([type]), textarea, select {
 input:focus, textarea:focus, select:focus { border-color: var(--doom-blue); box-shadow: 0 0 0 2px rgba(var(--doom-blue-rgb), 0.3); outline: none; }
 textarea { height: auto; padding: var(--space-2); resize: vertical; min-height: 60px; font-family: var(--font-monospace); line-height: 1.5; }
 select { padding-right: var(--space-6); cursor: var(--cursor); }
+/* Number boxes: narrow, no spin buttons, the unit after them ("15 minutes"). */
+input[type="number"] { width: 5em; text-align: right; -moz-appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.setting-unit { color: var(--text-muted); font-size: var(--text-sm); }
+.vertical-tab-content .setting-item.mod-number .setting-item-control { justify-content: flex-end; }
+.vertical-tab-content .setting-item.mod-number .setting-item-control input[type="number"] { flex: 0 0 5em; width: 5em; }
 input.color-picker { width: 44px; height: var(--control-h); padding: 2px; cursor: var(--cursor); }
 input.color-picker::-webkit-color-swatch-wrapper { padding: 0; }
 input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
@@ -628,7 +634,7 @@ input.settings-search { margin: var(--space-2) var(--space-2) 0; }
 }
 .vertical-tab-nav-item:hover { background: var(--doom-base2); color: var(--text-normal); }
 .vertical-tab-nav-item.is-active { background: rgba(var(--doom-blue-rgb), 0.16); color: var(--doom-blue-text); border-left-color: var(--doom-blue); }
-.vertical-tab-content-container { flex: 1; overflow-y: auto; padding: var(--space-2) var(--space-8) var(--space-8); }
+.vertical-tab-content-container { flex: 1; overflow-y: auto; scrollbar-gutter: stable; padding: var(--space-2) var(--space-8) var(--space-8); }
 
 .setting-item { display: flex; align-items: center; gap: var(--space-4); padding: var(--setting-pad) 0; border-top: var(--border-width) solid var(--doom-hairline); }
 .setting-item:first-child, .setting-item-heading + .setting-item { border-top: none; }
@@ -649,9 +655,14 @@ input.settings-search { margin: var(--space-2) var(--space-2) 0; }
 /* Rows with buttons or two dropdowns keep the column's left edge but may grow to the left. */
 .vertical-tab-content .setting-item:not(.setting-item-heading) .setting-item-control:is(:has(> button), :has(> select + select)) { width: auto; min-width: var(--control-width); }
 .vertical-tab-content .setting-item .setting-item-control:has(> select + select) > select { flex: 1 0 auto; width: auto; min-width: max-content; }
-/* A row with only buttons: buttons start at the left. */
+/* A row with only buttons: right-aligned like every other control. */
 .setting-item.mod-buttons .setting-item-info { display: none; }
-.vertical-tab-content .setting-item.mod-buttons .setting-item-control { width: auto; justify-content: flex-start; }
+.vertical-tab-content .setting-item.mod-buttons .setting-item-control { width: auto; margin-left: auto; justify-content: flex-end; }
+/* Rows holding a text area: the name and description at the top, beside the box's top. */
+.setting-item:has(.setting-item-control textarea) { align-items: flex-start; }
+.setting-item:has(.setting-item-control textarea) .setting-item-info { padding-top: var(--space-1); }
+/* Fonts: a line of sample text in the chosen font. */
+.setting-font-sample { margin-top: var(--space-1); font-size: var(--text-md); color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .modal-content > .setting-item:has(input[type="text"]) { flex-direction: column; align-items: stretch; gap: var(--space-2); }
 .modal-content > .setting-item:has(input[type="text"]) .setting-item-control input { width: 100%; }
 .setting-note { padding: var(--space-1) 0 var(--space-2); }
@@ -760,7 +771,9 @@ pre.notices-text { margin: 0; max-height: 65vh; overflow: auto; white-space: pre
 .cm-image-embed img, .markdown-rendered img.image-embed { display: block; max-width: 100%; max-height: 70vh; border-radius: var(--radius-s); }
 /* PDFs in a tab (pdf/view.ts): a toolbar, then pages on a scrolling backdrop. */
 .pdf-view { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
-.pdf-toolbar { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--background-modifier-border); font-family: var(--font-chrome); font-size: var(--text-sm); color: var(--text-muted); }
+.pdf-toolbar { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--background-modifier-border); font-family: var(--font-chrome); font-size: var(--text-sm); color: var(--text-muted); white-space: nowrap; overflow: hidden; container-type: inline-size; }
+/* In a narrow pane the page count and zoom percentage give way; the page box and buttons stay. */
+@container (max-width: 360px) { .pdf-page-count, .pdf-zoom { display: none; } }
 .pdf-toolbar-spacer { flex: 1; }
 .pdf-page-input { width: 4.5em; text-align: center; }
 .pdf-zoom { min-width: 3.5em; text-align: center; }
@@ -1009,3 +1022,8 @@ input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: no
 }
 .workspace-leaf-spine:hover { color: var(--doom-blue-text); background: var(--doom-base2); }
 .workspace-leaf.is-stack-active > .workspace-leaf-spine { color: var(--doom-blue-text); }
+
+/* Dialog buttons, one way everywhere: at the right, spaced, the main action last, with room above. */
+.modal-button-container { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.modal-content > .setting-item.mod-buttons { border-top: none; padding-top: var(--space-4); }
+.modal-content > .setting-item.mod-buttons .setting-item-control { width: 100%; justify-content: flex-end; }

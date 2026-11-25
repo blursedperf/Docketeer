@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+Buttons, spacing and settings (see docs/research/ui-review.md):
+
+- **Fonts are chosen from a list.** Interface, text and monospace font are dropdowns of the fonts installed on this
+  computer (read from the font folders, offline), monospaced fonts first for the monospace font, with a line of sample
+  text in the chosen font. *Other…* still lets you type a name.
+- **Dialog buttons** are laid out one way everywhere: at the right, spaced, the main action last. Delete and Export
+  had them touching at the left.
+- **Deleting asks with a red *Move to trash*** rather than a blue *Continue*; removing a lock says *Remove lock*.
+- *After idle time* (Security) is a styled number box with "minutes" after it.
+- Settings controls end at the same place on every page, whether it scrolls or not.
+- Shorter *Default location for new notes* options, so none are cut off.
+- Ordinary settings buttons are no longer in the accent colour; the snippets buttons sit in a named row at the right.
+- Text-box rows (*Your dictionary*, AGLC4 *Folders*) put their name at the top beside the box.
+- The PDF toolbar stays on one line in a narrow pane.
+
 ## v0.15.1
 
 0.15.0 was tagged but not published (its release build failed a test); 0.15.1 is everything listed under 0.15.0,

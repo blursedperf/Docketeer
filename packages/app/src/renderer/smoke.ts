@@ -932,6 +932,26 @@ export async function runSmoke(app: App): Promise<void> {
 		app.setting.close();
 		return (widths.length > 5 && widths.every((w) => w === widths[0])) || widths.join(',');
 	});
+	await check('fonts are chosen from the installed fonts, with a sample', async () => {
+		const fonts = (await app.host.app.fonts?.()) ?? [];
+		app.setting.openTabById('appearance');
+		await sleep(100);
+		const row = [...document.querySelectorAll<HTMLElement>('.setting-item.mod-font')].find((r) => r.textContent?.includes('Interface font'));
+		const sel = row?.querySelector('select');
+		const opts = sel ? [...sel.options].map((o) => o.value) : [];
+		const pick = fonts[0]?.family;
+		let applied = true;
+		if (sel && pick) {
+			sel.value = pick;
+			sel.dispatchEvent(new Event('change'));
+			await sleep(100);
+			applied = app.config.interfaceFont === pick && document.body.style.getPropertyValue('--font-interface').includes(pick) && !!row?.querySelector<HTMLElement>('.setting-font-sample')?.style.fontFamily.includes(pick);
+			await app.setConfig('interfaceFont', '');
+		}
+		app.setting.close();
+		const listed = fonts.every((f) => opts.includes(f.family)) && opts[0] === '' && opts.at(-1)?.endsWith('other');
+		return (fonts.length > 0 && listed && applied) || `fonts=${fonts.length} options=${opts.length} applied=${applied}`;
+	});
 	await check('settings search finds settings on every page', async () => {
 		app.setting.open();
 		app.setting.search('accent');
@@ -2393,13 +2413,16 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('Delete');
 		await sleep(80);
 		const question = document.querySelector('.modal p')?.textContent ?? '';
-		[...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((b) => b.textContent === 'Continue')?.click();
+		// The red "Move to trash", the last button of the dialog.
+		const confirmBtn = document.querySelector<HTMLButtonElement>('.modal .modal-button-container button:last-child');
+		const danger = confirmBtn?.textContent === 'Move to trash' && confirmBtn.classList.contains('mod-warning');
+		confirmBtn?.click();
 		await sleep(400);
 		const gone = !vault.getFolderByPath('Old subject') && !rowsText().includes('Old subject');
 		const keyboardBack = !!document.activeElement?.closest('.docket-panel');
 		press('Escape'); press('Escape');
-		return (fromResults && fromPanel && next && prev && appeared && renamed && /2 notes/.test(question) && gone && keyboardBack)
-			|| `fromResults=${fromResults} fromPanel=${fromPanel} next=${next} prev=${prev} appeared=${appeared} renamed=${renamed} question="${question}" gone=${gone} keyboardBack=${keyboardBack}`;
+		return (fromResults && fromPanel && next && prev && appeared && renamed && /2 notes/.test(question) && danger && gone && keyboardBack)
+			|| `fromResults=${fromResults} fromPanel=${fromPanel} next=${next} prev=${prev} appeared=${appeared} renamed=${renamed} question="${question}" danger=${danger} gone=${gone} keyboardBack=${keyboardBack}`;
 	});
 
 	await check('cheat sheet: "?" lists the Docket keys, prefixes and every shortcut by section', async () => {

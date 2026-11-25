@@ -194,17 +194,18 @@ class SecurityTab extends SettingTab {
 		new Setting(el).setName('Locking').setHeading();
 		if (!lock.isSetUp) {
 			new Setting(el).setName('Set up locking').setDesc('Encrypt chosen notes and folders on this computer, opened with a passphrase.')
-				.addButton((b) => b.setButtonText('Set up…').setCta().onClick(() => { new SetUpLockModal(this.app, () => this.display()).open(); }));
+				.addButton((b) => b.setButtonText('Set up…').onClick(() => { new SetUpLockModal(this.app, () => this.display()).open(); }));
 		} else {
 			new Setting(el).setName(lock.isUnlocked ? 'Unlocked' : 'Locked').setDesc(`${lock.sealedNotes.length} locked note(s), ${lock.lockedFolders.length} locked folder(s).`)
 				.addButton((b) => b.setButtonText(lock.isUnlocked ? 'Lock now' : 'Unlock…').onClick(async () => { if (lock.isUnlocked) await lock.lock(); else await promptUnlock(this.app); this.display(); }));
 			new Setting(el).setName('Change passphrase').addButton((b) => b.setButtonText('Change…').onClick(() => new ChangePassphraseModal(this.app).open()));
 		}
 		new Setting(el).setName('Lock again by itself').setHeading();
-		new Setting(el).setName('After idle time').setDesc('Minutes without typing or clicking; 0 never locks on idle.')
+		new Setting(el).setName('After idle time').setDesc('Minutes without typing or clicking; 0 never locks on idle.').setClass('mod-number')
 			.addText((t) => {
 				t.inputEl.type = 'number';
 				t.inputEl.min = '0';
+				t.inputEl.insertAdjacentElement('afterend', createSpan({ cls: 'setting-unit', text: 'minutes' }));
 				t.setValue(String(this.app.config.lockIdleMinutes ?? 15)).onChange((v) => { const n = Math.max(0, Math.round(Number(v) || 0)); void this.app.setConfig('lockIdleMinutes', n); });
 			});
 		new Setting(el).setName('When the computer sleeps or its screen locks')
@@ -244,7 +245,7 @@ export function registerLocking(app: App): void {
 	add({
 		id: 'app:remove-note-lock', name: 'Remove lock from note', icon: 'lock-open', aliases: ['Decrypt note'],
 		when: (ctx) => { const f = fileArg(ctx.args); return !!f && lock.isEncrypted(f.path); },
-		confirm: (ctx) => `Decrypt “${fileArg(ctx.args)?.basename}” on disk? Other apps will be able to read it again.`,
+		confirm: (ctx) => `Decrypt “${fileArg(ctx.args)?.basename}” on disk? Other apps will be able to read it again.`, confirmAction: 'Remove lock', danger: true,
 		run: async (ctx) => {
 			const f = fileArg(ctx.args)!;
 			if (!(await promptUnlock(app))) return;
@@ -254,7 +255,7 @@ export function registerLocking(app: App): void {
 	add({
 		id: 'app:lock-folder', name: 'Lock folder', icon: 'folder-lock', aliases: ['Lock subject', 'Lock topic'],
 		when: (ctx) => { const f = folderArg(ctx.args); return !!f && !f.isRoot() && !lock.isFolderLocked(f); },
-		confirm: (ctx) => `Lock “${folderArg(ctx.args)?.name}”? Every note in it, and every new note made in it, is encrypted on disk.`,
+		confirm: (ctx) => `Lock “${folderArg(ctx.args)?.name}”? Every note in it, and every new note made in it, is encrypted on disk.`, confirmAction: 'Lock folder',
 		run: async (ctx) => {
 			const f = folderArg(ctx.args)!;
 			if (!(await ready())) return;
@@ -264,7 +265,7 @@ export function registerLocking(app: App): void {
 	add({
 		id: 'app:remove-folder-lock', name: 'Remove lock from folder', icon: 'lock-open',
 		when: (ctx) => { const f = folderArg(ctx.args); return !!f && lock.isFolderLocked(f) && lock.lockedFolders.includes(f.path); },
-		confirm: (ctx) => `Decrypt every note in “${folderArg(ctx.args)?.name}” on disk? Other apps will be able to read them again.`,
+		confirm: (ctx) => `Decrypt every note in “${folderArg(ctx.args)?.name}” on disk? Other apps will be able to read them again.`, confirmAction: 'Remove lock', danger: true,
 		run: async (ctx) => {
 			const f = folderArg(ctx.args)!;
 			if (!(await promptUnlock(app))) return;

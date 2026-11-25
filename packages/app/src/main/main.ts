@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import { serveVaultFile, vaultType } from './vault-files';
 import { installExample } from './example';
 import { applyHomebaseLayout } from './homebase-layout';
+import { fontsOnce } from './fonts';
 
 const APP_DIR = __dirname; // dist/
 const RENDERER_DIR = path.join(APP_DIR, 'renderer');
@@ -305,6 +306,8 @@ function registerIpc() {
 			return null;
 		}
 	});
+	// The fonts installed on this computer (read from the font folders once), for the font settings.
+	handle('app:fonts', () => fontsOnce());
 	handle('app:notices', () => fsp.readFile(path.join(APP_DIR, 'THIRD_PARTY_NOTICES.txt'), 'utf8').catch(() => ''));
 	ipcMain.on('smoke:report', (_e, report) => { void finishSmoke(report); });
 	// Screenshot mode: the renderer asks for a capture of the window as it is now.

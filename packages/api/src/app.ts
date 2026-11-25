@@ -157,7 +157,7 @@ export class Commands {
 		const go = () => this.runNow(cmd, ctx);
 		if (cmd.confirm) {
 			const question = typeof cmd.confirm === 'function' ? cmd.confirm(ctx) : typeof cmd.confirm === 'string' ? cmd.confirm : `${cmd.name}?`;
-			new ConfirmCommandModal(this.app, cmd.name, question, go).open();
+			new ConfirmCommandModal(this.app, cmd.name, question, go, cmd.confirmAction ?? 'Continue', cmd.danger === true).open();
 			return true;
 		}
 		go();
@@ -222,7 +222,7 @@ export class Commands {
 
 /** Asks before a command with `confirm` runs. */
 class ConfirmCommandModal extends Modal {
-	constructor(app: App, title: string, private question: string, private onYes: () => void) {
+	constructor(app: App, title: string, private question: string, private onYes: () => void, private action = 'Continue', private danger = false) {
 		super(app);
 		this.setTitle(title);
 	}
@@ -231,7 +231,7 @@ class ConfirmCommandModal extends Modal {
 		const row = this.contentEl.createDiv({ cls: 'modal-button-container' });
 		const no = row.createEl('button', { text: 'Cancel' });
 		no.addEventListener('click', () => this.close());
-		const yes = row.createEl('button', { cls: 'mod-cta', text: 'Continue' });
+		const yes = row.createEl('button', { cls: this.danger ? 'mod-warning' : 'mod-cta', text: this.action });
 		yes.addEventListener('click', () => { this.close(); this.onYes(); });
 		window.setTimeout(() => yes.focus(), 0);
 	}

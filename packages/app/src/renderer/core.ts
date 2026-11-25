@@ -83,7 +83,7 @@ class FilesTab extends SettingTab {
 		new Setting(el).setName('Open notes from the Docket in a new tab').setDesc('A note chosen in the Docket opens in a new tab (or the tab already showing it), so the note you were in stays where it is. Off: it replaces the note in the tab in use. Back (Alt+←, ⌘[ on a Mac) returns to what a tab showed before either way.')
 			.addToggle((t) => t.setValue(c.docketNewTab !== false).onChange((v) => { void this.app.setConfig('docketNewTab', v); }));
 		new Setting(el).setName('Default location for new notes')
-			.addDropdown((d) => d.addOptions({ root: 'Homebase folder', current: 'Same folder as current file', folder: 'In the folder below' })
+			.addDropdown((d) => d.addOptions({ root: 'Top of the homebase', current: 'Folder of the open note', folder: 'A folder I choose' })
 				.setValue(c.newFileLocation).onChange((v) => { void this.app.setConfig('newFileLocation', v as typeof c.newFileLocation); this.display(); }));
 		if (c.newFileLocation === 'folder') {
 			new Setting(el).setName('Folder for new notes')
@@ -112,6 +112,8 @@ const ICON_PREVIEW = ['file-text', 'folder-open', 'search', 'history', 'book-ope
 class AppearanceTab extends SettingTab {
 	override id = 'appearance';
 	override name = 'Appearance';
+	/** Fonts being typed (Other…) rather than chosen from the list. */
+	private typingFonts = new Set<string>();
 	display(): void {
 		const el = this.containerEl;
 		el.empty();
@@ -142,12 +144,53 @@ class AppearanceTab extends SettingTab {
 		if (c.accentColor) accent.addExtraButton((b) => b.setIcon('rotate-ccw').setTooltip('Use the palette\'s accent').onClick(() => set('accentColor', '', true)));
 
 		new Setting(el).setName('Type and spacing').setHeading();
-		const font = (name: string, desc: string, key: 'interfaceFont' | 'textFont' | 'monospaceFont', placeholder: string) =>
-			new Setting(el).setName(name).setDesc(desc)
-				.addText((t) => t.setPlaceholder(placeholder).setValue(String(c[key] ?? '')).onChange((v) => set(key, v.trim())));
-		font('Interface font', 'Menus, tabs, settings. A font installed on this computer; empty for the default.', 'interfaceFont', 'System default');
-		font('Text font', 'The text of notes.', 'textFont', 'Same as interface');
-		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'JetBrains Mono, Iosevka …');
+		/**
+		 * A font: chosen from the fonts installed on this computer (monospaced ones first for the monospace font), or
+		 * typed (Other…). A line of sample text shows it.
+		 */
+		const OTHER = '\u0000other';
+		const font = (name: string, desc: string, key: 'interfaceFont' | 'textFont' | 'monospaceFont', empty: string, mono: boolean) => {
+			const row = new Setting(el).setName(name).setDesc(desc).setClass('mod-font');
+			const sample = row.descEl.createDiv({ cls: 'setting-font-sample', text: mono ? 'const ratio = 0.5; // [1932] AC 562' : 'Donoghue v Stevenson [1932] AC 562: the neighbour principle.' });
+			const show = (v: string) => { sample.style.fontFamily = v ? `"${v.replace(/"/g, '')}", ${mono ? 'monospace' : 'sans-serif'}` : ''; };
+			const typing = this.typingFonts.has(key);
+			row.addDropdown((d) => {
+				const sel = d.selectEl;
+				const fill = (fonts: { family: string; mono: boolean }[]) => {
+					const current = String(c[key] ?? '');
+					sel.empty();
+					sel.createEl('option', { value: '', text: empty });
+					const group = (label: string, list: { family: string }[]) => {
+						if (!list.length) return;
+						const g = sel.createEl('optgroup', { attr: { label } });
+						for (const f of list) g.createEl('option', { value: f.family, text: f.family });
+					};
+					if (mono) { group('Monospaced', fonts.filter((f) => f.mono)); group('Other fonts', fonts.filter((f) => !f.mono)); } else group('Installed fonts', fonts);
+					if (current && !fonts.some((f) => f.family === current)) sel.createEl('option', { value: current, text: fonts.length ? `${current} (typed; not found)` : current });
+					sel.createEl('option', { value: OTHER, text: 'Other… (type a name)' });
+					sel.value = current;
+					show(current);
+				};
+				fill([]);
+				void this.app.host.app.fonts?.().then(fill).catch(() => undefined);
+				d.onChange((v) => {
+					if (v === OTHER) { this.typingFonts.add(key); this.display(); return; }
+					show(v);
+					void set(key, v);
+				});
+				if (typing) sel.hide();
+			});
+			if (typing) {
+				row.addText((t) => {
+					t.setPlaceholder('Font name, as installed').setValue(String(c[key] ?? '')).onChange((v) => { show(v.trim()); void set(key, v.trim()); });
+					window.setTimeout(() => t.inputEl.focus(), 0);
+				});
+				row.addExtraButton((b) => b.setIcon('list').setTooltip('Choose from the installed fonts').onClick(() => { this.typingFonts.delete(key); this.display(); }));
+			}
+		};
+		font('Interface font', 'Menus, tabs, settings.', 'interfaceFont', 'System default', false);
+		font('Text font', 'The text of notes.', 'textFont', 'Same as the interface', false);
+		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'Default (a coding font installed here)', true);
 		new Setting(el).setName('Text size').setDesc('Size of the text in notes, in pixels.')
 			.addSlider((s) => s.setLimits(10, 30, 1).setValue(c.fontSize).onChange((v) => set('fontSize', v)));
 		new Setting(el).setName('Density').setDesc('How much space the interface leaves around rows, tabs and controls.')
@@ -207,12 +250,12 @@ class AppearanceTab extends SettingTab {
 			const refused = css.refusal('snippet', name);
 			if (refused) row.setDesc(`Not loaded: it uses ${refused.join(', ')}.`).descEl.addClass('mod-warning');
 		}
-		new Setting(el)
-			.addButton((b) => b.setButtonText('Show snippets folder').onClick(async () => {
+		new Setting(el).setName('Snippets folder').setDesc(css.snippetsFolder)
+			.addButton((b) => b.setButtonText('Show folder').onClick(async () => {
 				await app.vault.adapter.mkdir(css.snippetsFolder);
 				await app.host.app.showItemInFolder(css.snippetsFolder);
 			}))
-			.addButton((b) => b.setButtonText('Reload themes and snippets').setCta().onClick(async () => {
+			.addButton((b) => b.setButtonText('Reload').setTooltip('Read the themes and snippets again').onClick(async () => {
 				await css.load();
 				this.display();
 				new Notice('Themes and snippets reloaded.');
@@ -580,7 +623,7 @@ export function registerCore(app: App): { reveal(): void } {
 		run: (ctx) => promptRename(app, fileArg(ctx)!),
 	});
 	add({
-		id: 'app:delete-file', name: 'Delete file', icon: 'trash-2', section: 'Notes', aliases: ['Remove', 'Trash'],
+		id: 'app:delete-file', name: 'Delete file', icon: 'trash-2', section: 'Notes', aliases: ['Remove', 'Trash'], confirmAction: 'Move to trash', danger: true,
 		when: (ctx) => { const f = fileArg(ctx); return !!f && !(f instanceof TFolder && f.isRoot()); },
 		confirm: (ctx) => {
 			const f = fileArg(ctx);
