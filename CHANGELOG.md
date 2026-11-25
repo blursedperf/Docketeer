@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.14.0
 
 - **Drag and drop in the Docket.** Drag a file or folder in Homebase › Files, Units, or a panel's file tree onto a
   folder (or onto a folder's *+ New* rows, or the top's) to move it there; links to it follow. A folder will not go
