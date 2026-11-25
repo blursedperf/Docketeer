@@ -11,6 +11,7 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import { isImage } from './attachments';
 import { isMedia } from './media';
 import { propertiesPreview } from './properties-editor';
+import { tablePreview } from './tables-editor';
 
 export interface LivePreviewOptions {
 	/** Open a link clicked in the formatted text. */
@@ -242,5 +243,5 @@ export function livePreview(opts: LivePreviewOptions): Extension {
 		},
 	});
 
-	return [plugin, clicks, propertiesPreview(), EditorView.editorAttributes.of({ class: 'is-live-preview' })];
+	return [plugin, clicks, propertiesPreview(), tablePreview(), EditorView.editorAttributes.of({ class: 'is-live-preview' })];
 }

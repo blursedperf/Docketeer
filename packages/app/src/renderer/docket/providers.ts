@@ -221,6 +221,27 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 			},
 		}),
 		docket.addSearchProvider({
+			// "+name": make a note of that name (Enter), or → to choose the place; if it exists, open it.
+			id: 'core:new-note', title: 'New note', prefixes: ['+'], source: 'core',
+			search: ({ text }) => {
+				const name = text.trim().replace(/\.md$/i, '');
+				if (!name) return { results: [] };
+				if (/[\\/:]/.test(name)) return { results: [{ id: 'new-note:bad', type: 'New note', title: 'A name cannot contain / \\ or :', icon: 'alert-triangle' }] };
+				const parent = app.fileManager.getNewFileParent(activePath());
+				const existing = vault.getMarkdownFiles().find((f) => f.basename.toLowerCase() === name.toLowerCase() && !app.isLocked(f));
+				const results: SearchResult[] = [];
+				if (existing) results.push({ ...noteResult(existing, 1e6), detail: `already exists · ${existing.parent && !existing.parent.isRoot() ? placeName(existing.parent) : 'top of the homebase'}` });
+				results.push({
+					id: `create:${name}`, type: 'New note', title: `Create note “${name}”`, detail: `in ${placeName(parent)} · → to choose another place`, icon: 'file-plus', score: existing ? 0 : 1e6,
+					open: async (where) => {
+						const file = await createNote(app, parent, name);
+						if (file && where !== 'current') await openFileIn(app, file, where);
+					},
+				});
+				return { results };
+			},
+		}),
+		docket.addSearchProvider({
 			id: 'core:settings', title: 'Settings', prefixes: [''], source: 'core',
 			search: ({ text }) => {
 				if (text.length < 2) return [];
@@ -318,6 +339,7 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 					['Prefixes', '/', 'Headings in this note'],
 					['Prefixes', '@', 'Authorities in this note'],
 					['Prefixes', '?', 'This cheat sheet'],
+					['Prefixes', '+', 'New note: type its name, Enter'],
 				];
 				fixed.forEach(([type, keys, title], i) => {
 					const s = text ? best(text, [title, keys]) : 1000 - i;

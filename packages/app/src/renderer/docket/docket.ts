@@ -23,9 +23,10 @@ const EMPTY: Record<string, string> = {
 	'#': 'No folders or tags match.',
 	'/': 'No headings in this note match.',
 	'?': 'No shortcuts match.',
+	'+': 'Type the new note\'s name, then Enter (→ to choose where it goes).',
 };
 
-const PREFIX_LABEL: Record<string, string> = { '': 'All', '>': 'Commands', '@': 'Authorities', '#': 'Folders & tags', '/': 'Headings', '?': 'Shortcuts' };
+const PREFIX_LABEL: Record<string, string> = { '': 'All', '>': 'Commands', '@': 'Authorities', '#': 'Folders & tags', '/': 'Headings', '?': 'Shortcuts', '+': 'New note' };
 
 export interface ActionItem { title: string; icon?: string; run: () => unknown }
 

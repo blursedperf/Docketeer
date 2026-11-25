@@ -93,13 +93,16 @@ export class WorkspaceSplit extends WorkspaceItem {
 	/** Lay out children with resize handles between them. */
 	render(): void {
 		this.containerEl.empty();
+		// Weights are shares of the row (or column): as flex-grow they must add up to at least 1, or the children
+		// leave the rest empty (a pane left alone after its neighbour closed kept 0.5, so half the window stayed blank).
+		const total = this.children.reduce((sum, c) => sum + (c.weight > 0 ? c.weight : 0), 0) || 1;
 		this.children.forEach((child, i) => {
 			if (i > 0) {
 				const handle = this.containerEl.createDiv({ cls: 'workspace-leaf-resize-handle' });
 				const before = this.children[i - 1]!;
 				handle.addEventListener('mousedown', (e) => this.startResize(e, before, child));
 			}
-			child.containerEl.setCssStyles({ flexGrow: String(child.weight), flexBasis: '0' });
+			child.containerEl.setCssStyles({ flexGrow: String((child.weight > 0 ? child.weight : 0) / total || 1), flexBasis: '0' });
 			this.containerEl.appendChild(child.containerEl);
 		});
 	}
@@ -119,8 +122,9 @@ export class WorkspaceSplit extends WorkspaceItem {
 			const share = Math.max(0.08, Math.min(0.92, (sizeA + d) / total));
 			a.weight = share * weights;
 			b.weight = (1 - share) * weights;
-			a.containerEl.style.flexGrow = String(a.weight);
-			b.containerEl.style.flexGrow = String(b.weight);
+			const all = this.children.reduce((sum, c) => sum + (c.weight > 0 ? c.weight : 0), 0) || 1;
+			a.containerEl.style.flexGrow = String(a.weight / all);
+			b.containerEl.style.flexGrow = String(b.weight / all);
 			this.workspace.trigger('resize');
 		};
 		const up = () => {
@@ -505,12 +509,29 @@ export class Workspace extends Events {
 	}
 
 	/** A new tab in the active pane: where views plugins open "in a sidebar" go (there are no sidebars). */
+	/**
+	 * What a plugin would put in the right sidebar (a page preview, a version history) opens beside the note
+	 * instead, as PDFs and recordings do: a new tab in the pane to the right of the one in use, or a new pane
+	 * split off to the right when there is none.
+	 */
 	getRightLeaf(_split = false): WorkspaceLeaf {
-		return this.createLeafInTabs(this.activeRootTabs());
+		return this.leafBeside('right');
 	}
 
+	/** The left sidebar's equivalent: beside the note, to the left. */
 	getLeftLeaf(_split = false): WorkspaceLeaf {
-		return this.createLeafInTabs(this.activeRootTabs());
+		return this.leafBeside('left');
+	}
+
+	private leafBeside(dir: 'left' | 'right'): WorkspaceLeaf {
+		const leaf = this.activeRootLeaf() ?? this.getMostRecentLeaf();
+		if (!leaf?.parent) return this.createLeafInTabs(this.activeRootTabs());
+		const { tree, panes } = this.layoutTree();
+		const id = [...panes].find(([, t]) => t === leaf.parent)?.[0];
+		const next = id ? neighbour(tree, id, dir) : null;
+		const tabs = next ? panes.get(next) : null;
+		if (tabs) return this.createLeafInTabs(tabs);
+		return this.createLeafBySplit(leaf, 'vertical', dir === 'left');
 	}
 
 	ensureSideLeaf(type: string, side: 'left' | 'right', opts: { active?: boolean; reveal?: boolean; state?: Record<string, unknown> } = {}): Promise<WorkspaceLeaf> {
@@ -869,6 +890,9 @@ export class Workspace extends Events {
 				const target = t.tabs;
 				const split = target.parent!;
 				if (split.direction === direction) {
+					// The new pane takes half the target's room, as splitting does.
+					fresh.weight = target.weight / 2;
+					target.weight /= 2;
 					split.insertChild(split.children.indexOf(target) + (before ? 0 : 1), fresh);
 				} else {
 					const sub = new WorkspaceSplit(this, direction);

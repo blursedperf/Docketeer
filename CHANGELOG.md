@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **Tables while you write.** In live preview a table is drawn as a table (with its bold, italics and links) until you
+  click into it; clicking a cell puts the cursor in that cell of the Markdown. Hover it for **+** at the right edge (a
+  column) and the foot (a row). Editing a table, **Tab** and **Shift+Tab** go to the next and previous cell and line
+  the columns up; Tab in the last cell adds a row. **Alt+Enter** adds a row below, **Alt+Shift+Enter** a column to
+  the right; *Table:* commands add rows above and columns to the left, delete rows and columns, and line the columns
+  up, and they are in the right-click menu in a table. Tab outside a table indents as before.
+- **"+" in the Docket makes a note.** Type `+` and a name (`+Smith v Jones brief`), Enter: the note is made in the
+  usual place and opened; → chooses another place. If a note of that name exists, it is offered first.
+- **AGLC4's page preview and version history open beside the note**, in the pane to the right or a new one, as PDFs
+  and recordings do, instead of over it. (Plugins' "right sidebar" views all open this way now.)
+- **Fixed**: after splitting right and closing the new pane, the pane left filled only half the window. Panes now
+  always share the whole window; a tab dragged onto a pane's edge takes half that pane, as splitting does.
+
 ## v0.14.0
 
 - **Drag and drop in the Docket.** Drag a file or folder in Homebase › Files, Units, or a panel's file tree onto a

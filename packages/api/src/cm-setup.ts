@@ -7,6 +7,7 @@ import { EditorState, type Extension, RangeSetBuilder } from '@codemirror/state'
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, drawSelection, dropCursor, keymap, rectangularSelection } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import type { MarkdownConfig } from '@lezer/markdown';
+import { tableKeymap } from './tables-editor';
 
 /** YAML frontmatter at the very top of a note, parsed as one block (not as a setext heading). */
 const frontmatter: MarkdownConfig = {
@@ -240,6 +241,7 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 		EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' }),
 		inlineMarks,
 		markdownLinks,
+		tableKeymap(),
 		keymap.of([
 			...markdownKeymap,
 			...defaultKeymap,

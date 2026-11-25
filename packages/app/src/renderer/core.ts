@@ -3,10 +3,11 @@
  * badge and word count. Search, navigation and panels are the Docket's (./docket).
  */
 import { EditorSelection } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, type CommandContext, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp,
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
@@ -634,6 +635,29 @@ export function registerCore(app: App): { reveal(): void } {
 	editorCmd('editor:toggle-bold', 'Toggle bold', 'b', '**');
 	editorCmd('editor:toggle-italics', 'Toggle italics', 'i', '*');
 	editorCmd('editor:insert-wikilink', 'Insert internal link', 'k', '[[', ']]');
+	// Tables: rows and columns from the keyboard, in a table being edited (Tab and Shift+Tab move between cells).
+	const tableCmd = (id: string, name: string, op: TableOp, hotkeys?: Hotkey[]) => add({
+		id, name, section: 'Tables', icon: 'table', hotkeys,
+		when: () => { const v = activeMarkdown(); return !!v && v.getMode() === 'source' && !!tableHere(v.editor.cm.state); },
+		run: () => { const v = activeMarkdown(); if (v) tableOp(v.editor.cm, op); },
+	});
+	tableCmd('editor:table-row-below', 'Table: add a row below', 'row-below', [{ modifiers: ['Alt'], key: 'Enter' }]);
+	tableCmd('editor:table-row-above', 'Table: add a row above', 'row-above');
+	tableCmd('editor:table-column-right', 'Table: add a column to the right', 'column-right', [{ modifiers: ['Alt', 'Shift'], key: 'Enter' }]);
+	tableCmd('editor:table-column-left', 'Table: add a column to the left', 'column-left');
+	tableCmd('editor:table-delete-row', 'Table: delete this row', 'delete-row');
+	tableCmd('editor:table-delete-column', 'Table: delete this column', 'delete-column');
+	tableCmd('editor:table-format', 'Table: line up the columns', 'format');
+	// …and from the right-click menu, in a table.
+	workspace.on('editor-menu', (menu: Menu, editor: { cm: EditorView }) => {
+		if (!tableHere(editor.cm.state)) return;
+		menu.addSeparator();
+		for (const [title, op, icon] of [
+			['Add a row below', 'row-below', 'arrow-down'], ['Add a row above', 'row-above', 'arrow-up'],
+			['Add a column to the right', 'column-right', 'arrow-right'], ['Add a column to the left', 'column-left', 'arrow-left'],
+			['Delete this row', 'delete-row', 'trash-2'], ['Delete this column', 'delete-column', 'trash-2'],
+		] as const) menu.addItem((i) => i.setTitle(title).setIcon(icon).onClick(() => { tableOp(editor.cm, op); }));
+	});
 	add({ id: 'editor:toggle-highlight', name: 'Toggle highlight', section: 'Edit', editorCallback: () => wrapSelection(app, '==') });
 	add({ id: 'editor:toggle-code', name: 'Toggle inline code', section: 'Edit', editorCallback: () => wrapSelection(app, '`') });
 	add({ id: 'editor:toggle-strikethrough', name: 'Toggle strikethrough', section: 'Edit', editorCallback: () => wrapSelection(app, '~~') });

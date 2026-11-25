@@ -21,7 +21,8 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 
 ## Prefixes
 
-`>` commands · `#` folders and tags · `/` headings in this note · `?` shortcuts · `@` authorities (Phase 4)
+`>` commands · `#` folders and tags · `/` headings in this note · `?` shortcuts · `@` authorities (Phase 4) ·
+`+` new note (`+Smith v Jones brief`, Enter; → to choose where it goes)
 
 ## Tiling (Phase 5)
 

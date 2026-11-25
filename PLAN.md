@@ -151,7 +151,7 @@ Progress:
       Footnotes inside an embedded section are not resolved yet.
 - [x] Live preview (default; Editor settings or "Toggle live preview / source mode"): formatting marks hidden
       and links, bullets, task boxes, quotes and rules drawn, except on the lines being edited and in %% comments.
-      Footnote syntax is left as written for the AGLC4 plugin. Tables and code blocks are shown as written.
+      Footnote syntax is left as written for the AGLC4 plugin. Code blocks are shown as written; tables are drawn (since 0.15).
 - [x] Offline spellcheck: nspell (MIT) with SCOWL Hunspell dictionaries for English (Australia, default), British
       and US English. Licences reviewed: SCOWL's permissive notices, Ispell's BSD licence and WordNet's notice
       require the notices to ship, so `THIRD_PARTY_NOTICES.txt` (every bundled library and dictionary) is built

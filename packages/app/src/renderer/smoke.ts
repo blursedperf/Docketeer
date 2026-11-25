@@ -9,6 +9,8 @@ import { type App, MarkdownView, Platform, formatHotkey, paneRects, type TFile, 
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { genericPanels } from './docket/panels-model';
+
+const splitCells = (line: string) => line.trim().replace(/^\||\|$/g, '').split('|');
 import { revealInUnits } from './docket/panels/units';
 
 interface Check { name: string; ok: boolean; detail?: string; }
@@ -837,19 +839,22 @@ export async function runSmoke(app: App): Promise<void> {
 		const ok = await until(() => document.querySelectorAll('.aglc-pv-page').length > 1, 15000);
 		return ok || document.querySelector('.aglc-pv-info')?.textContent || 'no preview';
 	});
-	await check('AGLC4: page preview and version history open as normal tabs', async () => {
+	await check('AGLC4: page preview and version history open beside the note, as PDFs do', async () => {
 		const preview = workspace.getLeavesOfType('aglc4-page-preview')[0];
+		const essayLeaf = workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file?.basename === 'AGLC4 example essay');
+		if (essayLeaf) workspace.setActiveLeaf(essayLeaf, { focus: true });
 		commands.executeCommandById(`${id}:show-version-history`);
 		await sleep(300);
 		const history = workspace.getLeavesOfType('aglc4-version-history')[0];
 		const inMain = (l: typeof preview) => !!l && !l.isSidebar() && l.parent !== null && workspace.rootTabs().includes(l.parent);
-		const ok = inMain(preview) && inMain(history);
+		const beside = (l: typeof preview) => !!l && !!essayLeaf && l.parent !== essayLeaf.parent;
+		const ok = inMain(preview) && inMain(history) && beside(preview) && beside(history);
 		history?.detach();
 		preview?.detach();
 		await sleep(100);
 		const main = workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file?.basename === 'AGLC4 example essay');
 		if (main) workspace.setActiveLeaf(main, { focus: true });
-		return ok || `preview=${inMain(preview)} history=${inMain(history)}`;
+		return ok || `preview=${inMain(preview)}/${beside(preview)} history=${inMain(history)}/${beside(history)}`;
 	});
 	await check('AGLC4: version history moves with the keys: ↑↓ choose, Enter to the actions, Esc back', async () => {
 		const essay = workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file?.basename === 'AGLC4 example essay');
@@ -1855,6 +1860,87 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(150);
 		if (app.docket.orderedPanels().length !== 6) problems.push(`after reset: ${app.docket.orderedPanels().map((p) => p.id).join(',')}`);
 		(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
+		return problems.length === 0 || problems.join('; ');
+	});
+	await check('list fixes: "+" makes a note from the Docket; a closed split gives its room back; tables drawn, grown by mouse and keys', async () => {
+		const problems: string[] = [];
+		const ui = () => (app as unknown as { docketUI?: { open(): void; close(h?: boolean): void } }).docketUI;
+		// "+name" in the Docket: Create note first; Enter makes and opens it.
+		ui()?.open();
+		await sleep(100);
+		const input = document.querySelector<HTMLInputElement>('.docket-input')!;
+		input.value = '+';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		await sleep(150);
+		if (!document.querySelector('.docket-results .docket-empty')?.textContent?.includes('new note')) problems.push('bare "+" gives no hint');
+		input.value = '+Plus smoke';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		await sleep(200);
+		const first = document.querySelector('.docket-results .docket-option .docket-option-title')?.textContent;
+		if (first !== 'Create note “Plus smoke”') problems.push(`"+" first result: ${first}`);
+		input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+		await sleep(300);
+		const made = vault.getMarkdownFiles().find((f) => f.basename === 'Plus smoke');
+		if (!made) problems.push('"+" made no note');
+		else if (workspace.getActiveFile() !== made) problems.push('the new note did not open');
+		// Split right, close the new pane: the one left fills the window again.
+		const leaf = workspace.getMostRecentLeaf()!;
+		const fullWidth = leaf.parent!.containerEl.getBoundingClientRect().width;
+		commands.executeCommandById('app:split-right');
+		await sleep(150);
+		const halved = leaf.parent!.containerEl.getBoundingClientRect().width;
+		commands.executeCommandById('app:close-tab');
+		await sleep(150);
+		const back = leaf.parent!.containerEl.getBoundingClientRect().width;
+		if (!(halved < fullWidth * 0.75) || Math.abs(back - fullWidth) > 3) problems.push(`widths: ${fullWidth} → ${halved} → ${back}`);
+		// Tables: drawn in live preview, grown with the mouse, edited with the keys.
+		const note = made ?? (await vault.create('Plus smoke.md', ''));
+		const view = (workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file === note)?.view ?? workspace.getActiveViewOfType(MarkdownView)) as MarkdownView;
+		view.editor.setValue('Top line\n\n| Case | Year |\n| --- | ---: |\n| Mabo | 1992 |\n\nAfter the table\n');
+		view.editor.setCursor({ line: 0, ch: 0 });
+		await sleep(150);
+		const widget = () => view.contentEl.querySelector<HTMLElement>('.cm-table-widget');
+		if (!widget()?.querySelector('table tbody tr')) problems.push('the table is not drawn');
+		widget()?.querySelector<HTMLElement>('.cm-table-add-row')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+		await sleep(100);
+		widget()?.querySelector<HTMLElement>('.cm-table-add-column')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+		await sleep(100);
+		const grown = view.editor.getValue();
+		if (!grown.includes('| Case | Year |     |') || grown.split('\n').filter((l) => l.startsWith('|')).length !== 4) problems.push(`+ buttons: ${JSON.stringify(grown)}`);
+		// Click a cell: the Markdown shows, the cursor in that cell.
+		widget()?.querySelectorAll<HTMLElement>('tbody td')[1]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+		await sleep(100);
+		if (widget()) problems.push('the table stayed drawn while being edited');
+		const cur = view.editor.getCursor();
+		if (cur.line !== 4 || view.editor.getLine(4).slice(cur.ch, cur.ch + 4) !== '1992') problems.push(`cell click put the cursor at ${cur.line}:${cur.ch}`);
+		// Tab to the next cell, and past the last one: a new row.
+		const tab = (shift = false) => view.editor.cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: shift, bubbles: true, cancelable: true }));
+		tab(); await sleep(50);
+		if (view.editor.getCursor().line !== 4 || view.editor.getCursor().ch < view.editor.getLine(4).indexOf('1992') + 4) problems.push('Tab did not go to the next cell');
+		view.editor.setCursor({ line: 5, ch: view.editor.getLine(5).length - 3 });
+		tab(); await sleep(50);
+		if (view.editor.getValue().split('\n').filter((l) => l.startsWith('|')).length !== 5) problems.push('Tab in the last cell added no row');
+		// The keys' commands.
+		const rows = () => view.editor.getValue().split('\n').filter((l) => l.startsWith('|')).length;
+		const before = rows();
+		commands.executeCommandById('editor:table-row-below'); await sleep(50);
+		if (rows() !== before + 1) problems.push('add a row below did nothing');
+		commands.executeCommandById('editor:table-delete-row'); await sleep(50);
+		if (rows() !== before) problems.push('delete this row did nothing');
+		const cols = () => splitCells(view.editor.getLine(2)).length;
+		commands.executeCommandById('editor:table-column-right'); await sleep(50);
+		if (cols() !== 4) problems.push(`add a column: ${cols()} columns`);
+		commands.executeCommandById('editor:table-delete-column'); await sleep(50);
+		if (cols() !== 3) problems.push(`delete a column: ${cols()} columns`);
+		if (!view.editor.getValue().includes('\n\nAfter the table')) problems.push('the line after the table was changed');
+		if (!view.editor.getValue().startsWith('Top line\n\n| Case')) problems.push('the lines before the table were changed');
+		// Away from the table, Tab indents as before.
+		view.editor.setCursor({ line: 0, ch: 0 });
+		tab(); await sleep(50);
+		if (!view.editor.getLine(0).startsWith('\t') && !view.editor.getLine(0).startsWith('  ')) problems.push('Tab outside a table no longer indents');
+		await view.save();
+		workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file === note)?.detach();
+		await vault.delete(note);
 		return problems.length === 0 || problems.join('; ');
 	});
 	await check('units: pin, archive and folders from the keyboard', async () => {

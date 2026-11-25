@@ -58,3 +58,5 @@ export { IMAGE_EXTENSIONS, isImage, attachmentFolder, availablePath, saveAttachm
 
 /** This API's version. */
 export const apiVersion = '0.14.0';
+export { type Table, type Align, parseTable, formatTable, addRow, addColumn, deleteRow, deleteColumn, tableAt, allTables } from './tables';
+export { type TableOp, tableOp, tableHere } from './tables-editor';

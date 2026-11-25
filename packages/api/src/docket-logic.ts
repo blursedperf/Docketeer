@@ -4,7 +4,7 @@
  */
 import type { SearchResult } from './docket-registry';
 
-export const DOCKET_PREFIXES = ['>', '@', '#', '/', '?'] as const;
+export const DOCKET_PREFIXES = ['>', '@', '#', '/', '?', '+'] as const;
 
 /** "> new note" → { prefix: '>', text: 'new note' }. */
 export function parsePrefix(input: string): { prefix: string; text: string } {

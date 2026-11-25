@@ -92,6 +92,13 @@ const ALLOWED_TAGS = new Set([
 ]);
 const ALLOWED_ATTRS = new Set(['href', 'class', 'id', 'data-href', 'data-alias', 'title', 'start', 'colspan', 'rowspan', 'align', 'type', 'checked', 'disabled', 'aria-label', 'alt', 'src']);
 
+/** Draw a line of inline Markdown (a table cell: **bold**, *italics*, `code`, [[links]]) into `el`, safely. */
+export function renderInlineInto(el: HTMLElement, markdown: string): void {
+	const html = getParser().renderInline(markdown);
+	const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+	sanitizeInto(doc.body, el);
+}
+
 /** Copy only safe elements and attributes from parsed HTML into `target`. */
 function sanitizeInto(source: Node, target: Node) {
 	for (const child of Array.from(source.childNodes)) {
