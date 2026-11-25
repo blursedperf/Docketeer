@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **The "+" rows say only what they make**: *New note*, *New topic* and *New folder*, not "New note in Constitutional
+  Law and Human Rights Week 3", which crowded the list when folders have long names. Their indent shows the
+  folder they belong to, and screen readers and the row's tooltip still say it in full.
+
 ## v0.17.1
 
 - **Panels start at the top**: opening the Docket on a panel, choosing a panel or clearing the search shows it from

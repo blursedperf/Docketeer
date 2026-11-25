@@ -134,11 +134,12 @@ export function filesTree(app: App, docket: Docket, parent: HTMLElement, open: S
 	};
 	/** The "+ New note" and "+ New folder" rows at the end of `folder`'s contents. */
 	const addRows = (folder: TFolder, level: number) => {
+		// Named by what they make; their indent puts them in the folder. Screen readers hear the folder too.
 		const where = folder.isRoot() ? '' : ` in ${folder.name}`;
 		const target = folder.isRoot() ? '' : folder.path;
 		for (const r of [
-			row(parent, docket, `New note${where}`, () => newNote(folder), { icon: 'plus', level, cls: 'is-command' }),
-			row(parent, docket, `New folder${where}`, () => newFolder(folder), { icon: 'folder-plus', level, cls: 'is-command' }),
+			row(parent, docket, 'New note', () => newNote(folder), { icon: 'plus', level, cls: 'is-command', label: `New note${where}` }),
+			row(parent, docket, 'New folder', () => newFolder(folder), { icon: 'folder-plus', level, cls: 'is-command', label: `New folder${where}` }),
 		]) {
 			keys(r, folder);
 			// Dropping a file or folder on these rows puts it in this folder too (the top's rows: the top).

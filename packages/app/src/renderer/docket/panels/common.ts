@@ -16,12 +16,16 @@ export interface RowOptions {
 	/** Actions for → or Mod+. */
 	actions?: () => ActionItem[];
 	cls?: string;
+	/** The row's full name for screen readers and its tooltip, when the title leans on its indent ("New note in Torts"). */
+	label?: string;
 }
 
 /** A row: arrows move between rows, Enter (and Mod/Alt/Shift+Enter) or a click runs it, → its actions. */
 export function row(parent: HTMLElement, docket: Docket, title: string, run: (where: Where) => unknown, o: RowOptions = {}): HTMLElement {
 	const el = parent.createEl('button', { cls: `docket-item${o.cls ? ` ${o.cls}` : ''}`, attr: { type: 'button', 'data-docket-item': '' } });
 	if (o.level) el.style.setProperty('--outline-level', String(o.level));
+	// A fuller name for screen readers and the tooltip, when the shown one leans on the row's place (its indent).
+	if (o.label) { el.setAttribute('aria-label', o.label); el.title = o.label; }
 	if (o.icon) setIcon(el.createSpan({ cls: 'docket-option-icon' }), o.icon);
 	const text = el.createSpan({ cls: 'docket-option-text' });
 	const t = text.createSpan({ cls: 'docket-option-title', text: title });

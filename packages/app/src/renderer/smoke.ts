@@ -1593,9 +1593,11 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	// ---- Phase 4: the panels ------------------------------------------------------------------------
 	const essayFile = vault.getFileByPath('AGLC4 example essay.md');
 	const openEssay = async () => { if (essayFile) await workspace.getLeaf(false).openFile(essayFile); await sleep(150); const v = workspace.getActiveViewOfType(MarkdownView)!; if (v.getMode() !== 'source') await v.setMode('source'); return v.editor.cm; };
-	const rowsText = () => [...document.querySelectorAll('.docket-panel .docket-item .docket-option-title')].map((e) => e.textContent ?? '');
+	// A row's full name: its label when the title leans on its indent ("New note" in Torts is "New note in Torts").
+	const rowName = (x: Element) => x.getAttribute('aria-label') ?? x.querySelector('.docket-option-title')?.textContent ?? '';
+	const rowsText = () => [...document.querySelectorAll('.docket-panel .docket-item')].map(rowName);
 	const focusEditorOrBody = () => { const v = workspace.getActiveViewOfType(MarkdownView); if (v) v.editor.cm.focus(); else (document.activeElement as HTMLElement | null)?.blur(); };
-	const focusRow = (title: string) => { const r = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((x) => x.querySelector('.docket-option-title')?.textContent === title); r?.focus(); return r; };
+	const focusRow = (title: string) => { const r = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((x) => rowName(x) === title || x.querySelector('.docket-option-title')?.textContent === title); r?.focus(); return r; };
 
 	await check('authorities: cases and legislation in the essay, Enter goes to the next place', async () => {
 		const ed = await openEssay();
@@ -1891,7 +1893,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			from.dispatchEvent(new DragEvent('dragend', { dataTransfer: dt, bubbles: true }));
 			await sleep(300);
 		};
-		const rowEl = (title: string) => [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((x) => x.querySelector('.docket-option-title')?.textContent === title);
+		const rowEl = (title: string) => [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((x) => rowName(x) === title);
 		const optEl = (title: string) => [...document.querySelectorAll<HTMLElement>('.docket-option')].find((x) => x.querySelector('.docket-option-title')?.textContent === title);
 		const tabEl = (id: string) => document.querySelector<HTMLElement>(`.docket-tab[data-panel="${id}"]`);
 		// Files: a note onto a folder, then back to the top; a folder onto itself is refused.
@@ -2430,7 +2432,9 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('3', { ctrl: true });
 		await sleep(100);
 		const rows2 = rowsText();
-		const topicRow = rows2.includes('New topic in Torts') && !rows2.includes('New topic in Negligence');
+		// The + rows show only what they make; the folder is in their indent (and their label, for screen readers).
+		const shown = [...document.querySelectorAll('.docket-panel .docket-item.is-command .docket-option-title')].map((e) => e.textContent);
+		const topicRow = rows2.includes('New topic in Torts') && !rows2.includes('New topic in Negligence') && shown.includes('New topic') && !shown.some((t) => / in /.test(t ?? ''));
 		focusRow('New topic in Torts');
 		press('Enter');
 		await sleep(80);

@@ -120,11 +120,12 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		for (const p of unitChildren(store.tags, folder.path).map((x) => app.vault.getFolderByPath(x)).filter((f): f is TFolder => !!f).sort(byName)) unitRow(parent, p, level + 1);
 		const notes = folder.children.filter((c): c is TFile => c instanceof TFile && c.extension === 'md').sort((a, b) => byName({ name: a.basename }, { name: b.basename }));
 		for (const f of notes) noteRow(parent, f, level + 1);
-		const add = row(parent, docket, `New note in ${folder.name}`, () => newNote(folder), { icon: 'plus', level: level + 1, cls: 'is-command' });
+		// The + rows say what they make, not where: their indent puts them in the folder (a long name would crowd them).
+		const add = row(parent, docket, 'New note', () => newNote(folder), { icon: 'plus', level: level + 1, cls: 'is-command', label: `New note in ${folder.name}` });
 		keys(add, folder);
 		dropIntoFolder(add, app, folder.path);
 		if (store.kind(folder.path) === 'subject') {
-			const addTopic = row(parent, docket, `New ${UNIT_LABELS.level2.toLowerCase()} in ${folder.name}`, () => newTopic(folder), { icon: 'folder-plus', level: level + 1, cls: 'is-command' });
+			const addTopic = row(parent, docket, `New ${UNIT_LABELS.level2.toLowerCase()}`, () => newTopic(folder), { icon: 'folder-plus', level: level + 1, cls: 'is-command', label: `New ${UNIT_LABELS.level2.toLowerCase()} in ${folder.name}` });
 			keys(addTopic, folder);
 		}
 	};
@@ -147,7 +148,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			keys(r, c);
 			if (expanded) {
 				folderTree(parent, c.children, level + 1);
-				const add = row(parent, docket, `New note in ${c.name}`, () => newNote(c), { icon: 'plus', level: level + 1, cls: 'is-command' });
+				const add = row(parent, docket, 'New note', () => newNote(c), { icon: 'plus', level: level + 1, cls: 'is-command', label: `New note in ${c.name}` });
 				keys(add, c);
 			}
 		}
