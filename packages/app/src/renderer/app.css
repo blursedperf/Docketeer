@@ -962,3 +962,18 @@ input.inline-title {
 }
 input.inline-title:hover { border-bottom-color: var(--doom-border-subtle); }
 input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: none; }
+
+/* Dragging in the Docket (drag.ts, docket.ts): files and folders onto folders, tabs and list rows into another order. */
+.docket-item.is-dragging, .docket-option.is-dragging, .docket-tab.is-dragging { opacity: 0.5; }
+.docket-item.is-drop-target, .docket-option.is-drop-target, .docket-tab.is-drop-target { outline: 2px solid var(--interactive-accent); outline-offset: -2px; background: var(--doom-base2); }
+.docket-option.is-reorderable { cursor: grab; }
+
+/* The welcome screen's choice of panels for a new homebase. */
+.welcome-layouts { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-3) 0; text-align: left; }
+.welcome-layouts[hidden] { display: none; }
+.welcome-layouts-title { margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
+.welcome-layout { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); text-align: left; height: auto; border: var(--border-width) solid var(--doom-border-subtle); border-radius: var(--radius-s); background: none; cursor: var(--cursor); }
+.welcome-layout:hover, .welcome-layout:focus-visible { border-color: var(--doom-blue); background: var(--doom-base2); }
+.welcome-layout-icon .svg-icon { width: var(--icon-lg); height: var(--icon-lg); color: var(--doom-blue-text); }
+.welcome-layout-name { font-family: var(--font-chrome); color: var(--doom-blue-text); }
+.welcome-layout-detail { font-size: var(--text-xs); color: var(--text-muted); white-space: normal; }

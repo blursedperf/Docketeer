@@ -10,6 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { serveVaultFile, vaultType } from './vault-files';
 import { installExample } from './example';
+import { applyHomebaseLayout } from './homebase-layout';
 
 const APP_DIR = __dirname; // dist/
 const RENDERER_DIR = path.join(APP_DIR, 'renderer');
@@ -272,10 +273,12 @@ function registerIpc() {
 		await openVaultAndReload(dest);
 		return dest;
 	});
-	handle('app:chooseVault', async (create: boolean) => {
+	handle('app:chooseVault', async (create: boolean, layout?: unknown) => {
 		const r = await dialog.showOpenDialog(win!, { title: create ? 'Create a homebase in a folder' : 'Open a folder as a homebase', properties: ['openDirectory', 'createDirectory'] });
 		const p = r.filePaths[0];
 		if (r.canceled || !p) return false;
+		// A new homebase starts with the layout chosen (Generic writes its panels; Legal is the panels as they come).
+		if (create && layout === 'generic') await applyHomebaseLayout(p, 'generic');
 		await openVaultAndReload(p);
 		return true;
 	});

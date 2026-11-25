@@ -15,6 +15,7 @@ import { ConfirmModal, NameModal, placeName } from '../dialogs';
 import {
 	type CustomPanel, type NoteRule, type PanelElement, type PanelsConfig, describeElement, elementHeading, moveItem, newPanelId, panelId, parsePanelsConfig,
 } from './panels-model';
+import { draggablePath } from './drag';
 
 const ELEMENT_ICONS: Record<PanelElement['type'], string> = { commands: 'terminal', files: 'folder-tree', notes: 'list', section: 'panel-top' };
 
@@ -116,6 +117,7 @@ export function registerCustomPanels(app: App, docket: Docket): () => void {
 						icon: 'file-text', detail: f.parent && !f.parent.isRoot() ? placeName(f.parent) : undefined, actions: () => noteActions(app, docket, f),
 					});
 					r.dataset.path = f.path;
+					draggablePath(r, f.path);
 				}
 				return;
 			}
@@ -148,10 +150,14 @@ export function registerCustomPanels(app: App, docket: Docket): () => void {
 	const arrange = () => {
 		const hidden = new Set(config.hidden);
 		let n = 0;
-		const items = app.docket.allPanels().map((p) => {
+		const ids = app.docket.allPanels().map((p) => p.id);
+		const items = app.docket.allPanels().map((p, i) => {
 			const shown = !hidden.has(p.id);
 			if (shown) n++;
-			return item(`arrange:${p.id}`, 'Panels', p.title, p.icon ?? 'panel-top', `${shown ? (n <= 9 ? `Tab ${n}` : 'Shown') : 'Hidden'}${p.id.startsWith('custom:') ? ' · yours' : ''}`, () => panelMenu(p.id));
+			const it = item(`arrange:${p.id}`, 'Panels', p.title, p.icon ?? 'panel-top', `${shown ? (n <= 9 ? `Tab ${n}` : 'Shown') : 'Hidden'}${p.id.startsWith('custom:') ? ' · yours' : ''}`, () => panelMenu(p.id));
+			// Drag a panel onto another to put it there.
+			it.reorder = { group: 'panels', index: i, move: (to) => save({ ...config, order: moveItem(ids, i, to - i) }).then(arrange) };
+			return it;
 		});
 		items.push(item('arrange:new', 'Change', 'New panel…', 'plus', 'Build one from commands, file trees, note lists and sections', newPanel));
 		if (config.order.length || config.hidden.length) items.push(item('arrange:reset', 'Change', 'Show every panel in its usual order', 'rotate-ccw', 'Your own panels stay', () => save({ ...config, order: [], hidden: [] }).then(arrange)));
@@ -197,7 +203,12 @@ export function registerCustomPanels(app: App, docket: Docket): () => void {
 	const editContents = (pid: string) => {
 		const p = find(pid);
 		if (!p) { arrange(); return; }
-		const items = p.elements.map((e, i) => item(`el:${i}`, 'Shows', describeElement(e, title), ELEMENT_ICONS[e.type], e.title ? `Heading: ${e.title}` : undefined, () => elementMenu(pid, i)));
+		const items = p.elements.map((e, i) => {
+			const it = item(`el:${i}`, 'Shows', describeElement(e, title), ELEMENT_ICONS[e.type], e.title ? `Heading: ${e.title}` : undefined, () => elementMenu(pid, i));
+			// Drag an element onto another to put it there.
+			it.reorder = { group: 'elements', index: i, move: (to) => update(pid, (x) => ({ ...x, elements: moveItem(x.elements, i, to - i) })).then(() => editContents(pid)) };
+			return it;
+		});
 		const add = (e: PanelElement) => update(pid, (x) => ({ ...x, elements: [...x.elements, e] }));
 		items.push(item('add:commands', 'Add', 'Add commands…', 'terminal', 'Buttons for any command, a plugin\'s too', () => add({ type: 'commands', commands: [] }).then(() => pickCommands(pid, find(pid)!.elements.length - 1))));
 		items.push(item('add:files', 'Add', 'Add a file tree…', 'folder-tree', 'A folder and everything in it, or the whole homebase', () => pickFolder('File tree of…', (folder) => add({ type: 'files', folder }).then(() => editContents(pid)))));
@@ -282,10 +293,20 @@ export function registerCustomPanels(app: App, docket: Docket): () => void {
 
 	// -------------------------------------------------------------------------------------------
 
+	// A Docket tab dragged onto another: the dragged panel takes that place.
+	const tabMoved = app.workspace.on('docket-move-panel', (id: string, target: string) => {
+		const ids = app.docket.allPanels().map((p) => p.id);
+		const from = ids.indexOf(id);
+		const to = ids.indexOf(target);
+		if (from < 0 || to < 0 || from === to) return;
+		void save({ ...config, order: moveItem(ids, from, to - from) });
+	});
+
 	app.commands.addCommand({ id: 'app:arrange-panels', name: "Arrange and customise the Docket's panels", icon: 'layout-list', section: 'Docket', aliases: ['Customise panels', 'Hide panel', 'Reorder panels', 'Edit panels'], run: () => arrange() });
 	app.commands.addCommand({ id: 'app:new-panel', name: 'New Docket panel…', icon: 'plus', section: 'Docket', aliases: ['Custom panel', 'Make a panel'], run: () => newPanel() });
 	void load();
 	return () => {
+		app.workspace.offref(tabMoved);
 		for (const r of registered) r();
 		registered = [];
 		app.docket.setArrangement({ order: [], hidden: [] });

@@ -49,10 +49,26 @@ export async function switcherItems(app: App): Promise<SearchResult[]> {
 	}
 	const action = (id: string, title: string, icon: string, detail: string, run: () => unknown): SearchResult => ({ id, type: 'Open', icon, title, detail, open: () => { void run(); } });
 	items.push(action('homebase:open-folder', 'Open a folder as a homebase…', 'folder-open', 'Any folder; its Markdown files become notes', () => app.host.app.chooseVault(false)));
-	items.push(action('homebase:create', 'Create a new homebase…', 'folder-plus', 'Choose or make an empty folder', () => app.host.app.chooseVault(true)));
+	items.push(action('homebase:create', 'Create a new homebase…', 'folder-plus', 'Legal or generic panels, then a folder', () => createHomebase(app)));
 	if (app.host.app.openExample) items.push(action('homebase:example', 'Open the example homebase', 'graduation-cap', 'Sample law notes in “Quire example” in your Documents', () => openExample(app)));
 	if (others.length) items.push(action('homebase:forget', 'Remove a homebase from this list…', 'list-x', 'The folder and its notes stay where they are', () => showForget(app)));
 	return items;
+}
+
+/** The two layouts a new homebase can start with, in words. */
+export const LAYOUTS = [
+	{ id: 'legal' as const, title: 'Legal', icon: 'scale', detail: 'Units, Authorities, Outline, Cite, Homebase and Layout panels: law notes with AGLC4 citations (as Quire comes)' },
+	{ id: 'generic' as const, title: 'Generic', icon: 'folder-tree', detail: 'Three panels: Files and Folders, Homebase and Layout; the others can be shown later' },
+];
+
+/** Create a homebase: first which layout (a list in the Docket), then the folder. */
+export function createHomebase(app: App): void {
+	const docket = docketOf(app);
+	if (!docket) { void app.host.app.chooseVault(true, 'legal'); return; }
+	docket.showList('New homebase: which panels should it start with?', LAYOUTS.map((l) => ({
+		id: `layout:${l.id}`, type: 'Layout', icon: l.icon, title: l.title, detail: l.detail,
+		open: () => { void app.host.app.chooseVault(true, l.id); },
+	})));
 }
 
 export async function openExample(app: App): Promise<void> {
@@ -93,7 +109,7 @@ export function registerHomebases(app: App): void {
 		id: 'app:switch-homebase', name: 'Switch homebase…', icon: 'house', hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'o' }],
 		aliases: ['Recent homebases', 'Open vault', 'Change homebase'], run: () => { void showSwitcher(app); },
 	});
-	add({ id: 'app:create-homebase', name: 'Create a new homebase…', icon: 'folder-plus', aliases: ['New homebase', 'New vault'], run: () => { void app.host.app.chooseVault(true); } });
+	add({ id: 'app:create-homebase', name: 'Create a new homebase…', icon: 'folder-plus', aliases: ['New homebase', 'New vault', 'Generic homebase', 'Legal homebase'], run: () => createHomebase(app) });
 	add({ id: 'app:open-example-homebase', name: 'Open the example homebase', icon: 'graduation-cap', aliases: ['Sample notes', 'Demo', 'Tutorial'], when: () => !!app.host.app.openExample, run: () => { void openExample(app); } });
 	add({ id: 'app:forget-homebase', name: 'Remove a homebase from the recent list…', icon: 'list-x', run: () => { void showForget(app); } });
 

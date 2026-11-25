@@ -10,6 +10,7 @@ import { openFileIn } from '../providers';
 import { unitsStore } from '../../units-store';
 import { byName, unitTagActions } from './units';
 import { row, section } from './common';
+import { draggablePath, dropIntoFolder } from '../drag';
 
 export interface RedactOptions { comments: boolean; frontmatter: boolean; words: string[] }
 
@@ -134,8 +135,15 @@ export function filesTree(app: App, docket: Docket, parent: HTMLElement, open: S
 	/** The "+ New note" and "+ New folder" rows at the end of `folder`'s contents. */
 	const addRows = (folder: TFolder, level: number) => {
 		const where = folder.isRoot() ? '' : ` in ${folder.name}`;
-		keys(row(parent, docket, `New note${where}`, () => newNote(folder), { icon: 'plus', level, cls: 'is-command' }), folder);
-		keys(row(parent, docket, `New folder${where}`, () => newFolder(folder), { icon: 'folder-plus', level, cls: 'is-command' }), folder);
+		const target = folder.isRoot() ? '' : folder.path;
+		for (const r of [
+			row(parent, docket, `New note${where}`, () => newNote(folder), { icon: 'plus', level, cls: 'is-command' }),
+			row(parent, docket, `New folder${where}`, () => newFolder(folder), { icon: 'folder-plus', level, cls: 'is-command' }),
+		]) {
+			keys(r, folder);
+			// Dropping a file or folder on these rows puts it in this folder too (the top's rows: the top).
+			dropIntoFolder(r, app, target);
+		}
 	};
 	const cmd = (id: string, title: string, args: Record<string, unknown>): ActionItem | null => {
 		const c = app.commands.findCommand(id);
@@ -161,6 +169,8 @@ export function filesTree(app: App, docket: Docket, parent: HTMLElement, open: S
 			});
 			r.setAttribute('aria-expanded', String(expanded));
 			r.dataset.path = f.path;
+			draggablePath(r, f.path);
+			dropIntoFolder(r, app, f.path);
 			keys(r, f);
 			if (expanded) {
 				draw(f, level + 1);
@@ -178,6 +188,7 @@ export function filesTree(app: App, docket: Docket, parent: HTMLElement, open: S
 				actions: () => (f.extension === 'md' ? (locked ? [] : noteActions(app, docket, f)) : common(f)),
 			});
 			r.dataset.path = f.path;
+			draggablePath(r, f.path);
 			keys(r, folder);
 		}
 	};

@@ -383,6 +383,38 @@ export class Docket {
 		this.focusZone('input');
 	}
 
+	/** The row being dragged to reorder a list, while it is. */
+	private dragged: SearchResult | null = null;
+
+	/** Let `el` (result `r`) be dragged onto rows of the same group to put the list in another order. */
+	private reorderable(el: HTMLElement, r: SearchResult): void {
+		const ro = r.reorder!;
+		el.draggable = true;
+		el.addClass('is-reorderable');
+		el.addEventListener('dragstart', (e) => {
+			this.dragged = r;
+			e.dataTransfer?.setData('text/x-quire-reorder', `${ro.group}:${ro.index}`);
+			if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+			el.addClass('is-dragging');
+		});
+		el.addEventListener('dragend', () => { this.dragged = null; el.removeClass('is-dragging'); });
+		el.addEventListener('dragover', (e) => {
+			if (!this.dragged?.reorder || this.dragged.reorder.group !== ro.group || this.dragged === r) return;
+			e.preventDefault();
+			if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+			el.addClass('is-drop-target');
+		});
+		el.addEventListener('dragleave', () => el.removeClass('is-drop-target'));
+		el.addEventListener('drop', (e) => {
+			el.removeClass('is-drop-target');
+			const from = this.dragged;
+			this.dragged = null;
+			if (!from?.reorder || from.reorder.group !== ro.group || from === r) return;
+			e.preventDefault();
+			void Promise.resolve(from.reorder.move(ro.index)).catch((err: unknown) => new Notice(err instanceof Error ? err.message : String(err)));
+		});
+	}
+
 	private renderTabs(): void {
 		this.tabsEl.empty();
 		this.app.docket.orderedPanels().forEach((p, i) => {
@@ -396,6 +428,23 @@ export class Docket {
 			tab.createSpan({ text: p.title });
 			tab.toggleClass('is-active', active);
 			tab.addEventListener('click', () => { this.showPanel(p.id); this.focusZone('tabs'); });
+			// Drag a tab onto another to put it there (saved with the panels' arrangement).
+			tab.draggable = true;
+			tab.addEventListener('dragstart', (e) => { e.dataTransfer?.setData('text/x-quire-panel', p.id); tab.addClass('is-dragging'); });
+			tab.addEventListener('dragend', () => tab.removeClass('is-dragging'));
+			tab.addEventListener('dragover', (e) => {
+				if (!e.dataTransfer?.types.includes('text/x-quire-panel')) return;
+				e.preventDefault();
+				tab.addClass('is-drop-target');
+			});
+			tab.addEventListener('dragleave', () => tab.removeClass('is-drop-target'));
+			tab.addEventListener('drop', (e) => {
+				tab.removeClass('is-drop-target');
+				const id = e.dataTransfer?.getData('text/x-quire-panel');
+				if (!id || id === p.id) return;
+				e.preventDefault();
+				this.app.workspace.trigger('docket-move-panel', id, p.id);
+			});
 			if (active) this.panelEl.setAttribute('aria-labelledby', tab.id);
 		});
 	}
@@ -503,6 +552,7 @@ export class Docket {
 			for (const r of g.items) {
 				const el = this.renderOption(group, i++, r.title, r.detail, r.icon, r.hint, r.detailRanges);
 				if (r.id.startsWith('docket:more:')) el.addClass('mod-more');
+				if (r.reorder) this.reorderable(el, r);
 			}
 		}
 		if (!this.items.length) this.resultsEl.createDiv({ cls: 'docket-empty', text: EMPTY[prefix] ?? 'No matches.' });

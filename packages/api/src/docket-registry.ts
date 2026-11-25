@@ -27,6 +27,11 @@ export interface SearchResult {
 	open?(where: OpenWhere): unknown;
 	/** Markdown to insert at the cursor (Shift+Enter): a link or a citation. */
 	insert?(): string | null;
+	/**
+	 * Rows that can be put in another order by dragging: dropping one on another of the same `group` calls the
+	 * dragged row's `move` with the index of the row it was dropped on.
+	 */
+	reorder?: { group: string; index: number; move(to: number): unknown };
 }
 
 export interface SearchQuery {

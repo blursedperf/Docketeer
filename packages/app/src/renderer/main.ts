@@ -18,6 +18,7 @@ import { App, getHost, setIcon, setIconPack } from '@quire/api';
 import { registerCore } from './core';
 import { registerBundledIconPacks } from './icon-packs';
 import { runBench, runShots, runSmoke } from './smoke';
+import { LAYOUTS } from './homebases';
 
 (globalThis as Record<string, unknown>).__quireModules = {
 	'@quire/api': api,
@@ -51,7 +52,21 @@ async function welcome() {
 	const b1 = actions.createEl('button', { cls: 'mod-cta', text: 'Open a folder as a homebase' });
 	b1.addEventListener('click', () => { void host.app.chooseVault(false); });
 	const b2 = actions.createEl('button', { text: 'Create a new homebase' });
-	b2.addEventListener('click', () => { void host.app.chooseVault(true); });
+	// Creating: first which panels it starts with, Legal (as Quire comes) or Generic.
+	const layouts = box.createDiv({ cls: 'welcome-layouts', attr: { hidden: '', role: 'group', 'aria-label': 'Panels for the new homebase' } });
+	layouts.createEl('p', { cls: 'welcome-layouts-title', text: 'Which panels should it start with?' });
+	for (const l of LAYOUTS) {
+		const card = layouts.createEl('button', { cls: 'welcome-layout', attr: { type: 'button', 'data-layout': l.id } });
+		setIcon(card.createDiv({ cls: 'welcome-layout-icon' }), l.icon);
+		const text = card.createDiv({ cls: 'welcome-layout-text' });
+		text.createDiv({ cls: 'welcome-layout-name', text: l.title });
+		text.createDiv({ cls: 'welcome-layout-detail', text: l.detail });
+		card.addEventListener('click', () => { void host.app.chooseVault(true, l.id); });
+	}
+	b2.addEventListener('click', () => {
+		layouts.toggleAttribute('hidden');
+		if (!layouts.hasAttribute('hidden')) layouts.querySelector<HTMLElement>('.welcome-layout')?.focus();
+	});
 	if (host.app.openExample) {
 		const b3 = actions.createEl('button', { text: 'Try the example homebase' });
 		b3.setAttr('title', 'Sample law notes, copied into “Quire example” in your Documents');

@@ -8,6 +8,7 @@ import { Vim, getCM } from '@replit/codemirror-vim';
 import { type App, MarkdownView, Platform, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
+import { genericPanels } from './docket/panels-model';
 import { revealInUnits } from './docket/panels/units';
 
 interface Check { name: string; ok: boolean; detail?: string; }
@@ -1760,6 +1761,100 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		if (app.docket.panels.has('custom:my-week')) problems.push('panel not deleted');
 		if (!app.docket.orderedPanels().some((p) => p.id === 'core:cite')) problems.push('Cite not back');
 		ui.close(true);
+		return problems.length === 0 || problems.join('; ');
+	});
+	await check('drag and drop: files and folders onto folders and into notes; tabs, panels and elements into order; the Generic layout', async () => {
+		const problems: string[] = [];
+		// Looked up each time: turning the Docket off and on again makes a new one.
+		const ui = { showPanel: (id: string) => (app as unknown as { docketUI?: { showPanel(id: string): void } }).docketUI?.showPanel(id) };
+		const drag = async (from: Element | null | undefined, to: Element | null | undefined) => {
+			if (!from || !to) { problems.push(`nothing to drag (${!!from}) or to drop on (${!!to})`); return; }
+			const dt = new DataTransfer();
+			from.dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+			to.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+			to.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+			from.dispatchEvent(new DragEvent('dragend', { dataTransfer: dt, bubbles: true }));
+			await sleep(300);
+		};
+		const rowEl = (title: string) => [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((x) => x.querySelector('.docket-option-title')?.textContent === title);
+		const optEl = (title: string) => [...document.querySelectorAll<HTMLElement>('.docket-option')].find((x) => x.querySelector('.docket-option-title')?.textContent === title);
+		const tabEl = (id: string) => document.querySelector<HTMLElement>(`.docket-tab[data-panel="${id}"]`);
+		// Files: a note onto a folder, then back to the top; a folder onto itself is refused.
+		await vault.create('Drag me.md', 'x');
+		ui.showPanel('core:homebase');
+		await sleep(150);
+		await drag(rowEl('Drag me'), rowEl('Folder'));
+		if (!vault.getFileByPath('Folder/Drag me.md')) problems.push('the note did not move into Folder');
+		ui.showPanel('core:homebase');
+		await sleep(150);
+		await drag(rowEl('Folder'), rowEl('Folder'));
+		if (!vault.getFolderByPath('Folder')) problems.push('Folder moved into itself');
+		const moved = vault.getFileByPath('Folder/Drag me.md');
+		if (moved) {
+			const top = rowEl('New note');
+			const src = createDiv();
+			src.draggable = true;
+			src.addEventListener('dragstart', (e) => e.dataTransfer?.setData('text/x-quire-path', 'Folder/Drag me.md'));
+			document.body.appendChild(src);
+			await drag(src, top);
+			src.remove();
+			if (!vault.getFileByPath('Drag me.md')) problems.push('the note did not move back to the top');
+		}
+		// A file dragged from the Docket into a note: a link.
+		const essay = workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file?.basename === 'AGLC4 example essay');
+		if (essay) {
+			ui.showPanel('core:homebase');
+			await sleep(150);
+			const view = essay.view as MarkdownView;
+			const before = view.editor.getValue();
+			view.editor.setCursor({ line: 0, ch: 0 });
+			await drag(rowEl('Drag me'), view.editor.cm.contentDOM);
+			if (!view.editor.getValue().includes('[[Drag me]]')) problems.push('dropping the row on a note made no link');
+			view.editor.setValue(before);
+			await view.save();
+		}
+		await vault.delete(vault.getFileByPath('Drag me.md')!);
+		// Tabs: Layout dragged onto the first tab takes its place.
+		ui.showPanel('core:homebase');
+		await sleep(150);
+		const first = app.docket.orderedPanels()[0]!.id;
+		await drag(tabEl('core:layout'), tabEl(first));
+		if (app.docket.orderedPanels()[0]?.id !== 'core:layout') problems.push(`tab order: ${app.docket.orderedPanels().map((p) => p.id).join(',')}`);
+		// The Arrange list: Homebase dragged onto Units.
+		commands.executeCommandById('app:arrange-panels');
+		await sleep(150);
+		const unitsAt = app.docket.allPanels().findIndex((p) => p.id === 'core:units');
+		await drag(optEl('Homebase'), optEl('Units'));
+		if (app.docket.allPanels().findIndex((p) => p.id === 'core:homebase') !== unitsAt) problems.push(`arranged: ${app.docket.allPanels().map((p) => p.id).join(',')}`);
+		// A panel's elements: the second dragged onto the first.
+		await vault.adapter.write('.quire/panels.json', JSON.stringify({ panels: [{ id: 'drag-test', title: 'Drag test', elements: [{ type: 'commands', commands: [] }, { type: 'files', folder: '' }] }] }));
+		await app.setConfig('docket', false);
+		await app.setConfig('docket', true);
+		await until(() => app.docket.panels.has('custom:drag-test'), 2000);
+		ui.showPanel('custom:drag-test');
+		await sleep(150);
+		rowEl('Customise this panel…')?.click();
+		await sleep(250);
+		await drag(optEl('File tree: the whole homebase'), optEl('Commands: 0 commands'));
+		const saved = await vault.adapter.read('.quire/panels.json');
+		if (!(saved.indexOf('"files"') >= 0 && saved.indexOf('"files"') < saved.indexOf('"commands"'))) problems.push(`elements: ${saved.slice(0, 160)}`);
+		// The Generic layout: Files and Folders, Homebase, Layout.
+		await vault.adapter.write('.quire/panels.json', JSON.stringify(genericPanels()));
+		await app.setConfig('docket', false);
+		await app.setConfig('docket', true);
+		await until(() => app.docket.panels.has('custom:files-and-folders'), 2000);
+		const tabs = app.docket.orderedPanels().map((p) => p.id).join(',');
+		if (tabs !== 'custom:files-and-folders,core:homebase,core:layout') problems.push(`generic tabs: ${tabs}`);
+		ui.showPanel('custom:files-and-folders');
+		await sleep(150);
+		if (!rowEl('Folder')) problems.push('Files and Folders shows no tree');
+		// Back as it was.
+		await vault.adapter.remove('.quire/panels.json');
+		await app.setConfig('docket', false);
+		await app.setConfig('docket', true);
+		await sleep(150);
+		if (app.docket.orderedPanels().length !== 6) problems.push(`after reset: ${app.docket.orderedPanels().map((p) => p.id).join(',')}`);
+		(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
 		return problems.length === 0 || problems.join('; ');
 	});
 	await check('units: pin, archive and folders from the keyboard', async () => {

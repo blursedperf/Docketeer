@@ -143,3 +143,18 @@ export function moveItem<T>(list: T[], i: number, by: number): T[] {
 	out.splice(j, 0, x!);
 	return out;
 }
+
+/** Layouts a new homebase can start with: Legal (the panels as they come) or Generic. */
+export type HomebaseLayout = 'legal' | 'generic';
+
+/**
+ * The Generic layout: three panels, Files and Folders (the whole homebase as a tree), Homebase and Layout. The
+ * others are hidden, not removed: "Arrange the Docket's panels" shows them again.
+ */
+export function genericPanels(): PanelsConfig {
+	return {
+		panels: [{ id: 'files-and-folders', title: 'Files and Folders', icon: 'folder-tree', elements: [{ type: 'files', folder: '' }] }],
+		order: ['custom:files-and-folders', 'core:homebase', 'core:layout'],
+		hidden: ['core:authorities', 'core:outline', 'core:units', 'core:cite'],
+	};
+}

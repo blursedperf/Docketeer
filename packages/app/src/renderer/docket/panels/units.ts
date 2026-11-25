@@ -16,6 +16,7 @@ import { openFileIn } from '../providers';
 import { unitsStore } from '../../units-store';
 import { type UnitKind, suggestedUnitTags, unitChildren, unitRoots } from '../../units-model';
 import { empty, row, section } from './common';
+import { draggablePath, dropIntoFolder } from '../drag';
 
 export const UNIT_LABELS = { level1: 'Subject', level2: 'Topic', plural1: 'Subjects' };
 
@@ -97,6 +98,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		}, { icon: app.isEncrypted(f) ? (app.isLocked(f) ? 'lock' : 'lock-open') : 'file-text', level, detail, actions: () => (app.isLocked(f) ? [] : noteActions(app, docket, f)) });
 		if (app.isLocked(f)) { r.addClass('is-locked'); r.setAttribute('aria-description', 'Locked: Enter asks for the passphrase'); }
 		r.dataset.path = f.path;
+		draggablePath(r, f.path);
 		keys(r, f.parent ?? app.vault.getRoot());
 		return r;
 	};
@@ -111,6 +113,8 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		r.setAttribute('aria-expanded', String(expanded));
 		r.dataset.path = folder.path;
 		r.dataset.unit = store.kind(folder.path) ?? '';
+		draggablePath(r, folder.path);
+		dropIntoFolder(r, app, folder.path);
 		keys(r, folder);
 		if (!expanded) return;
 		for (const p of unitChildren(store.tags, folder.path).map((x) => app.vault.getFolderByPath(x)).filter((f): f is TFolder => !!f).sort(byName)) unitRow(parent, p, level + 1);
@@ -118,6 +122,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		for (const f of notes) noteRow(parent, f, level + 1);
 		const add = row(parent, docket, `New note in ${folder.name}`, () => newNote(folder), { icon: 'plus', level: level + 1, cls: 'is-command' });
 		keys(add, folder);
+		dropIntoFolder(add, app, folder.path);
 	};
 
 	/** Folders as they are (for the archive): every folder and note inside `items`. */

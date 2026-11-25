@@ -22,7 +22,18 @@ Each element has a heading (its own, or one made from what it shows). A panel ca
 - **Customise this panel…** at the end of each of your panels opens the same list. Enter on an element to change
   it, give it a heading, move it up or down, or remove it.
 
-Everything is chosen from lists, so it all works from the keyboard; typing filters a list. A hidden panel keeps
+Everything is chosen from lists, so it all works from the keyboard; typing filters a list. With the mouse, drag
+instead: a Docket tab onto another tab, a panel onto another in *Arrange the Docket's panels*, or an element onto
+another in a panel's list of what it shows, and it takes that place.
+
+## Starting layouts
+
+Creating a homebase (on the welcome screen, or *Create a new homebase…*) asks which panels it starts with:
+
+- **Legal**: the panels as Quire comes (Authorities, Outline, Units, Cite, Homebase, Layout).
+- **Generic**: three panels, *Files and Folders* (the whole homebase as a tree), Homebase and Layout. The others are
+  hidden, not gone: *Arrange the Docket's panels* shows them again. This is written to `.quire/panels.json` in the
+  new homebase (a folder that already has one keeps it). A hidden panel keeps
 working where something opens it directly (the header's subject › topic opens Units even when Units is hidden).
 
 ## The file

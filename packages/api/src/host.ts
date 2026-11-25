@@ -75,8 +75,11 @@ export interface HostBridge {
 		forgetVault?(path: string): Promise<void>;
 		/** Copy the example homebase into Documents (once) and open it; resolves to its folder. */
 		openExample?(): Promise<string>;
-		/** Ask for a folder and open it as a vault (reloads the window). */
-		chooseVault(create?: boolean): Promise<boolean>;
+		/**
+		 * Ask for a folder and open it as a homebase (reloads the window). Creating one, `layout` is how its Docket
+		 * starts: 'legal' (the panels as they come) or 'generic' (Files and Folders, Homebase, Layout).
+		 */
+		chooseVault(create?: boolean, layout?: 'legal' | 'generic'): Promise<boolean>;
 		openVault(path: string): Promise<boolean>;
 		showItemInFolder(path: string): Promise<void>;
 		/** Smoke-test mode: report results and exit. */

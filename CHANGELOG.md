@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **Drag and drop in the Docket.** Drag a file or folder in Homebase › Files, Units, or a panel's file tree onto a
+  folder (or onto a folder's *+ New* rows, or the top's) to move it there; links to it follow. A folder will not go
+  inside itself. Drag a note, PDF or recording from the Docket into a note to link or embed it. Drag a Docket tab
+  onto another tab to reorder the panels, and in panel editing, drag a panel onto another in *Arrange the Docket's
+  panels*, or an element onto another in a panel's list of what it shows.
+- **Legal or Generic, for a new homebase.** Creating a homebase now asks which panels it starts with: **Legal**, as
+  Quire comes, or **Generic**: *Files and Folders* (the whole homebase as a tree), Homebase and Layout, with the law
+  panels hidden (they can be shown again). On the welcome screen, and in *Switch homebase* › *Create a new homebase*.
+- **Plugin API**: a search result can be dragged into another order (`reorder` on `SearchResult`).
+
 ## v0.13.0
 
 - **Your own Docket panels.** Build panels from **commands** (any command, a plugin's too, with its key), **file
