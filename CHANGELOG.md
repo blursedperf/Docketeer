@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- **Units shows what you mark.** Only folders marked as a **subject (unit)** or **topic** appear in Units, with
+  their notes; attachments, readings folders and scratch folders no longer crowd it. Mark a folder with → on it
+  (*Mark as subject (unit)*, *Mark as topic*, *Remove from Units*), in Units or in Homebase › Files. New subjects
+  and topics made in Units are marked as they are made, and marks follow a folder that is renamed or moved. For a
+  homebase with nothing marked yet, Units offers to mark the folders as it showed them before (top folders as
+  subjects, the folders inside them as topics) in one go. Marks are kept in `.quire/units.json`; the folders are
+  not changed. The example homebase comes marked.
+- **Homebase › Files: the whole homebase as a tree.** Every folder and file, folders first, with an icon for each
+  kind (note, PDF, recording, picture) and each folder's mark and file count. Enter opens a file (Ctrl+Enter to the
+  right) or opens and closes a folder; → for its actions, F2 renames and Delete deletes. It opens the way to the
+  note you are in.
+- **Version history from the keyboard.** In the AGLC4 plugin's version history, ↑ and ↓ (and Home, End, Page Up,
+  Page Down) choose a version and show its changes at once; Enter goes to its actions (Restore, Restore as a copy,
+  Name, Show full text) and Esc comes back. The list has the keyboard as soon as the tab opens, and choosing a
+  version no longer reloads the whole list.
+
 ## v0.11.0
 
 - **Slash commands.** Type `/` at the start of a line or after a space for a menu of things to insert: headings,

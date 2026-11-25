@@ -78,6 +78,8 @@ export class HistoryView extends ItemView {
 	private titleEl!: HTMLElement;
 	private footerEl!: HTMLElement;
 	private generation = 0;
+	/** The note's versions as listed, newest first (for moving through them with the keys). */
+	private versions: Version[] = [];
 	private readonly refresh = debounce(() => { void this.render(); }, 1500, true);
 
 	constructor(leaf: WorkspaceLeaf, private host: HistoryHost) {
@@ -104,14 +106,70 @@ export class HistoryView extends ItemView {
 		button('save', 'Save a version now', () => { void this.saveNow(); });
 		button('tag', 'Name the current version', () => this.nameCurrent());
 		button('refresh-cw', 'Refresh', () => { void this.render(); });
-		this.listEl = root.createDiv({ cls: 'aglc-hist-list' });
+		// The list is navigable from the keyboard: ↑↓ (Home, End) choose a version and show its changes,
+		// Enter goes to its actions, Esc there comes back.
+		this.listEl = root.createDiv({ cls: 'aglc-hist-list', attr: { tabindex: '0', role: 'listbox', 'aria-label': 'Versions' } });
+		this.listEl.addEventListener('keydown', (e) => this.onListKey(e));
 		this.detailEl = root.createDiv({ cls: 'aglc-hist-detail' });
+		this.detailEl.addEventListener('keydown', (e) => {
+			if (e.key !== 'Escape') return;
+			e.preventDefault();
+			e.stopPropagation();
+			this.listEl.focus();
+		});
 		this.footerEl = root.createDiv({ cls: 'aglc-hist-footer' });
 
 		this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.follow()));
 		this.registerEvent(this.app.vault.on('modify', (f) => { if (f === this.file) this.refresh(); }));
 		this.registerEvent(this.app.vault.on('rename', (f) => { if (f === this.file) void this.render(); }));
 		this.follow();
+	}
+
+	/** Focus goes to the list when the tab is shown, so the keys work at once. */
+	override focus(): void {
+		this.listEl?.focus();
+	}
+
+	private onListKey(e: KeyboardEvent): void {
+		if (e.ctrlKey || e.metaKey || e.altKey) return;
+		const n = this.versions.length;
+		if (n === 0) return;
+		const at = this.selected ? this.versions.findIndex((v) => v.id === this.selected!.id) : -1;
+		let next: number | null = null;
+		if (e.key === 'ArrowDown') next = at < 0 ? 0 : Math.min(n - 1, at + 1);
+		else if (e.key === 'ArrowUp') next = at < 0 ? 0 : Math.max(0, at - 1);
+		else if (e.key === 'Home') next = 0;
+		else if (e.key === 'End') next = n - 1;
+		else if (e.key === 'PageDown') next = Math.min(n - 1, Math.max(0, at) + 10);
+		else if (e.key === 'PageUp') next = Math.max(0, at - 10);
+		else if (e.key === 'Enter' || e.key === ' ') {
+			if (at < 0) next = 0;
+			else {
+				this.detailEl.querySelector<HTMLElement>('.aglc-hist-actions button')?.focus();
+				e.preventDefault();
+				return;
+			}
+		}
+		if (next === null) return;
+		e.preventDefault();
+		this.select(this.versions[next]!);
+	}
+
+	/** Choose a version: mark its row and show its changes, without reading the list again. */
+	private select(v: Version): void {
+		this.selected = v;
+		let chosen: HTMLElement | null = null;
+		for (const row of Array.from(this.listEl.querySelectorAll<HTMLElement>('.aglc-hist-row[data-version]'))) {
+			const on = row.dataset.version === v.id;
+			row.toggleClass('is-selected', on);
+			row.setAttribute('aria-selected', String(on));
+			if (on) chosen = row;
+		}
+		if (chosen) {
+			this.listEl.setAttribute('aria-activedescendant', chosen.id);
+			chosen.scrollIntoView({ block: 'nearest' });
+		}
+		if (this.file) void this.renderDetail(this.file, ++this.generation);
 	}
 
 	/** Follow the active note (not this view). */
@@ -179,7 +237,11 @@ export class HistoryView extends ItemView {
 		}
 		if (gen !== this.generation) return;
 
+		// Keep the keyboard in the list when it is drawn again.
+		const hadFocus = this.listEl.contains(document.activeElement);
+		this.versions = versions;
 		this.listEl.empty();
+		this.listEl.removeAttribute('aria-activedescendant');
 		if (versions.length === 0) {
 			this.listEl.createDiv({ cls: 'aglc-hist-empty', text: 'No versions yet. A version is saved as you write, and when you open or leave the note.' });
 		}
@@ -190,15 +252,16 @@ export class HistoryView extends ItemView {
 				day = d;
 				this.listEl.createDiv({ cls: 'aglc-hist-day', text: d });
 			}
-			const row = this.listEl.createDiv({ cls: 'aglc-hist-row' });
-			if (this.selected?.id === v.id) row.addClass('is-selected');
+			const selected = this.selected?.id === v.id;
+			const row = this.listEl.createDiv({ cls: 'aglc-hist-row', attr: { role: 'option', id: `aglc-hist-v-${i}`, 'data-version': v.id, 'aria-selected': String(selected) } });
+			if (selected) { row.addClass('is-selected'); this.listEl.setAttribute('aria-activedescendant', row.id); }
 			row.createSpan({ cls: 'aglc-hist-time', text: formatTime(v.time) });
 			if (v.name) row.createSpan({ cls: 'aglc-hist-name', text: v.name });
 			if (v.label) row.createSpan({ cls: 'aglc-hist-label', text: v.label });
 			const prev = versions[i + 1];
 			const delta = prev ? v.size - prev.size : v.size;
 			row.createSpan({ cls: 'aglc-hist-size', text: `${delta >= 0 ? '+' : '−'}${Math.abs(delta).toLocaleString()} characters` });
-			row.addEventListener('click', () => { this.selected = v; void this.render(); });
+			row.addEventListener('click', () => { this.listEl.focus(); this.select(v); });
 		});
 
 		for (const ex of exports) {
@@ -219,6 +282,10 @@ export class HistoryView extends ItemView {
 			}
 		}
 
+		if (hadFocus) {
+			this.listEl.focus();
+			this.listEl.querySelector('.aglc-hist-row.is-selected')?.scrollIntoView({ block: 'nearest' });
+		}
 		await this.renderDetail(file, gen);
 		void this.host.history.usage().then((u) => {
 			if (gen !== this.generation) return;

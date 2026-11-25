@@ -7,6 +7,7 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
 import { type App, MarkdownView, Platform, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 import { docketKeyProblem, setDocketKey } from './core';
+import { unitsStore } from './units-store';
 
 interface Check { name: string; ok: boolean; detail?: string; }
 
@@ -848,6 +849,47 @@ export async function runSmoke(app: App): Promise<void> {
 		if (main) workspace.setActiveLeaf(main, { focus: true });
 		return ok || `preview=${inMain(preview)} history=${inMain(history)}`;
 	});
+	await check('AGLC4: version history moves with the keys: ↑↓ choose, Enter to the actions, Esc back', async () => {
+		const essay = workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file?.basename === 'AGLC4 example essay');
+		if (!essay) return 'no essay open';
+		workspace.setActiveLeaf(essay, { focus: true });
+		commands.executeCommandById(`${id}:show-version-history`);
+		await sleep(300);
+		const leaf = workspace.getLeavesOfType('aglc4-version-history')[0];
+		if (!leaf) return 'no history tab';
+		const root = leaf.view.containerEl;
+		const save = () => root.querySelector<HTMLElement>('.aglc-hist-buttons button[aria-label="Save a version now"]')?.click();
+		const ed = (essay.view as MarkdownView).editor;
+		save(); await sleep(250);
+		ed.replaceRange('Version two. ', { line: ed.lineCount() - 1, ch: 0 });
+		save(); await sleep(250);
+		const list = root.querySelector<HTMLElement>('.aglc-hist-list');
+		const rows = () => [...root.querySelectorAll<HTMLElement>('.aglc-hist-row[data-version]')];
+		if (!list || rows().length < 2) { leaf.detach(); return `versions: ${rows().length}`; }
+		const problems: string[] = [];
+		list.focus();
+		const key = async (k: string) => { list.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); await sleep(250); };
+		const chosen = () => rows().findIndex((r) => r.getAttribute('aria-selected') === 'true');
+		// What restoring that version would change: differs between a version with the edit and one without.
+		const summary = () => root.querySelector('.aglc-hist-detail-stats')?.textContent ?? '';
+		await key('ArrowDown');
+		if (chosen() !== 0) problems.push(`↓ chose ${chosen()}`);
+		const first = summary();
+		await key('ArrowDown');
+		if (chosen() !== 1) problems.push(`↓↓ chose ${chosen()}`);
+		if (!summary() || summary() === first) problems.push(`the changes did not follow the selection (${first} / ${summary()})`);
+		await key('ArrowUp');
+		if (chosen() !== 0) problems.push(`↑ chose ${chosen()}`);
+		if (document.activeElement !== list) problems.push('the list lost the keyboard');
+		await key('Enter');
+		if (!(document.activeElement as HTMLElement | null)?.closest('.aglc-hist-actions')) problems.push('Enter did not go to the actions');
+		document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+		await sleep(50);
+		if (document.activeElement !== list) problems.push('Esc did not come back to the list');
+		leaf.detach();
+		workspace.setActiveLeaf(essay, { focus: true });
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('AGLC4: settings page renders', async () => {
 		app.setting.openTabById(id);
 		const ok = await until(() => document.querySelectorAll('.modal.mod-settings .setting-item').length > 20, 2000);
@@ -1565,6 +1607,49 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return ok || `p1=${p1} p2=${p2} text=${JSON.stringify(text.slice(-160))}`;
 	});
 
+	await check('units: only marked folders; existing ones marked in one go; Homebase › Files lists everything and marks', async () => {
+		const problems: string[] = [];
+		const store = unitsStore(app);
+		await until(() => store.loaded, 3000);
+		press('p', { ctrl: true });
+		press('3', { ctrl: true });
+		await sleep(120);
+		if (rowsText().includes('Folder')) problems.push('an unmarked folder is in Units');
+		const offer = rowsText().find((t) => t.startsWith('Mark my folders'));
+		if (!offer) problems.push(`no offer to mark folders: ${rowsText().join(' | ')}`);
+		else { focusRow(offer); press('Enter'); await sleep(200); }
+		if (store.kind('Folder') !== 'subject') problems.push(`Folder is ${store.kind('Folder')}`);
+		if (store.kind('attachments')) problems.push('the attachments folder was marked');
+		if (!rowsText().includes('Folder')) problems.push('Folder not in Units after marking');
+		const saved = await vault.adapter.read('.quire/units.json').catch(() => '');
+		if (!saved.includes('"Folder": "subject"')) problems.push(`units.json: ${saved}`);
+		// Homebase › Files: everything, attachments and other files too; a folder marked there joins Units.
+		press('5', { ctrl: true });
+		await sleep(120);
+		const files = rowsText();
+		if (!files.includes('attachments') || !files.includes('Welcome') || !files.includes('Folder')) problems.push(`Files: ${files.slice(0, 12).join(' | ')}`);
+		focusRow('attachments'); press('Enter'); await sleep(120);
+		if (!rowsText().some((t) => t.endsWith('.pdf'))) problems.push('a PDF is not listed in Files');
+		await vault.createFolder('Scratch');
+		await sleep(150);
+		focusRow('Scratch');
+		press('ArrowRight');
+		await sleep(60);
+		const acts = titles();
+		const mark = acts.findIndex((t) => t.startsWith('Mark as topic'));
+		if (mark < 0) problems.push(`no mark action: ${acts.slice(0, 6).join(' | ')}`);
+		else { for (let i = 0; i < mark; i++) press('ArrowDown'); press('Enter'); await sleep(200); }
+		if (store.kind('Scratch') !== 'topic') problems.push(`Scratch is ${store.kind('Scratch')}`);
+		// Tags follow a renamed folder, and leave with a deleted one.
+		await vault.rename(vault.getFolderByPath('Scratch')!, 'Scratch two');
+		await sleep(150);
+		if (store.kind('Scratch two') !== 'topic' || store.kind('Scratch')) problems.push(`after rename: ${JSON.stringify(store.tags)}`);
+		await vault.delete(vault.getFolderByPath('Scratch two')!, true);
+		await sleep(150);
+		if (store.kind('Scratch two')) problems.push('tag left after delete');
+		press('Escape'); press('Escape');
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('units: pin, archive and folders from the keyboard', async () => {
 		const brief = vault.getFileByPath('Brief test.md')!;
 		commands.executeCommandById('app:toggle-pin-note', { file: brief });
@@ -1801,6 +1886,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('units: N and T on a row, "+ New note" in opened folders, A–Z with numbers in order', async () => {
 		await vault.create('Torts/Week 10.md', '');
 		await vault.create('Torts/Week 2.md', '');
+		await unitsStore(app).set('Torts', 'subject');
 		press('p', { ctrl: true });
 		press('3', { ctrl: true });
 		await sleep(100);
@@ -1909,6 +1995,8 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.createFolder('Old subject/Old topic').catch(() => undefined);
 		await vault.create('Old subject/Old topic/Old note.md', 'x').catch(() => undefined);
 		await vault.create('Old subject/Rename me.md', 'y').catch(() => undefined);
+		await unitsStore(app).set('Old subject', 'subject');
+		await unitsStore(app).set('Old subject/Old topic', 'topic');
 		press('3', { ctrl: true });
 		await sleep(150);
 		const appeared = rowsText().includes('Old subject');

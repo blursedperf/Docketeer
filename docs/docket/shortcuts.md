@@ -96,6 +96,10 @@ opening a locked note, from the status bar lock, or with "Unlock".
 
 ## In Units
 
+Units lists the folders marked as subjects (units) and topics, with their notes. Mark a folder with → on it, here
+or in **Homebase › Files**, which lists every file and folder in the homebase. Marks are kept in
+`.quire/units.json`; the folders themselves are not changed.
+
 | Keys | Action |
 |---|---|
 | N / T | New note / new topic in the selected folder |

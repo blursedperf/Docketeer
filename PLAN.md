@@ -117,6 +117,8 @@ Phases 1 and 2 are built and verified:
   import line (`obsidian` → `@quire/api`). API changes the port
   needed: `appendText`, private-name clashes in base classes (now `_`-prefixed), and a refresh of editor
   extensions when a pane becomes active. The plugin relies on that refresh for its status bar after "open in new tab".
+  Since 0.12: `history/view.ts` and `styles.css` also differ, for keyboard navigation of the version history
+  (a re-sync from the original must keep those changes).
 
 Known gaps, deliberately left for later phases:
 - **Spellcheck is off.** Electron downloads Hunspell dictionaries from the web; bundling dictionaries

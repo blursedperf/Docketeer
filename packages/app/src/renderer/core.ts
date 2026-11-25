@@ -14,6 +14,7 @@ import { registerMedia } from './media';
 import { registerPdf } from './pdf/view';
 import { registerHomebases } from './homebases';
 import { SlashSuggest } from './slash';
+import { unitsStore } from './units-store';
 import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
 import { LinkSuggest } from './link-suggest';
@@ -647,6 +648,7 @@ export function registerCore(app: App): { reveal(): void } {
 	registerMedia(app);
 	registerPdf(app);
 	registerHomebases(app);
+	unitsStore(app);
 	(app as unknown as { tiling: typeof tiling }).tiling = tiling;
 	const docket = registerDocket(app);
 	return {

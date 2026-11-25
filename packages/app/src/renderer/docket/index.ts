@@ -85,6 +85,8 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 			cleanup = [];
 		}
 	};
+	// Unit tags changed (a folder marked or unmarked): what the Docket shows follows.
+	app.workspace.on('units-changed', () => { if (docket?.isOpen) void docket.refreshPanel(); });
 	// A subject or topic clicked in a note's header band: show it in Units.
 	app.workspace.on('reveal-folder', (path: string) => {
 		if (!docket) return;

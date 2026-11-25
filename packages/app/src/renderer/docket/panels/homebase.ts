@@ -2,8 +2,12 @@
  * Homebase (Mod+5): the homebase itself: what is in it, its lock status (locking comes in its own phase),
  * exporting a note with a confirmation step and redaction, and the homebase-wide tools.
  */
-import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Setting, type TFile, formatHotkey } from '@quire/api';
-import type { Docket } from '../docket';
+import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Setting, TFile, TFolder, formatHotkey, isMedia } from '@quire/api';
+import type { ActionItem, Docket } from '../docket';
+import { noteActions, pluginFileActions } from '../actions';
+import { openFileIn } from '../providers';
+import { unitsStore } from '../../units-store';
+import { byName, unitTagActions } from './units';
 import { row, section } from './common';
 
 export interface RedactOptions { comments: boolean; frontmatter: boolean; words: string[] }
@@ -70,7 +74,70 @@ class ExportModal extends Modal {
 	}
 }
 
+/** An icon for a file by its kind: note, PDF, recording, picture, other. */
+function fileIcon(f: TFile): string {
+	if (f.extension === 'md') return 'file-text';
+	if (f.extension === 'pdf') return 'file-type';
+	if (isMedia(f.name)) return /^(mp3|m4a|aac|ogg|oga|opus|wav|flac)$/i.test(f.extension) ? 'music' : 'video';
+	if (/^(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(f.extension)) return 'image';
+	return 'file';
+}
+
+/** Every file in a folder and the folders inside it. */
+function countFiles(folder: TFolder): number {
+	let n = 0;
+	for (const c of folder.children) n += c instanceof TFolder ? countFiles(c) : 1;
+	return n;
+}
+
+/**
+ * The homebase's files and folders as they are on disk (the Files section of Homebase): everything, not only
+ * the units. Folders first, A–Z; Enter opens a file or opens and closes a folder; → for actions, including
+ * marking a folder as a subject (unit) or topic.
+ */
+function filesTree(app: App, docket: Docket, parent: HTMLElement, open: Set<string>): void {
+	const store = unitsStore(app);
+	const cmd = (id: string, title: string, args: Record<string, unknown>): ActionItem | null => {
+		const c = app.commands.findCommand(id);
+		return c && app.commands.isAvailable(c, args) ? { title, icon: c.icon, run: () => app.commands.executeCommand(c, args) } : null;
+	};
+	const common = (f: TFile | TFolder) => [
+		cmd('app:rename-file', 'Rename…', { file: f }), cmd('app:move-file', 'Move to…', { file: f }), cmd('app:delete-file', 'Delete…', { file: f }),
+		cmd('app:show-in-folder', 'Show in system file manager', { file: f }), ...pluginFileActions(app, f),
+	].filter((a): a is ActionItem => !!a);
+	const draw = (folder: TFolder, level: number) => {
+		const folders = folder.children.filter((c): c is TFolder => c instanceof TFolder && !c.name.startsWith('.')).sort(byName);
+		const files = folder.children.filter((c): c is TFile => c instanceof TFile).sort(byName);
+		for (const f of folders) {
+			const expanded = open.has(f.path);
+			const kind = store.kind(f.path);
+			const r = row(parent, docket, f.name, () => { if (expanded) open.delete(f.path); else open.add(f.path); void docket.refreshPanel(); }, {
+				icon: expanded ? 'chevron-down' : 'chevron-right', level, cls: 'docket-folder', badge: `${kind ? `${kind} · ` : ''}${countFiles(f)}`,
+				actions: () => [...unitTagActions(app, f), ...common(f)],
+			});
+			r.setAttribute('aria-expanded', String(expanded));
+			r.dataset.path = f.path;
+			if (expanded) draw(f, level + 1);
+		}
+		for (const f of files) {
+			const locked = app.isLocked(f);
+			const r = row(parent, docket, f.extension === 'md' ? f.basename : f.name, (where) => {
+				if (where === 'insert') return;
+				docket.close();
+				void openFileIn(app, f, where);
+			}, {
+				icon: locked ? 'lock' : fileIcon(f), level,
+				actions: () => (f.extension === 'md' ? (locked ? [] : noteActions(app, docket, f)) : common(f)),
+			});
+			r.dataset.path = f.path;
+		}
+	};
+	draw(app.vault.getRoot(), 0);
+}
+
 export function homebasePanel(app: App, docket: Docket): DocketPanel {
+	const filesOpen = new Set<string>();
+	let followed: string | null = null;
 	const keyFor = (id: string) => { const c = app.commands.findCommand(id); const k = c ? app.commands.hotkeysFor(c)[0] : undefined; return k ? formatHotkey(k) : undefined; };
 	return {
 		id: 'core:homebase', title: 'Homebase', icon: 'house', order: 5, source: 'core',
@@ -80,6 +147,15 @@ export function homebasePanel(app: App, docket: Docket): DocketPanel {
 			const head = el.createDiv({ cls: 'docket-selected' });
 			head.createSpan({ cls: 'docket-selected-name', text: app.vault.getName() });
 			head.createSpan({ cls: 'docket-option-detail', text: `${notes} notes · ${folders} folders · search index ${app.search.isReady ? `ready (${app.search.index.size} notes, in memory only)` : 'building…'}` });
+
+			// Files: everything in the homebase, opened the way to the open note (once per note).
+			const current = app.workspace.getActiveFile();
+			if (current && current.path !== followed) {
+				followed = current.path;
+				const parts = current.path.split('/');
+				for (let i = 1; i < parts.length; i++) filesOpen.add(parts.slice(0, i).join('/'));
+			}
+			filesTree(app, docket, section(el, 'Files', app.vault.getFiles().length), filesOpen);
 
 			const lock = section(el, 'Lock');
 			const l = app.lock;

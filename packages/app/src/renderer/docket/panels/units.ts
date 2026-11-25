@@ -1,6 +1,7 @@
 /**
- * Units (Mod+3): pinned and recent notes, then subjects (top folders) with their topics (folders inside)
- * and notes, A–Z (numbers in order). Enter opens a note, or opens and closes a folder (the arrow shows
+ * Units (Mod+3): pinned and recent notes, then the folders tagged as subjects (units) and topics, each with
+ * its notes, A–Z (numbers in order). Tags are kept in .quire/units.json (units-store.ts); other folders are
+ * not shown here (Homebase › Files lists everything). Enter opens a note, or opens and closes a folder (the arrow shows
  * which). On a row, N makes a new note there and T a new topic, both asking for the name first; each
  * opened folder ends with "+ New note"; → offers renaming, moving, pinning, archiving and deleting. The
  * archive folder is listed last.
@@ -12,6 +13,8 @@ import type { ActionItem, Docket } from '../docket';
 import { archiveRoot, isArchived, noteActions, pluginFileActions } from '../actions';
 import { NameModal, NewNoteModal, notePlaces, placeName } from '../../dialogs';
 import { openFileIn } from '../providers';
+import { unitsStore } from '../../units-store';
+import { type UnitKind, suggestedUnitTags, unitChildren, unitRoots } from '../../units-model';
 import { empty, row, section } from './common';
 
 export const UNIT_LABELS = { level1: 'Subject', level2: 'Topic', plural1: 'Subjects' };
@@ -43,7 +46,9 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			if (!n) return;
 			if (/[\\/:]/.test(n)) { new Notice('A name cannot contain / \\ or :'); return; }
 			const path = folder.isRoot() ? n : `${folder.path}/${n}`;
-			app.vault.createFolder(path).then(() => {
+			app.vault.createFolder(path).then(async () => {
+				// Made here, so it is a unit: a subject at the top, a topic inside another.
+				await unitsStore(app).set(path, folder.isRoot() ? 'subject' : 'topic');
 				if (!folder.isRoot()) open.add(folder.path);
 				open.add(path);
 				docket.showPanel('core:units');
@@ -59,6 +64,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		const list = [
 			{ title: 'New note here (N)', icon: 'square-pen', run: () => newNote(folder) },
 			{ title: `New ${UNIT_LABELS.level2.toLowerCase()} here (T)`, icon: 'folder-plus', run: () => newTopic(folder) },
+			...unitTagActions(app, folder),
 			cmd('app:lock-folder', 'Lock folder', { folder }),
 			cmd('app:remove-folder-lock', 'Remove lock from folder', { folder }),
 			cmd('app:rename-file', 'Rename…', { file: folder }),
@@ -95,6 +101,26 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		return r;
 	};
 
+	/** A tagged folder's row; opened, its tagged folders, then its notes, then "+ New note". */
+	const unitRow = (parent: HTMLElement, folder: TFolder, level: number) => {
+		const store = unitsStore(app);
+		const expanded = open.has(folder.path);
+		const r = row(parent, docket, folder.name, () => { if (expanded) open.delete(folder.path); else open.add(folder.path); void docket.refreshPanel(); }, {
+			icon: expanded ? 'chevron-down' : 'chevron-right', level, badge: `${app.lock.isFolderLocked(folder) ? 'locked · ' : ''}${unitNoteCount(app, folder)}`, actions: () => folderActions(folder), cls: 'docket-folder',
+		});
+		r.setAttribute('aria-expanded', String(expanded));
+		r.dataset.path = folder.path;
+		r.dataset.unit = store.kind(folder.path) ?? '';
+		keys(r, folder);
+		if (!expanded) return;
+		for (const p of unitChildren(store.tags, folder.path).map((x) => app.vault.getFolderByPath(x)).filter((f): f is TFolder => !!f).sort(byName)) unitRow(parent, p, level + 1);
+		const notes = folder.children.filter((c): c is TFile => c instanceof TFile && c.extension === 'md').sort((a, b) => byName({ name: a.basename }, { name: b.basename }));
+		for (const f of notes) noteRow(parent, f, level + 1);
+		const add = row(parent, docket, `New note in ${folder.name}`, () => newNote(folder), { icon: 'plus', level: level + 1, cls: 'is-command' });
+		keys(add, folder);
+	};
+
+	/** Folders as they are (for the archive): every folder and note inside `items`. */
 	const folderTree = (parent: HTMLElement, items: TFolder['children'], level: number) => {
 		// The attachments folder (pictures and files pasted into notes) is not a subject.
 		const attachments = String(app.config.attachmentFolder ?? '').replace(/^\/+|\/+$/g, '');
@@ -127,8 +153,9 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			if (active) { const parts = active.path.split('/'); for (let i = 1; i < parts.length; i++) open.add(parts.slice(0, i).join('/')); }
 			if (pendingReveal) { const parts = pendingReveal.split('/'); for (let i = 1; i <= parts.length; i++) open.add(parts.slice(0, i).join('/')); pendingReveal = null; }
 
+			const store = unitsStore(app);
 			const help = el.createDiv({ cls: 'docket-help' });
-			help.createSpan({ text: `${UNIT_LABELS.plural1} are your top folders; ${UNIT_LABELS.level2.toLowerCase()}s are folders inside them.` });
+			help.createSpan({ text: `${UNIT_LABELS.plural1} (units) and ${UNIT_LABELS.level2.toLowerCase()}s are folders you mark: → on a folder here or in Homebase › Files.` });
 			const del = Platform.isMacOS ? '⌘⌫' : 'Del';
 			for (const [k, t] of [['Enter', 'open'], ['N', 'new note here'], ['T', `new ${UNIT_LABELS.level2.toLowerCase()} here`], ['F2', 'rename'], [del, 'delete'], ['→', 'more']] as const) {
 				const s = help.createSpan({ cls: 'docket-help-key' });
@@ -149,8 +176,18 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 
 			const root = app.vault.getRoot();
 			const sec = section(el, UNIT_LABELS.plural1);
-			if (!root.children.some((c) => c instanceof TFolder || (c instanceof TFile && c.extension === 'md'))) empty(sec, `No notes yet. Make a ${UNIT_LABELS.level1.toLowerCase()}, then notes in it.`);
-			folderTree(sec, root.children.filter((c) => !(c instanceof TFolder && isArchived(app, c))), 0);
+			if (!store.loaded) empty(sec, 'Loading…');
+			else if (store.isEmpty) {
+				// Nothing tagged yet: offer to tag the folders as Units used to show them, so nothing seems lost.
+				const suggested = suggestedTags(app);
+				const n = Object.keys(suggested).length;
+				if (n) {
+					empty(sec, `Units shows the folders you mark as ${UNIT_LABELS.plural1.toLowerCase()} (units) and ${UNIT_LABELS.level2.toLowerCase()}s. None are marked yet.`);
+					row(sec, docket, `Mark my folders: top folders as ${UNIT_LABELS.plural1.toLowerCase()}, folders inside them as ${UNIT_LABELS.level2.toLowerCase()}s`, () => { void store.replace(suggested); }, { icon: 'wand', detail: `${n} folder${n === 1 ? '' : 's'}; change any later with → on it`, cls: 'is-command' });
+				} else empty(sec, `No ${UNIT_LABELS.plural1.toLowerCase()} yet. Make one, then notes in it.`);
+			}
+			const roots = unitRoots(store.tags).map((p) => app.vault.getFolderByPath(p)).filter((f): f is TFolder => !!f && !isArchived(app, f)).sort(byName);
+			for (const f of roots) unitRow(sec, f, 0);
 			const addSubject = row(sec, docket, `New ${UNIT_LABELS.level1.toLowerCase()}`, () => newTopic(root), { icon: 'plus', cls: 'is-command' });
 			keys(addSubject, root);
 			const arch = app.vault.getFolderByPath(archive());
@@ -160,6 +197,33 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			}
 		},
 	};
+}
+
+/** The folders Units would mark for a homebase with no tags: see suggestedUnitTags. */
+export function suggestedTags(app: App): Record<string, UnitKind> {
+	const attachments = String(app.config.attachmentFolder ?? '').replace(/^\/+|\/+$/g, '');
+	const archive = archiveRoot(app);
+	const skip = (p: string) => p === attachments || p === archive || p.startsWith(`${archive}/`);
+	return suggestedUnitTags(app.vault.getAllFolders().filter((f) => !f.isRoot()).map((f) => f.path), skip);
+}
+
+/** Mark-as actions for a folder: subject (unit), topic, or out of Units. */
+export function unitTagActions(app: App, folder: TFolder): ActionItem[] {
+	const store = unitsStore(app);
+	const kind = store.kind(folder.path);
+	const out: ActionItem[] = [];
+	if (kind !== 'subject') out.push({ title: `Mark as ${UNIT_LABELS.level1.toLowerCase()} (unit)`, icon: 'book', run: () => { void store.set(folder.path, 'subject'); } });
+	if (kind !== 'topic') out.push({ title: `Mark as ${UNIT_LABELS.level2.toLowerCase()}`, icon: 'bookmark', run: () => { void store.set(folder.path, 'topic'); } });
+	if (kind) out.push({ title: 'Remove from Units (the folder stays)', icon: 'bookmark-minus', run: () => { void store.set(folder.path, null); } });
+	return out;
+}
+
+/** Notes Units lists under a tagged folder: its own, and those of the tagged folders inside it. */
+export function unitNoteCount(app: App, folder: TFolder): number {
+	const store = unitsStore(app);
+	let n = folder.children.filter((c) => c instanceof TFile && c.extension === 'md').length;
+	for (const p of unitChildren(store.tags, folder.path)) { const f = app.vault.getFolderByPath(p); if (f) n += unitNoteCount(app, f); }
+	return n;
 }
 
 /** Notes in a folder and every folder inside it. */
