@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.15.0
 
 - **Back and Forward.** Each pane remembers what it showed: when a note is replaced by another (a link followed, a
   note chosen), **Back** brings it back, with the cursor where it was, and **Forward** returns. ← and → at the left
