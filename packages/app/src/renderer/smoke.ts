@@ -1239,6 +1239,8 @@ export async function runShots(app: App): Promise<void> {
 	const matter = await app.vault.create('Torts/Negligence/Client matter.md', '# Client matter\n\nPrivate.\n');
 	await app.lock.lockNote(matter);
 	await app.lock.lock();
+	// Units lists marked folders: mark the subject and topic the locked note is in.
+	await unitsStore(app).replace({ Torts: 'subject', 'Torts/Negligence': 'topic' });
 	document.querySelectorAll('.notice').forEach((n) => n.detach());
 	docket.open({ panel: 'core:units' });
 	await sleep(150);
