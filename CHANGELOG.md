@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.17.2
 
 - **The "+" rows say only what they make**: *New note*, *New topic* and *New folder*, not "New note in Constitutional
   Law and Human Rights Week 3", which crowded the list when folders have long names. Their indent shows the
