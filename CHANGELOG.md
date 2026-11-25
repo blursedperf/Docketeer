@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.17.0
 
 - **Tables stay tables while you type in them** (live preview). Click a cell, or arrow into the table from the line
   above or below, and edit it in place: the cell shows its Markdown while it has the cursor, and every keystroke goes
