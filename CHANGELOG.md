@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **New notes and folders from Homebase › Files.** Each opened folder, and the top of the homebase, ends with
+  *+ New note* and *+ New folder*; on any row, **N** makes a new note and **F** a new folder there (in a folder's
+  row, that folder; on a file, beside it). Both are also in a folder's actions (→). The note gets the usual name
+  dialog with the place already chosen, and opens; a new folder shows, opened, in the tree. Folders made here are
+  not marked as units: mark them with → when they should be.
+
 ## v0.12.0
 
 - **Units shows what you mark.** Only folders marked as a **subject (unit)** or **topic** appear in Units, with

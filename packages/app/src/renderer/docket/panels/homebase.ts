@@ -2,9 +2,10 @@
  * Homebase (Mod+5): the homebase itself: what is in it, its lock status (locking comes in its own phase),
  * exporting a note with a confirmation step and redaction, and the homebase-wide tools.
  */
-import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Setting, TFile, TFolder, formatHotkey, isMedia } from '@quire/api';
+import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Platform, Setting, TFile, TFolder, formatHotkey, isMedia } from '@quire/api';
 import type { ActionItem, Docket } from '../docket';
-import { noteActions, pluginFileActions } from '../actions';
+import { archiveRoot, noteActions, pluginFileActions } from '../actions';
+import { NameModal, NewNoteModal, notePlaces, placeName } from '../../dialogs';
 import { openFileIn } from '../providers';
 import { unitsStore } from '../../units-store';
 import { byName, unitTagActions } from './units';
@@ -93,10 +94,49 @@ function countFiles(folder: TFolder): number {
 /**
  * The homebase's files and folders as they are on disk (the Files section of Homebase): everything, not only
  * the units. Folders first, A–Z; Enter opens a file or opens and closes a folder; → for actions, including
- * marking a folder as a subject (unit) or topic.
+ * marking a folder as a subject (unit) or topic. N and F on a row make a new note or folder there (in a folder
+ * row's folder, beside a file); each opened folder, and the top, end with "+ New note" and "+ New folder".
  */
 function filesTree(app: App, docket: Docket, parent: HTMLElement, open: Set<string>): void {
 	const store = unitsStore(app);
+	/** New note in `folder`: the name first (the same dialog as Ctrl+N, with the place chosen). */
+	const newNote = (folder: TFolder) => {
+		docket.close();
+		new NewNoteModal(app, folder, notePlaces(app, archiveRoot(app))).open();
+	};
+	/** New folder in `folder`: the name first; shown, opened, in the tree afterwards. */
+	const newFolder = (folder: TFolder) => {
+		new NameModal(app, folder.isRoot() ? 'New folder' : `New folder in ${placeName(folder)}`, '', 'Create', (name) => {
+			const n = name.trim();
+			if (!n) return;
+			if (/[\\/:]/.test(n)) { new Notice('A name cannot contain / \\ or :'); return; }
+			const path = folder.isRoot() ? n : `${folder.path}/${n}`;
+			if (app.vault.getAbstractFileByPath(path)) { new Notice(`“${n}” is already there.`); return; }
+			app.vault.createFolder(path).then(() => {
+				if (!folder.isRoot()) open.add(folder.path);
+				open.add(path);
+				docket.showPanel('core:homebase');
+			}).catch((e: unknown) => new Notice(e instanceof Error ? e.message : String(e)));
+		}).open();
+	};
+	/** N and F on a row: a new note or folder in `folder`. */
+	const keys = (el: HTMLElement, folder: TFolder) => {
+		el.addEventListener('keydown', (e) => {
+			if (e.ctrlKey || e.metaKey || e.altKey) return;
+			const k = e.key.toLowerCase();
+			if (k !== 'n' && k !== 'f') return;
+			e.preventDefault();
+			e.stopPropagation();
+			if (k === 'n') newNote(folder);
+			else newFolder(folder);
+		});
+	};
+	/** The "+ New note" and "+ New folder" rows at the end of `folder`'s contents. */
+	const addRows = (folder: TFolder, level: number) => {
+		const where = folder.isRoot() ? '' : ` in ${folder.name}`;
+		keys(row(parent, docket, `New note${where}`, () => newNote(folder), { icon: 'plus', level, cls: 'is-command' }), folder);
+		keys(row(parent, docket, `New folder${where}`, () => newFolder(folder), { icon: 'folder-plus', level, cls: 'is-command' }), folder);
+	};
 	const cmd = (id: string, title: string, args: Record<string, unknown>): ActionItem | null => {
 		const c = app.commands.findCommand(id);
 		return c && app.commands.isAvailable(c, args) ? { title, icon: c.icon, run: () => app.commands.executeCommand(c, args) } : null;
@@ -113,11 +153,19 @@ function filesTree(app: App, docket: Docket, parent: HTMLElement, open: Set<stri
 			const kind = store.kind(f.path);
 			const r = row(parent, docket, f.name, () => { if (expanded) open.delete(f.path); else open.add(f.path); void docket.refreshPanel(); }, {
 				icon: expanded ? 'chevron-down' : 'chevron-right', level, cls: 'docket-folder', badge: `${kind ? `${kind} · ` : ''}${countFiles(f)}`,
-				actions: () => [...unitTagActions(app, f), ...common(f)],
+				actions: () => [
+					{ title: 'New note here (N)', icon: 'square-pen', run: () => newNote(f) },
+					{ title: 'New folder here (F)', icon: 'folder-plus', run: () => newFolder(f) },
+					...unitTagActions(app, f), ...common(f),
+				],
 			});
 			r.setAttribute('aria-expanded', String(expanded));
 			r.dataset.path = f.path;
-			if (expanded) draw(f, level + 1);
+			keys(r, f);
+			if (expanded) {
+				draw(f, level + 1);
+				addRows(f, level + 1);
+			}
 		}
 		for (const f of files) {
 			const locked = app.isLocked(f);
@@ -130,9 +178,18 @@ function filesTree(app: App, docket: Docket, parent: HTMLElement, open: Set<stri
 				actions: () => (f.extension === 'md' ? (locked ? [] : noteActions(app, docket, f)) : common(f)),
 			});
 			r.dataset.path = f.path;
+			keys(r, folder);
 		}
 	};
-	draw(app.vault.getRoot(), 0);
+	const help = parent.createDiv({ cls: 'docket-help' });
+	for (const [k, t] of [['Enter', 'open'], ['N', 'new note here'], ['F', 'new folder here'], ['F2', 'rename'], [Platform.isMacOS ? '⌘⌫' : 'Del', 'delete'], ['→', 'more']] as const) {
+		const s = help.createSpan({ cls: 'docket-help-key' });
+		s.createEl('kbd', { text: k });
+		s.appendText(` ${t}`);
+	}
+	const root = app.vault.getRoot();
+	draw(root, 0);
+	addRows(root, 0);
 }
 
 export function homebasePanel(app: App, docket: Docket): DocketPanel {

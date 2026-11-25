@@ -1654,6 +1654,51 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('Escape'); press('Escape');
 		return problems.length === 0 || problems.join('; ');
 	});
+	await check('homebase files: N and F make a note or folder where you are; "+ New" rows at the top and in opened folders', async () => {
+		const problems: string[] = [];
+		press('p', { ctrl: true });
+		press('5', { ctrl: true });
+		await sleep(150);
+		if (!rowsText().includes('New note') || !rowsText().includes('New folder')) problems.push('no "+ New" rows at the top');
+		const typeName = async (name: string) => {
+			const input = document.querySelector<HTMLInputElement>('.modal input');
+			if (!input) return false;
+			input.value = name;
+			input.dispatchEvent(new Event('input'));
+			input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+			await sleep(250);
+			return true;
+		};
+		// F on a folder: a folder in it, shown opened.
+		focusRow('Folder');
+		press('f');
+		await sleep(100);
+		if (!(await typeName('Sub'))) problems.push('F did not ask for a folder name');
+		if (!vault.getFolderByPath('Folder/Sub')) problems.push('Folder/Sub not made');
+		if (!rowsText().includes('Sub') || !rowsText().includes('New note in Sub')) problems.push(`Sub not shown opened: ${rowsText().slice(0, 14).join(' | ')}`);
+		// A bad name is refused.
+		focusRow('Folder');
+		press('f');
+		await sleep(100);
+		await typeName('A/B');
+		if (vault.getFolderByPath('Folder/A')) problems.push('a name with / was accepted');
+		// N on a folder: the new-note dialog, in that folder.
+		(app as unknown as { docketUI?: { showPanel(id: string): void } }).docketUI?.showPanel('core:homebase');
+		await sleep(150);
+		if (!focusRow('Sub')) problems.push(`no Sub row: ${rowsText().slice(0, 14).join(' | ')}`);
+		press('n');
+		await sleep(100);
+		const place = document.querySelector<HTMLSelectElement>('.modal select')?.value;
+		if (place !== 'Folder/Sub') problems.push(`new note goes to ${place}`);
+		await typeName('From files');
+		if (!vault.getFileByPath('Folder/Sub/From files.md')) problems.push('note not made');
+		if (workspace.getActiveFile()?.path !== 'Folder/Sub/From files.md') problems.push('the new note did not open');
+		// Clean up: the folder (and the note in it).
+		const sub = vault.getFolderByPath('Folder/Sub');
+		if (sub) await vault.delete(sub, true);
+		await sleep(100);
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('units: pin, archive and folders from the keyboard', async () => {
 		const brief = vault.getFileByPath('Brief test.md')!;
 		commands.executeCommandById('app:toggle-pin-note', { file: brief });
