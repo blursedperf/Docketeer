@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.16.1
 
 - **The Docket key is now Super+D** (⌘D on macOS), and switching it between peek and pinned is Super+Shift+D.
   Windows keeps Ctrl+P and Ctrl+Shift+P, because Windows uses Win+D to show the desktop and never passes it to apps.
