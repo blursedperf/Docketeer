@@ -179,7 +179,7 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 						},
 					});
 				}
-				// Subjects and topics by name (Enter shows them in Units).
+				// Subjects and topics by name (Enter shows them in Subjects).
 				if (!only || only === 'Folders') {
 					const archive = String(app.config.archiveFolder || 'Archive');
 					const folders: SearchResult[] = [];
@@ -190,7 +190,7 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 						const notes = countNotes(folder);
 						folders.push({
 							id: `folder:${folder.path}`, type: 'Folders', title: folder.name, icon: 'folder',
-							detail: `${folder.parent && !folder.parent.isRoot() ? `in ${placeName(folder.parent)} · ` : ''}${notes} note${notes === 1 ? '' : 's'} · Enter shows it in Units`,
+							detail: `${folder.parent && !folder.parent.isRoot() ? `in ${placeName(folder.parent)} · ` : ''}${notes} note${notes === 1 ? '' : 's'} · Enter shows it in Subjects`,
 							score: s, open: () => { revealInUnits(folder.path); ui.showPanel('core:units'); },
 						});
 					}
@@ -345,9 +345,9 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 					['In the Docket', `→ or ${mod}.`, 'More actions'],
 					['In the Docket', 'Tab', 'Input, results or panel, panel tabs'],
 					['In the Docket', 'Esc', 'Back one step, or close'],
-					['In Units', 'N / T', 'New note / new topic in the selected folder'],
-					['In Units', 'F2', 'Rename the selected note or folder'],
-					['In Units', Platform.isMacOS ? '⌘⌫' : 'Delete', 'Delete the selected note or folder (asks first)'],
+					['In Subjects', 'N / T', 'New note / new topic in the selected folder'],
+					['In Subjects', 'F2', 'Rename the selected note or folder'],
+					['In Subjects', Platform.isMacOS ? '⌘⌫' : 'Delete', 'Delete the selected note or folder (asks first)'],
 					['Prefixes', '>', 'Commands'],
 					['Prefixes', '#', 'Folders and tags'],
 					['Prefixes', '/', 'Headings in this note'],

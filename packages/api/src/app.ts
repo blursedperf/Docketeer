@@ -412,7 +412,7 @@ export interface AppConfig {
 	docketPanel: string;
 	/** The first-run hint ("Press the Docket key for everything") was seen. */
 	docketHintSeen: boolean;
-	/** Notes pinned in the Units panel (paths). */
+	/** Notes pinned in the Subjects panel (paths). */
 	pinnedNotes: string[];
 	/** Lock the homebase after this many idle minutes (0: never). */
 	lockIdleMinutes: number;

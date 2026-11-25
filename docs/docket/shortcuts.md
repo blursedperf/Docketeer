@@ -95,11 +95,11 @@ The homebase's name at the left of the status bar opens the same list.
 Lock a note or folder from its actions (→ in the Docket), or with "Lock note" / "Lock folder". Unlock by
 opening a locked note, from the status bar lock, or with "Unlock".
 
-## In Units
+## In Subjects
 
 In **Homebase › Files**, N and F on a row make a new note or folder there, and opened folders end with *+ New note* and *+ New folder*.
 
-Units lists the folders marked as subjects (units) and topics, with their notes. Mark a folder with → on it, here
+Subjects lists the folders marked as subjects and topics, with their notes; an opened subject ends with "+ New note" and "+ New topic". Mark a folder with → on it, here
 or in **Homebase › Files**, which lists every file and folder in the homebase. Marks are kept in
 `.quire/units.json`; the folders themselves are not changed.
 

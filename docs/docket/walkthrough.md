@@ -17,7 +17,7 @@ Screenshots from the test tour are in [`phase2/`](phase2/).
 6. **Run a command.** Type **>** then the command (`>split`). Each shows its shortcut; Enter runs it.
 7. **Other prefixes.** **#** folders and tags, **/** headings in this note, **?** every shortcut, **@** authorities
    (from Phase 4).
-8. **Panels.** **Mod+1 … Mod+6**: Authorities, Outline, Units, Cite, Homebase, Layout. **Tab / Shift+Tab** move
+8. **Panels.** **Mod+1 … Mod+6**: Authorities, Outline, Subjects, Cite, Homebase, Layout. **Tab / Shift+Tab** move
    between the input, the panel (or results) and the panel tabs; in the tabs **←/→** switch panel; in a panel
    **↑/↓** move and **Enter** runs the item (Outline: jump to the heading).
 9. **Pin it.** **Super+Shift+D** switches between peek (over the note, closes when done) and pinned (docked above

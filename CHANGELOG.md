@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Units is now called Subjects**: the Docket panel, its help, the "Mark as subject" and "Remove from Subjects"
+  actions, *Pin to Subjects*, *Show this note in Subjects*, the cheat sheet and the docs. Nothing to redo: the same
+  folders stay marked (they are still kept in `.quire/units.json`), and searching "Units" still finds the commands.
+- **"+ New topic" under each opened subject**, after "+ New note": Enter asks for the name, then makes the folder
+  and marks it as a topic (T on any row still does the same).
+
 ## v0.16.1
 
 - **The Docket key is now Super+D** (⌘D on macOS), and switching it between peek and pinned is Super+Shift+D.

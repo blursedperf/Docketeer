@@ -39,7 +39,7 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 
 	registerNoteCommands(app);
 
-	/** The note or folder of the focused Docket row, if any (rows in Units and other panels set data-path). */
+	/** The note or folder of the focused Docket row, if any (rows in Subjects and other panels set data-path). */
 	const rowTarget = () => {
 		const el = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.docket-panel [data-path]');
 		const path = el?.dataset.path;
@@ -67,7 +67,7 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 	add({ id: 'app:search', name: 'Search in all notes', icon: 'search', section: 'Search', aliases: ['Find in notes', 'Full-text search'], hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'f' }], when: () => !!docket, run: () => open() });
 	add({ id: 'app:show-outline', name: 'Show outline', icon: 'list-tree', section: 'View', when: () => !!docket, run: () => open({ panel: 'core:outline' }) });
 	add({ id: 'app:show-tags', name: 'Show tags', icon: 'tags', section: 'View', when: () => !!docket, run: () => open({ query: '#' }) });
-	add({ id: 'app:reveal-file', name: 'Show this note in Units', icon: 'folders', section: 'Notes', aliases: ['Reveal current file in navigation'], when: () => !!docket && !!note(), run: () => open({ panel: 'core:units' }) });
+	add({ id: 'app:reveal-file', name: 'Show this note in Subjects', icon: 'folders', section: 'Notes', aliases: ['Reveal current file in navigation', 'Show in Units'], when: () => !!docket && !!note(), run: () => open({ panel: 'core:units' }) });
 	add({ id: 'app:show-backlinks', name: 'Show links to this note', icon: 'link', section: 'View', aliases: ['Backlinks'], when: () => !!docket && !!note(), run: () => { const f = note(); if (f && docket) { docket.open(); void showLinksTo(app, docket, f); } } });
 	add({ id: 'app:show-outgoing-links', name: 'Show links from this note', icon: 'arrow-up-right', section: 'View', aliases: ['Outgoing links'], when: () => !!docket && !!note(), run: () => { const f = note(); if (f && docket) { docket.open(); showLinksFrom(app, docket, f); } } });
 	add({ id: 'app:show-mentions', name: 'Show mentions of this note', icon: 'text-search', section: 'View', aliases: ['Unlinked mentions'], when: () => !!docket && !!note(), run: () => { const f = note(); if (f && docket) { docket.open(); void showMentions(app, docket, f); } } });
@@ -87,7 +87,7 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 	};
 	// Unit tags changed (a folder marked or unmarked): what the Docket shows follows.
 	app.workspace.on('units-changed', () => { if (docket?.isOpen) void docket.refreshPanel(); });
-	// A subject or topic clicked in a note's header band: show it in Units.
+	// A subject or topic clicked in a note's header band: show it in Subjects.
 	app.workspace.on('reveal-folder', (path: string) => {
 		if (!docket) return;
 		revealInUnits(path);

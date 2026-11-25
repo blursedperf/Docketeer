@@ -1917,7 +1917,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		commands.executeCommandById('app:arrange-panels');
 		await sleep(150);
 		const unitsAt = app.docket.allPanels().findIndex((p) => p.id === 'core:units');
-		await drag(optEl('Homebase'), optEl('Units'));
+		await drag(optEl('Homebase'), optEl('Subjects'));
 		if (app.docket.allPanels().findIndex((p) => p.id === 'core:homebase') !== unitsAt) problems.push(`arranged: ${app.docket.allPanels().map((p) => p.id).join(',')}`);
 		// A panel's elements: the second dragged onto the first.
 		await vault.adapter.write('.quire/panels.json', JSON.stringify({ panels: [{ id: 'drag-test', title: 'Drag test', elements: [{ type: 'commands', commands: [] }, { type: 'files', folder: '' }] }] }));
@@ -2184,7 +2184,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(30);
 		const acts = titles();
 		press('Escape'); press('Escape'); press('Escape');
-		return (acts.includes('Notes linking here') && acts.some((t) => /Word/.test(t ?? '')) && acts.includes('Pin to Units')) || acts.join('|');
+		return (acts.includes('Notes linking here') && acts.some((t) => /Word/.test(t ?? '')) && acts.includes('Pin to Subjects')) || acts.join('|');
 	});
 
 	await check('docket: creates a note that does not exist; # lists notes with a tag', async () => {
@@ -2307,7 +2307,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(30);
 		const tabs = () => [...document.querySelectorAll<HTMLElement>('.docket-tab')];
 		await click(tabs()[2]); // Units
-		const afterTab = docketOpen() && !!document.querySelector('.docket-tab.is-active')?.textContent?.includes('Units');
+		const afterTab = docketOpen() && !!document.querySelector('.docket-tab.is-active')?.textContent?.includes('Subjects');
 		await click(tabs()[0]); // Authorities
 		await click(tabs()[2]); // Units again
 		const afterTabs = docketOpen();
@@ -2349,7 +2349,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (!!made && open && !untitled) || `made=${!!made} open=${open} untitled=${untitled}`;
 	});
 
-	await check('units: N and T on a row, "+ New note" in opened folders, A–Z with numbers in order', async () => {
+	await check('subjects: N and T on a row, "+ New note" in opened folders and "+ New topic" in subjects, A–Z with numbers in order', async () => {
 		await vault.create('Torts/Week 10.md', '');
 		await vault.create('Torts/Week 2.md', '');
 		await unitsStore(app).set('Torts', 'subject');
@@ -2376,7 +2376,24 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(80);
 		const sel = document.querySelector<HTMLSelectElement>('.modal select')?.value;
 		topModal()?.close();
-		return (help && order && plusRow && noLabels && !!topicModal && topic && sel === 'Torts/Negligence') || `help=${help} order=${order} plus=${plusRow} noLabels=${noLabels} topicModal=${!!topicModal} topic=${topic} preselected=${sel}`;
+		// An opened subject ends with "+ New topic" (a topic does not); Enter on it asks for the name and marks it.
+		pressDocketKey();
+		press('3', { ctrl: true });
+		await sleep(100);
+		const rows2 = rowsText();
+		const topicRow = rows2.includes('New topic in Torts') && !rows2.includes('New topic in Negligence');
+		focusRow('New topic in Torts');
+		press('Enter');
+		await sleep(80);
+		const ci = document.querySelector<HTMLInputElement>('.modal input');
+		if (ci) { ci.value = 'Causation'; ci.dispatchEvent(new Event('input')); ci.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); }
+		await sleep(200);
+		const madeTopic = !!vault.getFolderByPath('Torts/Causation') && unitsStore(app).kind('Torts/Causation') === 'topic';
+		const title = document.querySelector('.docket-tab.is-active')?.textContent ?? '';
+		if (app.docketOpen) (app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
+		await sleep(50);
+		return (help && order && plusRow && noLabels && !!topicModal && topic && sel === 'Torts/Negligence' && topicRow && madeTopic && title.includes('Subjects'))
+			|| `help=${help} order=${order} plus=${plusRow} noLabels=${noLabels} topicModal=${!!topicModal} topic=${topic} preselected=${sel} topicRow=${topicRow} madeTopic=${madeTopic} tab=${title}`;
 	});
 
 	await check('search: Enter opens the best match; "Create note" is last unless nothing matches', async () => {
@@ -2499,7 +2516,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const docketKeys = titles().includes('Open to the right');
 		const split = [...document.querySelectorAll('.docket-option')].some((o) => o.textContent?.includes('Split right') && /\\/.test(o.querySelector('.docket-option-hint')?.textContent ?? ''));
 		press('Escape'); press('Escape');
-		return (groups[0] === 'In the Docket' && groups[1] === 'In Units' && groups[2] === 'Prefixes' && groups.includes('Layout') && docketKeys && split) || `groups=${groups.join('|')} keys=${docketKeys} split=${split}`;
+		return (groups[0] === 'In the Docket' && groups[1] === 'In Subjects' && groups[2] === 'Prefixes' && groups.includes('Layout') && docketKeys && split) || `groups=${groups.join('|')} keys=${docketKeys} split=${split}`;
 	});
 
 	await check('security: locked notes stay out of search, authorities, links and Units', async () => {

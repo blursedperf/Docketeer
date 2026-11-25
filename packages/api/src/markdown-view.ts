@@ -387,7 +387,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 
 	/**
 	 * The header band says where the note is ("Torts › Negligence"; the homebase for a note at the top), since
-	 * its name is the title above the text. Each part shows that subject or topic in Units. With the title
+	 * its name is the title above the text. Each part shows that subject or topic in Subjects. With the title
 	 * turned off, the band shows the note's name as before.
 	 */
 	override updateTitle(): void {
@@ -402,7 +402,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		const folder = file.parent && !file.parent.isRoot() ? file.parent.path : '';
 		const parts = folder ? folder.split('/') : [];
 		const crumb = (text: string, path: string) => {
-			const el = this._titleEl.createSpan({ cls: 'view-header-crumb', text, attr: { role: 'button', tabindex: '0', title: path ? `Show ${path.replace(/\//g, ' › ')} in Units` : 'Show the homebase in Units' } });
+			const el = this._titleEl.createSpan({ cls: 'view-header-crumb', text, attr: { role: 'button', tabindex: '0', title: path ? `Show ${path.replace(/\//g, ' › ')} in Subjects` : 'Show the homebase in Subjects' } });
 			const go = (e: Event) => { e.preventDefault(); e.stopPropagation(); this.app.workspace.trigger('reveal-folder', path); };
 			el.addEventListener('click', go);
 			el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); });

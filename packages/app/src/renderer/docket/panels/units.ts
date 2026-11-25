@@ -1,9 +1,9 @@
 /**
- * Units (Mod+3): pinned and recent notes, then the folders tagged as subjects (units) and topics, each with
+ * Subjects (Mod+3; "units" in the code): pinned and recent notes, then the folders tagged as subjects and topics, each with
  * its notes, A–Z (numbers in order). Tags are kept in .quire/units.json (units-store.ts); other folders are
  * not shown here (Homebase › Files lists everything). Enter opens a note, or opens and closes a folder (the arrow shows
  * which). On a row, N makes a new note there and T a new topic, both asking for the name first; each
- * opened folder ends with "+ New note"; → offers renaming, moving, pinning, archiving and deleting. The
+ * opened folder ends with "+ New note" (and a subject with "+ New topic"); → offers renaming, moving, pinning, archiving and deleting. The
  * archive folder is listed last.
  *
  * Words for the levels live in UNIT_LABELS so subjects and topics can become clients and matters.
@@ -20,7 +20,7 @@ import { draggablePath, dropIntoFolder } from '../drag';
 
 export const UNIT_LABELS = { level1: 'Subject', level2: 'Topic', plural1: 'Subjects' };
 
-/** A folder to open the way to next time Units is drawn (from a "#" folder result). */
+/** A folder to open the way to next time Subjects is drawn (from a "#" folder result). */
 let pendingReveal: string | null = null;
 export function revealInUnits(path: string): void { pendingReveal = path; }
 
@@ -39,7 +39,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		new NewNoteModal(app, folder, notePlaces(app, archive())).open();
 	};
 
-	/** New topic (folder) in `folder`, or a new subject at the top; opened in Units afterwards. */
+	/** New topic (folder) in `folder`, or a new subject at the top; opened in Subjects afterwards. */
 	const newTopic = (folder: TFolder) => {
 		const label = (folder.isRoot() ? UNIT_LABELS.level1 : UNIT_LABELS.level2).toLowerCase();
 		new NameModal(app, folder.isRoot() ? `New ${label}` : `New ${label} in ${placeName(folder)}`, '', 'Create', (name) => {
@@ -103,7 +103,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		return r;
 	};
 
-	/** A tagged folder's row; opened, its tagged folders, then its notes, then "+ New note". */
+	/** A tagged folder's row; opened, its tagged folders, then its notes, then "+ New note" (and, in a subject, "+ New topic"). */
 	const unitRow = (parent: HTMLElement, folder: TFolder, level: number) => {
 		const store = unitsStore(app);
 		const expanded = open.has(folder.path);
@@ -123,6 +123,10 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 		const add = row(parent, docket, `New note in ${folder.name}`, () => newNote(folder), { icon: 'plus', level: level + 1, cls: 'is-command' });
 		keys(add, folder);
 		dropIntoFolder(add, app, folder.path);
+		if (store.kind(folder.path) === 'subject') {
+			const addTopic = row(parent, docket, `New ${UNIT_LABELS.level2.toLowerCase()} in ${folder.name}`, () => newTopic(folder), { icon: 'folder-plus', level: level + 1, cls: 'is-command' });
+			keys(addTopic, folder);
+		}
 	};
 
 	/** Folders as they are (for the archive): every folder and note inside `items`. */
@@ -151,7 +155,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 	};
 
 	return {
-		id: 'core:units', title: 'Units', icon: 'folders', order: 3, source: 'core',
+		id: 'core:units', title: UNIT_LABELS.plural1, icon: 'folders', order: 3, source: 'core',
 		render: (el) => {
 			const active = app.workspace.getActiveFile();
 			// Open the way to the open note, and to a folder chosen from a "#" result.
@@ -160,7 +164,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 
 			const store = unitsStore(app);
 			const help = el.createDiv({ cls: 'docket-help' });
-			help.createSpan({ text: `${UNIT_LABELS.plural1} (units) and ${UNIT_LABELS.level2.toLowerCase()}s are folders you mark: → on a folder here or in Homebase › Files.` });
+			help.createSpan({ text: `${UNIT_LABELS.plural1} and ${UNIT_LABELS.level2.toLowerCase()}s are folders you mark: → on a folder here or in Homebase › Files.` });
 			const del = Platform.isMacOS ? '⌘⌫' : 'Del';
 			for (const [k, t] of [['Enter', 'open'], ['N', 'new note here'], ['T', `new ${UNIT_LABELS.level2.toLowerCase()} here`], ['F2', 'rename'], [del, 'delete'], ['→', 'more']] as const) {
 				const s = help.createSpan({ cls: 'docket-help-key' });
@@ -183,11 +187,11 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 			const sec = section(el, UNIT_LABELS.plural1);
 			if (!store.loaded) empty(sec, 'Loading…');
 			else if (store.isEmpty) {
-				// Nothing tagged yet: offer to tag the folders as Units used to show them, so nothing seems lost.
+				// Nothing tagged yet: offer to tag the folders as this panel used to show them, so nothing seems lost.
 				const suggested = suggestedTags(app);
 				const n = Object.keys(suggested).length;
 				if (n) {
-					empty(sec, `Units shows the folders you mark as ${UNIT_LABELS.plural1.toLowerCase()} (units) and ${UNIT_LABELS.level2.toLowerCase()}s. None are marked yet.`);
+					empty(sec, `This panel shows the folders you mark as ${UNIT_LABELS.plural1.toLowerCase()} and ${UNIT_LABELS.level2.toLowerCase()}s. None are marked yet.`);
 					row(sec, docket, `Mark my folders: top folders as ${UNIT_LABELS.plural1.toLowerCase()}, folders inside them as ${UNIT_LABELS.level2.toLowerCase()}s`, () => { void store.replace(suggested); }, { icon: 'wand', detail: `${n} folder${n === 1 ? '' : 's'}; change any later with → on it`, cls: 'is-command' });
 				} else empty(sec, `No ${UNIT_LABELS.plural1.toLowerCase()} yet. Make one, then notes in it.`);
 			}
@@ -204,7 +208,7 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 	};
 }
 
-/** The folders Units would mark for a homebase with no tags: see suggestedUnitTags. */
+/** The folders Subjects would mark for a homebase with no tags: see suggestedUnitTags. */
 export function suggestedTags(app: App): Record<string, UnitKind> {
 	const attachments = String(app.config.attachmentFolder ?? '').replace(/^\/+|\/+$/g, '');
 	const archive = archiveRoot(app);
@@ -212,18 +216,18 @@ export function suggestedTags(app: App): Record<string, UnitKind> {
 	return suggestedUnitTags(app.vault.getAllFolders().filter((f) => !f.isRoot()).map((f) => f.path), skip);
 }
 
-/** Mark-as actions for a folder: subject (unit), topic, or out of Units. */
+/** Mark-as actions for a folder: subject, topic, or out of Subjects. */
 export function unitTagActions(app: App, folder: TFolder): ActionItem[] {
 	const store = unitsStore(app);
 	const kind = store.kind(folder.path);
 	const out: ActionItem[] = [];
-	if (kind !== 'subject') out.push({ title: `Mark as ${UNIT_LABELS.level1.toLowerCase()} (unit)`, icon: 'book', run: () => { void store.set(folder.path, 'subject'); } });
+	if (kind !== 'subject') out.push({ title: `Mark as ${UNIT_LABELS.level1.toLowerCase()}`, icon: 'book', run: () => { void store.set(folder.path, 'subject'); } });
 	if (kind !== 'topic') out.push({ title: `Mark as ${UNIT_LABELS.level2.toLowerCase()}`, icon: 'bookmark', run: () => { void store.set(folder.path, 'topic'); } });
-	if (kind) out.push({ title: 'Remove from Units (the folder stays)', icon: 'bookmark-minus', run: () => { void store.set(folder.path, null); } });
+	if (kind) out.push({ title: `Remove from ${UNIT_LABELS.plural1} (the folder stays)`, icon: 'bookmark-minus', run: () => { void store.set(folder.path, null); } });
 	return out;
 }
 
-/** Notes Units lists under a tagged folder: its own, and those of the tagged folders inside it. */
+/** Notes Subjects lists under a tagged folder: its own, and those of the tagged folders inside it. */
 export function unitNoteCount(app: App, folder: TFolder): number {
 	const store = unitsStore(app);
 	let n = folder.children.filter((c) => c instanceof TFile && c.extension === 'md').length;

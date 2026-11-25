@@ -213,7 +213,7 @@ export function registerCustomPanels(app: App, docket: Docket): () => void {
 		items.push(item('add:commands', 'Add', 'Add commands…', 'terminal', 'Buttons for any command, a plugin\'s too', () => add({ type: 'commands', commands: [] }).then(() => pickCommands(pid, find(pid)!.elements.length - 1))));
 		items.push(item('add:files', 'Add', 'Add a file tree…', 'folder-tree', 'A folder and everything in it, or the whole homebase', () => pickFolder('File tree of…', (folder) => add({ type: 'files', folder }).then(() => editContents(pid)))));
 		items.push(item('add:notes', 'Add', 'Add a note list…', 'list', 'Notes in a folder, with a tag, recent, pinned, or matching words', () => pickRule((rule) => add({ type: 'notes', rule }).then(() => editContents(pid)))));
-		items.push(item('add:section', 'Add', 'Add a built-in section…', 'panel-top', 'Units, Outline, Authorities, Layout …', () => pickSection((panel) => add({ type: 'section', panel }).then(() => editContents(pid)))));
+		items.push(item('add:section', 'Add', 'Add a built-in section…', 'panel-top', 'Subjects, Outline, Authorities, Layout …', () => pickSection((panel) => add({ type: 'section', panel }).then(() => editContents(pid)))));
 		items.push(item('done', 'Add', `Show “${p.title}”`, 'arrow-right', undefined, () => docket.showPanel(panelId(p))));
 		docket.showList(`${p.title}: what it shows`, items);
 	};

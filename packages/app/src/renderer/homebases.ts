@@ -57,7 +57,7 @@ export async function switcherItems(app: App): Promise<SearchResult[]> {
 
 /** The two layouts a new homebase can start with, in words. */
 export const LAYOUTS = [
-	{ id: 'legal' as const, title: 'Legal', icon: 'scale', detail: 'Units, Authorities, Outline, Cite, Homebase and Layout panels: law notes with AGLC4 citations (as Quire comes)' },
+	{ id: 'legal' as const, title: 'Legal', icon: 'scale', detail: 'Subjects, Authorities, Outline, Cite, Homebase and Layout panels: law notes with AGLC4 citations (as Quire comes)' },
 	{ id: 'generic' as const, title: 'Generic', icon: 'folder-tree', detail: 'Three panels: Files and Folders, Homebase and Layout; the others can be shown later' },
 ];
 

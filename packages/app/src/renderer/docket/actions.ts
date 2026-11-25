@@ -1,5 +1,5 @@
 /**
- * Actions on notes, wherever a note appears in the Docket (search results, Units, Authorities): the
+ * Actions on notes, wherever a note appears in the Docket (search results, Subjects, Authorities): the
  * file commands, pin and archive, links to and from the note, and every action plugins add to the file
  * menu (export to Word, version history …), so nothing that was a right-click away is out of reach.
  */
@@ -11,7 +11,7 @@ import { openFileIn } from './providers';
 export function registerNoteCommands(app: App): void {
 	const fileArg = (args: Record<string, unknown>) => (args.file instanceof TFile ? args.file : app.workspace.getActiveFile());
 	app.commands.addCommand({
-		id: 'app:toggle-pin-note', name: 'Pin or unpin note in Units', icon: 'pin', section: 'Notes', aliases: ['Pin note', 'Unpin note'],
+		id: 'app:toggle-pin-note', name: 'Pin or unpin note in Subjects', icon: 'pin', section: 'Notes', aliases: ['Pin note', 'Unpin note', 'Pin in Units'],
 		when: (ctx) => !!fileArg(ctx.args),
 		run: (ctx) => togglePin(app, fileArg(ctx.args)!),
 	});
@@ -80,7 +80,7 @@ export function noteActions(app: App, docket: Docket, file: TFile): ActionItem[]
 		{ title: 'Notes linking here', icon: 'link', run: () => showLinksTo(app, docket, file) },
 		{ title: 'Links from this note', icon: 'arrow-up-right', run: () => showLinksFrom(app, docket, file) },
 		{ title: 'Mentions (not linked)', icon: 'text-search', run: () => showMentions(app, docket, file) },
-		cmd('app:toggle-pin-note', isPinned(app, file) ? 'Unpin from Units' : 'Pin to Units'),
+		cmd('app:toggle-pin-note', isPinned(app, file) ? 'Unpin from Subjects' : 'Pin to Subjects'),
 		cmd('app:rename-file', 'Rename…'),
 		cmd('app:move-file', 'Move to…'),
 		cmd('app:copy-file'),
