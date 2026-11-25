@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.16.0
 
 - **Quire ships its own fonts**, so it looks the same on every computer: **Inter** for the interface and notes,
   **JetBrains Mono** for code and the chrome (tabs, file tree, status bar), and **Source Serif 4** as a serif for note
