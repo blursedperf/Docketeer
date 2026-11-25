@@ -770,6 +770,10 @@ pre.notices-text { margin: 0; max-height: 65vh; overflow: auto; white-space: pre
 .pdf-page .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
 .pdf-page .textLayer.selecting .endOfContent { top: 0; }
 
+/* Hidden syntax with text straight after it (see live-preview.ts: hideInline). */
+.cm-lp-hidden { display: none; }
+/* A line holding only a picture or player embed collapses while not edited: the embed shows in its place. */
+.cm-line.cm-lp-embed-line { line-height: 0; }
 /* Audio and video: embedded in notes and in their own tab (media.ts). */
 .cm-media-embed { padding: var(--space-2) 0; }
 .media-embed { display: block; max-width: 100%; border-radius: var(--radius-s); }

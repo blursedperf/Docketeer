@@ -14,9 +14,23 @@ import { isMedia } from './media';
 export interface LivePreviewOptions {
 	/** Open a link clicked in the formatted text. */
 	onOpenLink(link: { type: 'wiki' | 'url'; target: string }, newLeaf: boolean): void;
+	/**
+	 * Whether an `![[embed]]` shows something below its line (a picture or a player whose file exists). Only
+	 * then is its text hidden; an embed of a missing file stays as written, so it can be seen and fixed.
+	 * Without it, pictures and recordings are assumed to show.
+	 */
+	embedShows?(target: string): boolean;
 }
 
 const hide = Decoration.replace({});
+/**
+ * Hidden syntax with text straight after it ("]]." or "**,"). A replacement leaves CodeMirror's widget buffers
+ * (inline images) in the line, where the browser may break it, so the full stop wraps onto a line of its own.
+ * A hidden mark leaves nothing to break at. Only on lines not being edited, so the cursor never meets it.
+ */
+const hideInline = Decoration.mark({ class: 'cm-lp-hidden' });
+/** A line holding only embeds (and spaces). */
+const EMBEDS_ONLY = /^\s*(?:!\[\[[^\]\n]+\]\]\s*)+$/;
 
 class BulletWidget extends WidgetType {
 	override eq(): boolean { return true; }
@@ -67,7 +81,7 @@ function activeLines(state: EditorState): Set<number> {
 	return lines;
 }
 
-function build(view: EditorView): DecorationSet {
+function build(view: EditorView, opts: LivePreviewOptions): DecorationSet {
 	const { state } = view;
 	const doc = state.doc;
 	const active = activeLines(state);
@@ -78,7 +92,11 @@ function build(view: EditorView): DecorationSet {
 	const isActive = (pos: number) => active.has(doc.lineAt(pos).number) || comments.some(([a, b]) => pos >= a && pos < b);
 	const items: { from: number; to: number; deco: Decoration }[] = [];
 	const lineClasses = new Map<number, string>();
-	const add = (from: number, to: number, deco: Decoration) => { if (to > from || (to === from && (deco.spec as { widget?: unknown }).widget)) items.push({ from, to, deco }); };
+	const add = (from: number, to: number, deco: Decoration) => {
+		if (!(to > from || (to === from && (deco.spec as { widget?: unknown }).widget))) return;
+		if (deco === hide && to < doc.length && /\S/.test(doc.sliceString(to, to + 1))) deco = hideInline;
+		items.push({ from, to, deco });
+	};
 	const lineClass = (pos: number, cls: string) => { lineClasses.set(doc.lineAt(pos).from, cls); };
 
 	for (const { from, to } of view.visibleRanges) {
@@ -161,9 +179,18 @@ function build(view: EditorView): DecorationSet {
 			}
 			const target = m[2]!.trim();
 			if (m[1] === '!') {
-				// A picture or a player shows below the line: hide its embed text.
+				// A picture or a player shows below the line: hide its embed text, and when the line holds
+				// nothing else, the empty line too (the player then sits where the line was).
 				const bare = target.replace(/[#^].*$/, '');
-				if (isImage(bare) || isMedia(bare)) add(start, end, hide);
+				const shows = opts.embedShows ? opts.embedShows(target) : isImage(bare) || isMedia(bare);
+				if (shows) {
+					const line = doc.lineAt(start);
+					if (EMBEDS_ONLY.test(line.text)) {
+						// Nothing else on the line: hide it without widget buffers, so it takes no height at all.
+						add(start, end, hideInline);
+						lineClass(start, 'cm-lp-embed-line');
+					} else add(start, end, hide);
+				}
 				continue;
 			}
 			const textFrom = m[3] !== undefined ? start + 2 + m[2]!.length + 1 : start + 2;
@@ -191,10 +218,10 @@ function insideCode(state: EditorState, pos: number): boolean {
 export function livePreview(opts: LivePreviewOptions): Extension {
 	const plugin = ViewPlugin.fromClass(class {
 		decorations: DecorationSet;
-		constructor(view: EditorView) { this.decorations = build(view); }
+		constructor(view: EditorView) { this.decorations = build(view, opts); }
 		update(u: ViewUpdate) {
 			if (u.docChanged || u.viewportChanged || u.selectionSet || syntaxTree(u.startState) !== syntaxTree(u.state)) {
-				this.decorations = build(u.view);
+				this.decorations = build(u.view, opts);
 			}
 		}
 	}, { decorations: (v) => v.decorations });

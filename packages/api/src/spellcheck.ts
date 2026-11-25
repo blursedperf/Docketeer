@@ -94,7 +94,10 @@ export class Spellchecker extends Events {
 		if (!this.checker || this.ignored.has(word)) return true;
 		let ok = this.cache.get(word);
 		if (ok === undefined) {
-			ok = this.checker.correct(word) || this.checker.correct(word.replace(/’/g, "'"));
+			const plain = word.replace(/’/g, "'");
+			const folded = withoutAccents(plain);
+			// Dictionaries often have only the plain spelling ("cafe", "naive"): accept "café", "naïve" too.
+			ok = this.checker.correct(word) || this.checker.correct(plain) || (folded !== plain && this.checker.correct(folded));
 			this.cache.set(word, ok);
 		}
 		return ok;
@@ -124,6 +127,11 @@ export class Spellchecker extends Events {
 			cm?.dispatch({ effects: spellRefresh.of(null) });
 		});
 	}
+}
+
+/** `word` without accents or other combining marks: "café" → "cafe", "naïve" → "naive". */
+export function withoutAccents(word: string): string {
+	return word.normalize('NFD').replace(/\p{M}/gu, '').normalize('NFC');
 }
 
 const WORD = /[\p{L}][\p{L}\p{M}'’]*[\p{L}\p{M}]|[\p{L}]/gu;

@@ -359,6 +359,45 @@ export async function runSmoke(app: App): Promise<void> {
 		(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
 		return (shown && missing.length === 0) || `missing: ${missing.join(', ')}`;
 	});
+	await check('live preview: citation brackets are not links, punctuation stays with its link, embeds take their line', async () => {
+		const problems: string[] = [];
+		const wav = await vault.createBinary('Polish smoke.wav', silentWav(2));
+		const note = await vault.create('Polish smoke.md', 'Top line\n\nNotes: [[Welcome]].\n\nCite *Donoghue v Stevenson* [1932] AC 562, [78] and [a link](https://example.org).\n\n![[Polish smoke.wav]]\n\n![[Not here.mp4]]\n\nEnd\n');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		view.editor.setCursor({ line: 0, ch: 0 });
+		await sleep(200);
+		const lineEl = (n: number): HTMLElement => {
+			const { node } = cm.domAtPos(cm.state.doc.line(n).from);
+			return (node instanceof Element ? node : node.parentElement!).closest<HTMLElement>('.cm-line')!;
+		};
+		// B2: nothing the browser could break at between a link and the full stop after it.
+		if (lineEl(3).querySelector('img.cm-widgetBuffer')) problems.push(`break point by the link: ${lineEl(3).innerHTML}`);
+		if (lineEl(3).innerText !== 'Notes: Welcome.') problems.push(`link line reads ${lineEl(3).innerText}`);
+		// B1: [1932] and [78] are not links; a link with a URL is.
+		const links = Array.from(lineEl(5).querySelectorAll('.cm-link')).map((e) => e.textContent ?? '');
+		if (links.some((t) => /1932|78/.test(t))) problems.push(`citation drawn as a link: ${links.join(' | ')}`);
+		if (!links.some((t) => t.includes('a link'))) problems.push('the real link lost its style');
+		// B5: the embed's own line takes no room while the player shows; it comes back to be edited.
+		const player = () => view.contentEl.querySelector<HTMLAudioElement>('.cm-media-embed audio');
+		if (!(await until(() => !!player()))) problems.push('no player');
+		const first = player();
+		if (lineEl(7).getBoundingClientRect().height > 2) problems.push(`embed line is ${lineEl(7).getBoundingClientRect().height}px tall`);
+		view.editor.setCursor({ line: 6, ch: 2 });
+		await sleep(100);
+		if (lineEl(7).getBoundingClientRect().height < 10 || !lineEl(7).textContent?.includes('Polish smoke.wav')) problems.push('the embed line did not come back to be edited');
+		if (player() !== first) problems.push('the player was rebuilt when its line was edited');
+		view.editor.setCursor({ line: 0, ch: 0 });
+		await sleep(100);
+		// An embed of a missing file stays as written, so it can be fixed.
+		if (!lineEl(9).textContent?.includes('Not here.mp4') || lineEl(9).getBoundingClientRect().height < 10) problems.push(`missing embed hidden: "${lineEl(9).textContent}"`);
+		leaf.detach();
+		await vault.delete(note);
+		await vault.delete(wav);
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('reading view embeds notes, sections and pictures', async () => {
 		const pic = vault.getFiles().find((f) => f.path.startsWith('attachments/Pasted image'))!;
 		const file = await vault.create('Embeds.md', `# Embeds\n\n![[Welcome]]\n\n![[Renamed note#Second]]\n\n![[${pic.name}|120]]\n\n![[Embeds]]\n`);
@@ -452,7 +491,7 @@ export async function runSmoke(app: App): Promise<void> {
 		const view = workspace.getActiveViewOfType(MarkdownView)!;
 		const cm = view.editor.cm;
 		// Find each line's element from its end: its start may be inside hidden marks ("# ").
-		const lineText = (n: number) => { const d = cm.domAtPos(cm.state.doc.line(n).to).node; return (d instanceof HTMLElement ? d : d.parentElement)?.closest('.cm-line')?.textContent ?? ''; };
+		const lineText = (n: number) => { const d = cm.domAtPos(cm.state.doc.line(n).to).node; return (d instanceof HTMLElement ? d : d.parentElement)?.closest<HTMLElement>('.cm-line')?.innerText ?? ''; };
 		cm.dispatch({ selection: { anchor: cm.state.doc.length } });
 		await sleep(50);
 		const heading = lineText(1);
@@ -460,7 +499,7 @@ export async function runSmoke(app: App): Promise<void> {
 		const links = lineText(5);
 		const bullets = document.querySelectorAll('.cm-lp-bullet').length;
 		const box = document.querySelector<HTMLInputElement>('.cm-lp-task');
-		const quote = document.querySelector('.cm-line.cm-lp-quote')?.textContent;
+		const quote = document.querySelector<HTMLElement>('.cm-line.cm-lp-quote')?.innerText;
 		const rule = !!document.querySelector('.cm-lp-hr');
 		const formatted = heading === 'Heading' && inline === 'Some bold and em and code and hi.' && links === 'A link and home.' && bullets === 1 && !!box && quote === 'quote' && rule;
 		box?.click();

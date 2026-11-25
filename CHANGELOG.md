@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **Citations no longer look like links.** In the editor, `[1932]`, pinpoints such as `[78]` and `[2002] HCA 14`
+  were drawn as links, because Markdown can read any `[text]` as one. Only links with an address, or with a
+  reference defined in the note, look like links now.
+- **A full stop stays with its link.** A full stop or comma straight after a link or bold text could wrap onto
+  a line of its own.
+- **Recordings and pictures sit right under the text.** A line holding only `![[…]]` no longer leaves an empty
+  line above the player or picture; it comes back when you move onto it to edit it. An embed of a file that is
+  not in the homebase now stays visible as written, so it can be fixed, instead of disappearing.
+- **"café", "naïve", "rôle" are not marked as misspelt** when the dictionary has the plain spelling.
+
 ## v0.9.0
 
 - **Change the Docket key.** Settings → Hotkeys starts with *Docket key*: click *Change…* and press the keys. It is

@@ -8,7 +8,7 @@ import { baseExtensions, bracketExtensions } from './cm-setup';
 import { attachFiles, embedMarkdown, isImage } from './attachments';
 import { fileEmbeds } from './embeds-editor';
 import { createPlayer, isMedia, timeFromSubpath } from './media';
-import { livePreview } from './live-preview';
+import { type LivePreviewOptions, livePreview } from './live-preview';
 import { type TitleHandlers, inlineTitle, setTitle, titleElement } from './inline-title';
 import { spellcheckExtension, wordAt } from './spellcheck';
 import { Menu } from './ui';
@@ -79,7 +79,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			this.vimCompartment.of(cfg('vimMode', false) ? vim() : []),
 			editorInfoField.init(() => this),
 			this.bracketCompartment.of(bracketExtensions(cfg('autoPairBrackets', false))),
-			this.livePreviewCompartment.of(cfg('livePreview', true) ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
+			this.livePreviewCompartment.of(cfg('livePreview', true) ? livePreview(this.livePreviewOptions()) : []),
 			this.spellCompartment.of(this.spellExtension()),
 			this.titleCompartment.of(cfg('inlineTitle', true) ? inlineTitle(this.titleHandlers) : []),
 			EditorView.domEventHandlers({ contextmenu: (e) => { this.showEditorMenu(e); return true; } }),
@@ -191,6 +191,18 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		menu.showAtMouseEvent(e);
 	}
 
+	private livePreviewOptions(): LivePreviewOptions {
+		return {
+			onOpenLink: (l, n) => this.followLink(l, n),
+			// The same test the editor's embeds use: a picture or recording that is in the homebase.
+			embedShows: (target) => {
+				const bare = target.replace(/[#^].*$/, '');
+				if (!isImage(bare) && !isMedia(bare)) return false;
+				return !!this.app.metadataCache.getFirstLinkpathDest(bare, this.file?.path ?? '');
+			},
+		};
+	}
+
 	/** Open a link from the editor: notes in Quire; web links are copied, as Quire stays offline. */
 	private followLink(link: { type: 'wiki' | 'url'; target: string }, newLeaf: boolean): void {
 		if (link.type === 'url') {
@@ -226,7 +238,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			this.pluginCompartment.reconfigure(this.app.getEditorExtensions()),
 			this.vimCompartment.reconfigure(cfg('vimMode') ? vim() : []),
 			this.bracketCompartment.reconfigure(bracketExtensions(cfg('autoPairBrackets'))),
-			this.livePreviewCompartment.reconfigure(this.app.vault.getConfig('livePreview') !== false ? livePreview({ onOpenLink: (l, n) => this.followLink(l, n) }) : []),
+			this.livePreviewCompartment.reconfigure(this.app.vault.getConfig('livePreview') !== false ? livePreview(this.livePreviewOptions()) : []),
 			this.titleCompartment.reconfigure(this.app.vault.getConfig('inlineTitle') !== false ? inlineTitle(this.titleHandlers) : []),
 			this.spellCompartment.reconfigure(this.spellExtension()),
 		] });

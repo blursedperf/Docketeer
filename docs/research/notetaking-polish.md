@@ -88,6 +88,18 @@ and dim the other paragraphs. For essays and exam answers.
 **W8. Fewer false spelling marks** (B4) is a workflow issue as much as a bug: red underlines under every party's
 name teach people to ignore the spellchecker.
 
+## Progress
+
+| Item | Status |
+|---|---|
+| B1 citation brackets | **Done.** Only links with a URL or a defined reference get `.cm-link` (`realLinkRanges`, unit-tested). |
+| B2 punctuation after links | **Done.** Cause confirmed: widget buffers (inline images) around the replaced `]]`. Hidden syntax followed by text is now a `display: none` mark. |
+| B3 accented words | **Done.** A word whose accent-free form is in the dictionary is accepted (tested with the real en-AU dictionary). |
+| B5 gap above embeds | **Done.** An embed-only line collapses while not edited; an embed of a missing file stays visible. |
+
+Smoke check: *live preview: citation brackets are not links, punctuation stays with its link, embeds take their
+line*.
+
 ## 4. Suggested order
 
 | # | Work | Why | Size |

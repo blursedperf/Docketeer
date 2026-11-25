@@ -1,6 +1,6 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown';
-import { HighlightStyle, indentOnInput, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { EditorState, type Extension, RangeSetBuilder } from '@codemirror/state';
@@ -42,7 +42,7 @@ export const quireHighlight = HighlightStyle.define([
 	{ tag: t.strong, class: 'cm-strong' },
 	{ tag: t.emphasis, class: 'cm-em' },
 	{ tag: t.strikethrough, class: 'cm-strikethrough' },
-	{ tag: t.link, class: 'cm-link' },
+	// t.link is not styled here: Lezer gives it to any [text], so real links are marked by `markdownLinks`.
 	{ tag: t.url, class: 'cm-url' },
 	{ tag: t.monospace, class: 'cm-inline-code' },
 	{ tag: t.quote, class: 'cm-quote' },
@@ -70,6 +70,71 @@ const commentMark = Decoration.mark({ class: 'cm-comment cm-percent-comment' });
 const frontmatterLine = Decoration.line({ class: 'cm-frontmatter' });
 const frontmatterEnd = Decoration.line({ class: 'cm-frontmatter cm-frontmatter-end' });
 const commentLine = Decoration.line({ class: 'cm-comment-line' });
+
+/** A reference label as Markdown matches it: case and runs of spaces do not matter. */
+function normaliseLabel(s: string): string {
+	return s.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+/**
+ * The Markdown links and images in `from`..`to` that really are links: with a URL, or a reference label
+ * defined in the note. Lezer reads any `[text]` as a link, but `[1932]`, `[78]` and `[2002] HCA 14` in a
+ * citation are not, and must not look like one.
+ */
+export function realLinkRanges(state: EditorState, from = 0, to = state.doc.length): { from: number; to: number }[] {
+	const tree = syntaxTree(state);
+	const doc = state.doc;
+	const defined = new Set<string>();
+	tree.iterate({
+		enter: (n) => {
+			if (n.name !== 'LinkReference') return undefined;
+			const label = n.node.getChild('LinkLabel');
+			if (label) defined.add(normaliseLabel(doc.sliceString(label.from + 1, label.to - 1)));
+			return false;
+		},
+	});
+	const out: { from: number; to: number }[] = [];
+	tree.iterate({
+		from, to,
+		enter: (n) => {
+			if (n.name !== 'Link' && n.name !== 'Image') return undefined;
+			const node = n.node;
+			if (node.getChild('URL')) { out.push({ from: n.from, to: n.to }); return false; }
+			const label = node.getChild('LinkLabel');
+			const marks = node.getChildren('LinkMark');
+			const text = label
+				? doc.sliceString(label.from + 1, label.to - 1)
+				: marks.length >= 2 ? doc.sliceString(marks[0]!.to, marks[1]!.from) : '';
+			if (!text.startsWith('^') && defined.has(normaliseLabel(text))) out.push({ from: n.from, to: n.to });
+			return false;
+		},
+	});
+	return out;
+}
+
+const linkMark = Decoration.mark({ class: 'cm-link' });
+
+/** Mark the Markdown links that are real links (see `realLinkRanges`). */
+const markdownLinks = ViewPlugin.fromClass(class {
+	decorations: DecorationSet;
+	constructor(view: EditorView) { this.decorations = this.build(view); }
+	update(u: ViewUpdate) {
+		if (u.docChanged || u.viewportChanged || syntaxTree(u.startState) !== syntaxTree(u.state)) this.decorations = this.build(u.view);
+	}
+	build(view: EditorView): DecorationSet {
+		const builder = new RangeSetBuilder<Decoration>();
+		let last = -1;
+		for (const { from, to } of view.visibleRanges) {
+			for (const r of realLinkRanges(view.state, from, to)) {
+				// A link across two visible ranges is found in both: add it once.
+				if (r.from <= last) continue;
+				builder.add(r.from, r.to, linkMark);
+				last = r.from;
+			}
+		}
+		return builder.finish();
+	}
+}, { decorations: (v) => v.decorations });
 
 /** Style [[links]], [^footnotes], ==highlights== and the frontmatter block. */
 const inlineMarks = ViewPlugin.fromClass(class {
@@ -174,6 +239,7 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 		// The browser's spellchecker stays off: it would download dictionaries. Quire's own checks offline.
 		EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' }),
 		inlineMarks,
+		markdownLinks,
 		keymap.of([
 			...markdownKeymap,
 			...defaultKeymap,
