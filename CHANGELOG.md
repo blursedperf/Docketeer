@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed**: the focus ring of a full-width text box in a dialog (Rename, New note, Unlock …) was cut off at the left
+  and right, so only its top and bottom showed. The dialog now leaves room for it; nothing moves.
+
 ## v0.16.2
 
 - **Units is now called Subjects**: the Docket panel, its help, the "Mark as subject" and "Remove from Subjects"

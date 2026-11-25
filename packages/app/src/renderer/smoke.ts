@@ -925,6 +925,28 @@ export async function runSmoke(app: App): Promise<void> {
 	await app.setConfig('density', 'comfortable');
 	secondLeaf.detach();
 	await sleep(50);
+	await check('dialogs: a full-width text field has room for its focus ring at the sides', async () => {
+		const file = vault.getMarkdownFiles()[0]!;
+		commands.executeCommandById('app:rename-file', { file });
+		await sleep(100);
+		const input = document.querySelector<HTMLInputElement>('.modal input');
+		const content = input?.closest<HTMLElement>('.modal-content');
+		const modal = input?.closest<HTMLElement>('.modal');
+		let detail = 'no field';
+		let ok = false;
+		if (input && content && modal) {
+			input.focus();
+			const r = input.getBoundingClientRect();
+			const c = content.getBoundingClientRect();
+			const m = modal.getBoundingClientRect();
+			// The scroll box is the content's border box; the ring is 2px outside the field.
+			const room = Math.min(r.left - c.left, c.right - r.right);
+			ok = room >= 2;
+			detail = `room=${room} field ${Math.round(r.left - m.left)}px from the dialog edge`;
+		}
+		topModal()?.close();
+		return ok || detail;
+	});
 	await check('settings controls share one column', async () => {
 		app.setting.openTabById('appearance');
 		await sleep(50);

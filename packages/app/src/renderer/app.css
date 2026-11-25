@@ -539,6 +539,9 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .modal-title { margin-bottom: var(--space-4); padding-right: var(--space-8); font-family: var(--font-chrome); font-size: var(--text-lg); font-weight: var(--font-semibold); color: var(--doom-blue-text); }
 .modal-title:empty { display: none; }
 .modal-content { overflow: auto; font-size: var(--text-md); }
+/* Room for the focus ring (2px) of a field that fills the width: the content scrolls, so it would cut the ring off at
+   the sides. The negative margin keeps everything where it was. */
+.modal:not(.mod-settings) .modal-content { padding: 3px; margin: -3px; }
 .modal-content p { margin: 0 0 var(--space-3); line-height: 1.5; max-width: var(--prose-width); }
 
 .modal.prompt { width: min(700px, 92vw); padding: 0; overflow: hidden; }
