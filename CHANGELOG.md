@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Tables stay tables while you type in them** (live preview). Click a cell, or arrow into the table from the line
+  above or below, and edit it in place: the cell shows its Markdown while it has the cursor, and every keystroke goes
+  into the note with the columns lined up. Tab / Shift+Tab and the arrow keys move between cells, Enter goes down a
+  row (adding one at the foot), Escape leaves the table, and undo works from a cell. The table commands (Alt+Enter …)
+  act on the cell you are in. Source mode still shows the Markdown.
+- **Empty table cells keep their shape**: every cell is at least 5em wide and a row tall, and an empty one shows a
+  faint dash, so new rows and columns read as a grid instead of a squashed line. Short words no longer break inside
+  a narrow cell.
+- **Moving through the Docket is even** (see docs/research/docket-rows.md): every row is one height, with its
+  detail on the same line; full-text matches keep their matching line, every row of that group the same two-line
+  height. Group and section titles stay at the top of the list while their rows scroll, so you can always see which
+  group you are in. The list keeps a row of context above and below the selection and never scrolls the rest of
+  the window. Moving onto a group's first row brings its title into view, rather than lurching past it.
 - **Fixed**: the focus ring of a full-width text box in a dialog (Rename, New note, Unlock …) was cut off at the left
   and right, so only its top and bottom showed. The dialog now leaves room for it; nothing moves.
 

@@ -545,7 +545,8 @@ export class Docket {
 		this.inputEl.setAttribute('aria-expanded', 'true');
 		let i = 0;
 		for (const g of groups) {
-			const group = this.resultsEl.createDiv({ cls: 'docket-group', attr: { role: 'group', 'aria-label': g.type } });
+			// Full-text matches keep the matching line under the note's name: two lines for every row of that group.
+			const group = this.resultsEl.createDiv({ cls: `docket-group${g.type === 'In notes' ? ' mod-two-line' : ''}`, attr: { role: 'group', 'aria-label': g.type } });
 			const head = group.createDiv({ cls: 'docket-group-title', attr: { 'aria-hidden': 'true' } });
 			head.createSpan({ text: g.type });
 			const shown = g.items.filter((r) => !r.id.startsWith('docket:more:')).length;
@@ -593,7 +594,7 @@ export class Docket {
 			const on = el.id === `docket-opt-${this.selected}`;
 			el.toggleClass('is-selected', on);
 			el.setAttribute('aria-selected', String(on));
-			if (on && scroll) el.scrollIntoView({ block: 'nearest' });
+			if (on && scroll) revealInList(this.resultsEl, el as HTMLElement);
 		}
 		this.inputEl.setAttribute('aria-activedescendant', `docket-opt-${this.selected}`);
 		this.resultsEl.setAttribute('aria-activedescendant', `docket-opt-${this.selected}`);
@@ -764,8 +765,8 @@ export class Docket {
 					// Up from the first row goes back to the search input.
 					if (step === -1 && at <= 0) { this.focusZone('input'); return; }
 					const next = items[at === -1 ? 0 : Math.min(items.length - 1, at + step)]!;
-					next.focus();
-					next.scrollIntoView({ block: 'nearest' });
+					next.focus({ preventScroll: true });
+					revealInList(this.panelEl, next);
 				}
 				return;
 			}
@@ -812,4 +813,26 @@ export class Docket {
 				return;
 		}
 	}
+}
+
+/**
+ * Keep the selected row in view by scrolling its list only (never the window or the panes): one row of context
+ * above and below it, clear of its group's title (which stays at the top while its rows scroll). The first row of a
+ * group brings the group's title into view with it, so moving past a title never jumps.
+ */
+export function revealInList(list: HTMLElement, el: HTMLElement): void {
+	const box = list.getBoundingClientRect();
+	const r = el.getBoundingClientRect();
+	const group = el.closest<HTMLElement>('.docket-group, .docket-section-wrap');
+	const head = group?.querySelector<HTMLElement>(':scope > .docket-group-title, :scope > .docket-section-title');
+	const isRow = (n: Element | null) => !!n && (n.classList.contains('docket-option') || n.hasAttribute('data-docket-item'));
+	const prev = isRow(el.previousElementSibling) ? el.previousElementSibling!.getBoundingClientRect() : null;
+	const next = isRow(el.nextElementSibling) ? el.nextElementSibling!.getBoundingClientRect() : null;
+	// The highest point to show: the row before (below the sticky title), or the group's own top (its title).
+	const top = prev ? prev.top - (head?.offsetHeight ?? 0) : group ? group.getBoundingClientRect().top : r.top;
+	const bottom = (next ?? r).bottom;
+	let delta = 0;
+	if (bottom > box.bottom) delta = bottom - box.bottom;
+	if (top - delta < box.top) delta = top - box.top;
+	if (delta) list.scrollTop += delta;
 }

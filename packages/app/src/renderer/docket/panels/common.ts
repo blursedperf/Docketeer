@@ -38,11 +38,13 @@ export function row(parent: HTMLElement, docket: Docket, title: string, run: (wh
 	return el;
 }
 
+/** A titled section of a panel: the title and its rows share a box, so the title stays in view while its rows scroll. */
 export function section(parent: HTMLElement, title: string, count?: number): HTMLElement {
-	const head = parent.createDiv({ cls: 'docket-section-title' });
+	const wrap = parent.createDiv({ cls: 'docket-section-wrap' });
+	const head = wrap.createDiv({ cls: 'docket-section-title' });
 	head.createSpan({ text: title });
 	if (count !== undefined) head.createSpan({ cls: 'docket-group-more', text: String(count) });
-	return parent.createDiv({ cls: 'docket-section', attr: { role: 'group', 'aria-label': title } });
+	return wrap.createDiv({ cls: 'docket-section', attr: { role: 'group', 'aria-label': title } });
 }
 
 export function empty(parent: HTMLElement, text: string): void {

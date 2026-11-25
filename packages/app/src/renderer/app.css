@@ -914,7 +914,6 @@ input.docket-input:focus { box-shadow: none; }
 .docket-resize { position: absolute; left: 0; right: 0; bottom: -3px; height: 6px; cursor: row-resize; z-index: 1; }
 body.is-resizing-docket { cursor: row-resize; user-select: none; }
 .docket-option-detail mark { color: var(--doom-yellow, var(--text-normal)); background: transparent; font-weight: var(--font-bold); }
-.docket-option.mod-more { min-height: 0; }
 .docket-option.mod-more .docket-option-title { font-size: var(--text-xs); color: var(--text-muted); }
 .docket-option.mod-more.is-selected .docket-option-title { color: inherit; }
 
@@ -928,7 +927,7 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 .docket-item.is-focus { background: rgba(var(--doom-blue-rgb), 0.1); }
 .docket-item.is-command .docket-option-title { color: var(--text-muted); }
 .docket-filter { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: var(--space-1) var(--space-2) var(--space-2); }
-.docket-item.docket-chip { width: auto; min-height: 0; padding: 0 var(--space-2); border: var(--border-width) solid var(--doom-border-subtle); border-left-width: var(--border-width); font-size: var(--text-sm); }
+.docket-item.docket-chip { width: auto; min-height: 0; height: auto; padding: 0 var(--space-2); border: var(--border-width) solid var(--doom-border-subtle); border-left-width: var(--border-width); font-size: var(--text-sm); }
 .docket-item.docket-chip.is-active { color: var(--doom-blue-text); border-color: var(--doom-blue); }
 .docket-form { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-1) var(--space-2); }
 .docket-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2) var(--space-3); }
@@ -1007,11 +1006,19 @@ input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: no
 .welcome-layout-detail { font-size: var(--text-xs); color: var(--text-muted); white-space: normal; }
 
 /* Tables drawn in live preview (tables-editor.ts): the reading view's look, + to add a column (right) or row (foot). */
-.cm-table-widget { position: relative; display: inline-block; max-width: 100%; margin: var(--space-2) 0; padding: 0 var(--space-6) var(--space-6) 0; overflow-x: auto; }
+.cm-table-widget { position: relative; display: inline-block; max-width: 100%; margin: var(--space-2) 0; padding: 0 var(--space-6) var(--space-6) 0; overflow-x: auto; overflow-y: hidden; }
 .cm-table-widget table { border-collapse: collapse; }
-.cm-table-widget :is(th, td) { padding: var(--space-1) var(--space-3); border: var(--border-width) solid var(--doom-border-subtle); cursor: text; vertical-align: top; }
+/* Cells keep a usable size when empty (a new row or column reads as a grid, not a squashed line) and are edited in
+   place: the cell with the cursor is outlined in the accent colour. */
+.cm-table-widget :is(th, td) {
+	min-width: 5em; height: 2.2em; padding: var(--space-1) var(--space-3);
+	border: var(--border-width) solid var(--doom-border-subtle); cursor: text; vertical-align: top; outline: none;
+	white-space: pre-wrap; overflow-wrap: break-word; caret-color: var(--doom-blue);
+}
 .cm-table-widget th { background: var(--doom-base1); font-weight: var(--font-bold); text-align: left; }
 .cm-table-widget :is(th, td):hover { background: var(--doom-base2); }
+.cm-table-widget :is(th, td):focus { background: var(--background-primary); box-shadow: inset 0 0 0 2px var(--doom-blue); }
+.cm-table-widget td:empty:not(:focus) { background-image: linear-gradient(var(--doom-hairline), var(--doom-hairline)); background-size: 1.5em 1px; background-position: center; background-repeat: no-repeat; }
 .cm-table-add { position: absolute; display: flex; align-items: center; justify-content: center; padding: 0; border: var(--border-width) dashed var(--doom-border-subtle); border-radius: var(--radius-s); background: none; color: var(--text-faint); cursor: var(--cursor); opacity: 0; }
 .cm-table-widget:hover .cm-table-add, .cm-table-add:focus-visible { opacity: 1; }
 .cm-table-add:hover { color: var(--doom-blue-text); border-color: var(--doom-blue); }
@@ -1054,3 +1061,22 @@ body.is-frameless .docket-handle {
 body.is-frameless.is-darwin .docket-handle { padding-left: 80px; padding-right: 80px; }
 body.is-frameless .docket-handle :is(button, input, a, kbd) { -webkit-app-region: no-drag; }
 body.is-frameless .welcome::before { content: ""; position: fixed; inset: 0 0 auto 0; height: var(--space-8); -webkit-app-region: drag; }
+
+/* Docket rows, one rhythm (see docs/research/docket-rows.md): every row the same height, its detail on the same line
+   after the name (muted, cut short when long), so ↑/↓ step evenly. Full-text matches keep the matching line under the
+   note's name, every row of that group two lines. Group and section titles stay at the top of the list while their
+   rows scroll, the next title pushing the last away, so the group you are in is always named. */
+.docket { --docket-row: calc(var(--row-h) + var(--space-1)); --docket-title-h: var(--space-6); }
+.docket-option, .docket-item { height: var(--docket-row); min-height: var(--docket-row); padding-top: 0; padding-bottom: 0; }
+.docket-option-text { flex-direction: row; align-items: baseline; gap: var(--space-2); }
+.docket-option-title { flex: 0 1 auto; min-width: 0; }
+.docket-option-detail { flex: 1 1 0; min-width: 0; }
+.docket-group.mod-two-line .docket-option:not(.mod-more) { height: calc(var(--docket-row) * 1.6); }
+.docket-group.mod-two-line .docket-option-text { flex-direction: column; align-items: stretch; gap: 0; }
+.docket-group.mod-two-line .docket-option-detail { flex: none; }
+.docket-group-title, .docket-section-title {
+	position: sticky; top: calc(-1 * var(--space-1)); z-index: 1;
+	align-items: center; height: var(--docket-title-h); padding-top: 0; padding-bottom: 0; background: var(--doom-bg-alt);
+}
+.docket-selected .docket-section-title { position: static; height: auto; background: none; }
+.docket-section-wrap + .docket-section-wrap { margin-top: 0; }

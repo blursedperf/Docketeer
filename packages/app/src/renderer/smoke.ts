@@ -2017,19 +2017,35 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(100);
 		const grown = view.editor.getValue();
 		if (!grown.includes('| Case | Year |     |') || grown.split('\n').filter((l) => l.startsWith('|')).length !== 4) problems.push(`+ buttons: ${JSON.stringify(grown)}`);
-		// Click a cell: the Markdown shows, the cursor in that cell.
-		widget()?.querySelectorAll<HTMLElement>('tbody td')[1]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-		await sleep(100);
-		if (widget()) problems.push('the table stayed drawn while being edited');
-		const cur = view.editor.getCursor();
-		if (cur.line !== 4 || view.editor.getLine(4).slice(cur.ch, cur.ch + 4) !== '1992') problems.push(`cell click put the cursor at ${cur.line}:${cur.ch}`);
-		// Tab to the next cell, and past the last one: a new row.
+		// Edit a cell in place: the table stays drawn, the note follows each keystroke, lined up, and the caret stays.
+		const cellAt = (r: number, c: number) => widget()?.querySelector<HTMLElement>(`[data-row="${r}"][data-col="${c}"]`) ?? null;
 		const tab = (shift = false) => view.editor.cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: shift, bubbles: true, cancelable: true }));
-		tab(); await sleep(50);
-		if (view.editor.getCursor().line !== 4 || view.editor.getCursor().ch < view.editor.getLine(4).indexOf('1992') + 4) problems.push('Tab did not go to the next cell');
-		view.editor.setCursor({ line: 5, ch: view.editor.getLine(5).length - 3 });
-		tab(); await sleep(50);
+		const key = (k: string, shift = false) => (document.activeElement as HTMLElement | null)?.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey: shift, bubbles: true, cancelable: true }));
+		// The test window never has the system's focus, so focus events are not sent: send the one a click would.
+		const focusIn = (el: HTMLElement | null) => { el?.focus(); el?.dispatchEvent(new FocusEvent('focusin', { bubbles: true })); };
+		const year = cellAt(0, 1);
+		focusIn(year);
+		await sleep(80);
+		if (!widget()) problems.push('the table stopped being drawn when a cell was clicked');
+		const cur = view.editor.getCursor();
+		if (cur.line !== 4 || view.editor.getLine(4).slice(cur.ch, cur.ch + 4) !== '1992') problems.push(`a cell put the note's cursor at ${cur.line}:${cur.ch}`);
+		const firstCell = cellAt(0, 0);
+		focusIn(firstCell);
+		await sleep(50);
+		if (firstCell) { firstCell.textContent = 'Mabo v Queensland [No 2]'; firstCell.dispatchEvent(new InputEvent('input', { bubbles: true })); }
+		await sleep(80);
+		if (view.editor.getLine(4) !== '| Mabo v Queensland [No 2] | 1992 |     |') problems.push(`typed cell: ${JSON.stringify(view.editor.getLine(4))}`);
+		if (!view.editor.getLine(2).startsWith('| Case                     |')) problems.push(`not lined up: ${JSON.stringify(view.editor.getLine(2))}`);
+		if (!widget() || document.activeElement !== cellAt(0, 0)) problems.push('typing lost the table or the cell');
+		// Tab to the next cell, and past the last one: a new row.
+		key('Tab'); await sleep(50);
+		const at = (document.activeElement as HTMLElement | null)?.dataset;
+		if (at?.row !== '0' || at.col !== '1') problems.push(`Tab went to ${at?.row},${at?.col}`);
+		focusIn(cellAt(1, 2)); await sleep(50);
+		key('Tab'); await sleep(150);
 		if (view.editor.getValue().split('\n').filter((l) => l.startsWith('|')).length !== 5) problems.push('Tab in the last cell added no row');
+		const nowAt = (document.activeElement as HTMLElement | null)?.dataset;
+		if (nowAt?.row !== '2' || nowAt.col !== '0') problems.push(`after the new row the keyboard is at ${nowAt?.row},${nowAt?.col}`);
 		// The keys' commands.
 		const rows = () => view.editor.getValue().split('\n').filter((l) => l.startsWith('|')).length;
 		const before = rows();
@@ -2044,8 +2060,19 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		if (cols() !== 3) problems.push(`delete a column: ${cols()} columns`);
 		if (!view.editor.getValue().includes('\n\nAfter the table')) problems.push('the line after the table was changed');
 		if (!view.editor.getValue().startsWith('Top line\n\n| Case')) problems.push('the lines before the table were changed');
+		// Escape leaves the table for the line after it; ArrowDown from the line above goes into its first cell.
+		focusIn(cellAt(0, 0)); await sleep(50);
+		key('Escape'); await sleep(80);
+		const tableEnd = view.editor.getValue().split('\n').map((l) => l.startsWith('|')).lastIndexOf(true);
+		if (view.editor.getCursor().line !== tableEnd + 1) problems.push(`Escape put the cursor on line ${view.editor.getCursor().line}, the table ends on ${tableEnd}`);
+		view.editor.setCursor({ line: 1, ch: 0 });
+		view.editor.cm.focus();
+		view.editor.cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+		await sleep(80);
+		if ((document.activeElement as HTMLElement | null)?.dataset.row !== '-1') problems.push('ArrowDown above the table did not go into it');
 		// Away from the table, Tab indents as before.
 		view.editor.setCursor({ line: 0, ch: 0 });
+		view.editor.cm.focus();
 		tab(); await sleep(50);
 		if (!view.editor.getLine(0).startsWith('\t') && !view.editor.getLine(0).startsWith('  ')) problems.push('Tab outside a table no longer indents');
 		await view.save();
@@ -2418,6 +2445,40 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			|| `help=${help} order=${order} plus=${plusRow} noLabels=${noLabels} topicModal=${!!topicModal} topic=${topic} preselected=${sel} topicRow=${topicRow} madeTopic=${madeTopic} tab=${title}`;
 	});
 
+	await check('docket: ↑/↓ step evenly through results, the selected row in view and its group named above it', async () => {
+		pressDocketKey();
+		await type('e');
+		const list = document.querySelector<HTMLElement>('.docket-results')!;
+		const input = document.querySelector<HTMLInputElement>('.docket-input')!;
+		const problems: string[] = [];
+		const heights = new Set([...list.querySelectorAll<HTMLElement>('.docket-group:not(.mod-two-line) .docket-option')].map((o) => Math.round(o.getBoundingClientRect().height)));
+		if (heights.size !== 1) problems.push(`row heights ${[...heights].join(',')}`);
+		const rowH = [...heights][0] ?? 30;
+		const n = list.querySelectorAll('.docket-option').length;
+		const groups = list.querySelectorAll('.docket-group').length;
+		const titleH = list.querySelector<HTMLElement>('.docket-group-title')?.offsetHeight ?? 24;
+		const step = (key: 'ArrowDown' | 'ArrowUp') => {
+			const before = list.scrollTop;
+			const fromGroup = list.querySelector('.docket-option.is-selected')?.closest('.docket-group');
+			input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+			const sel = list.querySelector<HTMLElement>('.docket-option.is-selected');
+			if (!sel) return;
+			const box = list.getBoundingClientRect();
+			const r = sel.getBoundingClientRect();
+			const title = sel.closest('.docket-group')!.querySelector<HTMLElement>('.docket-group-title')!.getBoundingClientRect();
+			const where = `${sel.textContent?.slice(0, 20)} (${key})`;
+			if (r.top < title.bottom - 1 || r.bottom > box.bottom + 1) problems.push(`${where} not fully in view`);
+			if (title.top < box.top - rowH || title.bottom > r.top + 1) problems.push(`${where}: its group title is not above it`);
+			// Within a group the list moves a row at most; into another, also that group's title and the gap above it.
+			const most = sel.closest('.docket-group') === fromGroup ? rowH * 1.1 : rowH * 2 + titleH + 12;
+			if (Math.abs(list.scrollTop - before) > most) problems.push(`${where} jumped ${Math.round(list.scrollTop - before)}px`);
+		};
+		for (let i = 0; i < n - 1; i++) step('ArrowDown');
+		for (let i = 0; i < n - 1; i++) step('ArrowUp');
+		press('Escape'); press('Escape');
+		if (n < 12 || groups < 3) problems.push(`only ${n} rows in ${groups} groups to move through`);
+		return problems.length === 0 || problems.slice(0, 4).join('; ');
+	});
 	await check('search: Enter opens the best match; "Create note" is last unless nothing matches', async () => {
 		pressDocketKey();
 		await type('welc');
