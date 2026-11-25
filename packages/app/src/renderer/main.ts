@@ -101,8 +101,23 @@ async function welcome() {
 	await renderRecent();
 }
 
+/** With the title bar hidden: mark the page (the top bar moves the window), and colour the window buttons to match. */
+function frameless(host: ReturnType<typeof getHost>, app?: App): void {
+	if (!host.app.frameless) return;
+	document.body.addClass('is-frameless', `is-${host.platform}`);
+	const color = () => {
+		const s = getComputedStyle(document.body);
+		const bg = s.getPropertyValue('--doom-base0').trim() || '#121418';
+		const fg = s.getPropertyValue('--doom-text-muted').trim() || '#c9d0d9';
+		void host.app.setTitleBarColors?.(bg, fg);
+	};
+	color();
+	if (app) app.customCss.on('css-change', color);
+}
+
 async function start() {
 	const host = getHost();
+	frameless(host);
 	if (!host.vault) {
 		await welcome();
 		return;
@@ -112,6 +127,7 @@ async function start() {
 	(globalThis as Record<string, unknown>).app = app;
 	const core = registerCore(app);
 	await app.start();
+	frameless(host, app);
 	core.reveal();
 	if (host.app.isShots) {
 		// Screenshots for comparison: no caret, no animations.

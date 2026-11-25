@@ -232,7 +232,18 @@ input[type="text"], input[type="search"], input[type="number"], input[type="pass
 }
 input:focus, textarea:focus, select:focus { border-color: var(--doom-blue); box-shadow: 0 0 0 2px rgba(var(--doom-blue-rgb), 0.3); outline: none; }
 textarea { height: auto; padding: var(--space-2); resize: vertical; min-height: 60px; font-family: var(--font-monospace); line-height: 1.5; }
-select { padding-right: var(--space-6); cursor: var(--cursor); }
+/* Dropdowns draw their own arrow, in the theme's colour, with room from the right edge (the system's sat against it). */
+select {
+	appearance: none;
+	padding-right: var(--space-8);
+	cursor: var(--cursor);
+	background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+	background-position: calc(100% - 17px) 55%, calc(100% - 12px) 55%;
+	background-size: 5px 5px;
+	background-repeat: no-repeat;
+}
+select:hover { background-color: var(--doom-base2); }
+select option, select optgroup { background: var(--doom-base1); color: var(--text-normal); }
 /* Number boxes: narrow, no spin buttons, the unit after them ("15 minutes"). */
 input[type="number"] { width: 5em; text-align: right; -moz-appearance: textfield; }
 input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -1027,3 +1038,15 @@ input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: no
 .modal-button-container { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
 .modal-content > .setting-item.mod-buttons { border-top: none; padding-top: var(--space-4); }
 .modal-content > .setting-item.mod-buttons .setting-item-control { width: 100%; justify-content: flex-end; }
+
+/* The title bar hidden (Appearance › Window): the top bar moves the window, and leaves room for the window buttons:
+   at the right on Windows and Linux (drawn over it by the system), at the left on macOS. */
+body.is-frameless .docket-handle {
+	height: var(--space-8);
+	-webkit-app-region: drag;
+	padding-left: env(titlebar-area-x, 0px);
+	padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+}
+body.is-frameless.is-darwin .docket-handle { padding-left: 80px; padding-right: 80px; }
+body.is-frameless .docket-handle :is(button, input, a, kbd) { -webkit-app-region: no-drag; }
+body.is-frameless .welcome::before { content: ""; position: fixed; inset: 0 0 auto 0; height: var(--space-8); -webkit-app-region: drag; }

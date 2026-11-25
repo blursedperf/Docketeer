@@ -120,10 +120,10 @@ describe('themes', () => {
 		expect(accentVars('not a colour')).toBeNull();
 	});
 	it('has complete palettes', () => {
-		expect(BUILTIN_PALETTES).toHaveLength(16);
+		expect(BUILTIN_PALETTES).toHaveLength(18);
 		const keys = Object.keys(BUILTIN_PALETTES[0]!.vars).sort();
 		for (const p of BUILTIN_PALETTES) expect(Object.keys(p.vars).sort()).toEqual(keys);
-		expect(BUILTIN_PALETTES.filter((p) => p.mode === 'dark')).toHaveLength(9);
+		expect(BUILTIN_PALETTES.filter((p) => p.mode === 'dark')).toHaveLength(10);
 	});
 });
 

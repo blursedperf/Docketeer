@@ -87,6 +87,12 @@ export interface HostBridge {
 		isSmoke: boolean;
 		/** Screenshot mode (--shots), and a capture of the window in smoke modes. */
 		isShots?: boolean;
+		/** The system title bar is hidden: the window buttons are drawn over the top bar, which moves the window. */
+		frameless?: boolean;
+		/** Colour the window buttons drawn over the top bar (Windows and Linux). */
+		setTitleBarColors?(color: string, symbol: string): Promise<void>;
+		/** Restart Quire. */
+		relaunch?(): Promise<void>;
 		/** Benchmark mode (--bench): time the Docket on the open homebase and report. */
 		isBench?: boolean;
 		capture?(name: string): Promise<string | null>;

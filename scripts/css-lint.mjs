@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 const FILE = join(dirname(fileURLToPath(import.meta.url)), '..', 'packages/app/src/renderer/app.css');
 /** Selector fragments allowed a raw value, with why. */
 const ALLOW = [
+	['body.is-frameless', 'padding', 'room for the window buttons: sized by the system (env) or the macOS traffic lights'],
 	['.welcome h1', 'font-size', 'display heading, one-off'],
 	['.nav-file-tag', 'font-size', 'badge text below the UI scale'],
 	['.cm-panel.cm-search [name=close]', 'font-size', 'CodeMirror close glyph'],

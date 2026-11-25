@@ -1004,8 +1004,8 @@ export async function runSmoke(app: App): Promise<void> {
 		await app.setConfig('iconWeight', 'regular');
 		return (lucide === '0 0 24 24' && back === '0 0 256 256') || `${lucide} / ${back}`;
 	});
-	await check('palettes: 16 built in, switching applies', async () => {
-		if (app.customCss.getPalettes().length !== 16) return `${app.customCss.getPalettes().length} palettes`;
+	await check('palettes: 18 built in, switching applies', async () => {
+		if (app.customCss.getPalettes().length !== 18) return `${app.customCss.getPalettes().length} palettes`;
 		await app.setConfig('theme', 'dark');
 		await app.setConfig('darkPalette', 'dracula');
 		const bg = cssVar('--doom-bg');

@@ -197,6 +197,14 @@ class AppearanceTab extends SettingTab {
 			.addDropdown((d) => d.addOptions({ compact: 'Compact', comfortable: 'Comfortable', spacious: 'Spacious' }).setValue(c.density)
 				.onChange((v) => set('density', v as AppConfig['density'])));
 
+		new Setting(el).setName('Window').setHeading();
+		const frame = new Setting(el).setName('Title bar')
+			.setDesc('Hidden: the window buttons sit in Quire\'s top bar, which moves the window, as in Obsidian. System: the title bar your system draws. Applies when Quire restarts.')
+			.addDropdown((d) => d.addOptions({ hidden: 'Hidden', native: 'System' }).setValue(c.windowFrame ?? 'hidden')
+				.onChange((v) => { void app.setConfig('windowFrame', v as 'hidden' | 'native').then(() => this.display()); }));
+		if ((c.windowFrame !== 'native') !== !!app.host.app.frameless && !app.host.app.isSmoke && app.host.app.relaunch) {
+			frame.addButton((b) => b.setButtonText('Restart').setTooltip('Restart Quire to apply').onClick(() => { void app.host.app.relaunch?.(); }));
+		}
 		new Setting(el).setName('Docket').setHeading();
 		new Setting(el).setName('Mode')
 			.setDesc('Peek: over the note, closing when you are done. Pinned: docked above the note. Mod+Shift+P switches.')

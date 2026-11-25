@@ -44,6 +44,9 @@ protocol.registerSchemesAsPrivileged([
 interface Recent { path: string; name: string; time: number; }
 interface MainConfig { recent: Recent[]; last: string | null; [key: string]: unknown; }
 
+/** Height of the top bar when the title bar is hidden: room for the window buttons. */
+const TITLE_BAR_HEIGHT = 32;
+
 const configFile = () => path.join(app.getPath('userData'), 'quire.json');
 let config: MainConfig = { recent: [], last: null };
 /** The settings file as it was when a test run started: the run must leave it as it was. */
@@ -194,8 +197,16 @@ function registerIpc() {
 			isSmoke: SMOKE,
 			isShots: SHOTS,
 			isBench: BENCH,
+			frameless: config.windowFrame !== 'native' && !SMOKE,
 		};
 	});
+	// The colours of the window buttons drawn over the top bar (Windows and Linux), following the theme.
+	handle('app:titleBarColors', (c: { color: string; symbol: string }) => {
+		if (!win || process.platform === 'darwin' || config.windowFrame === 'native' || SMOKE) return;
+		try { win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbol, height: TITLE_BAR_HEIGHT - 1 }); } catch { /* no overlay */ }
+	});
+	// Restart Quire (for settings read when the window is made).
+	handle('app:relaunch', () => { if (SMOKE) return; app.relaunch(); app.exit(0); });
 	handle('fs:tree', async (rel: string) => tree(await resolvePath(rel)));
 	handle('fs:stat', async (rel: string) => statOf(await resolvePath(rel)));
 	handle('fs:exists', async (rel: string) => existsSync(await resolvePath(rel)));
@@ -437,7 +448,16 @@ function beforeQuit(contents: WebContents): Promise<void> {
 }
 
 function createWindow() {
+	// The title bar: hidden by default, the window buttons drawn over Quire's top bar (the Docket bar), as Obsidian
+	// does. "native" keeps the system's. Read when the window is made, so a change applies on restart.
+	const frameless = config.windowFrame !== 'native' && !SMOKE;
 	win = new BrowserWindow({
+		...(frameless ? {
+			titleBarStyle: 'hidden' as const,
+			...(process.platform === 'darwin'
+				? { trafficLightPosition: { x: 12, y: 9 } }
+				: { titleBarOverlay: { color: '#121418', symbolColor: '#c9d0d9', height: TITLE_BAR_HEIGHT - 1 } }),
+		} : {}),
 		width: 1280,
 		height: 860,
 		minWidth: 640,

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Chambers Dark and Chambers Light**: muted, formal palettes. Warm charcoal or ivory paper, ink blue, oxblood, brass
+  and sage, every pairing meeting WCAG AA.
+- **Title bar hidden by default**: the window buttons sit in Quire's top bar (the Docket bar), which moves the
+  window, as in Obsidian. *Appearance › Window › Title bar* switches back to the system's, with a Restart button.
+- **Dropdowns draw their own arrow**, in the theme's colour and set in from the right edge (the system arrow sat
+  against it).
+
 ## v0.15.2
 
 Buttons, spacing and settings (see docs/research/ui-review.md):

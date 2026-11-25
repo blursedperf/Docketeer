@@ -4,7 +4,7 @@
  */
 import { contextBridge, ipcRenderer } from 'electron';
 
-const info = ipcRenderer.sendSync('host:info') as { platform: string; appVersion: string; vault: { path: string; name: string } | null; isSmoke: boolean; isShots: boolean; isBench: boolean };
+const info = ipcRenderer.sendSync('host:info') as { platform: string; appVersion: string; vault: { path: string; name: string } | null; isSmoke: boolean; isShots: boolean; isBench: boolean; frameless: boolean };
 
 const call = <T>(channel: string, ...args: unknown[]): Promise<T> => ipcRenderer.invoke(channel, ...args) as Promise<T>;
 
@@ -50,6 +50,9 @@ contextBridge.exposeInMainWorld('quire', {
 		isSmoke: info.isSmoke,
 		isShots: info.isShots,
 		isBench: info.isBench,
+		frameless: info.frameless,
+		setTitleBarColors: (color: string, symbol: string) => call('app:titleBarColors', { color, symbol }),
+		relaunch: () => call('app:relaunch'),
 		capture: (name: string) => call<string | null>('smoke:capture', name),
 		getConfig: () => call('app:getConfig'),
 		setConfig: (patch: Record<string, unknown>) => call('app:setConfig', patch),

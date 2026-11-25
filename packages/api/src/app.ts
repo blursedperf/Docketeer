@@ -404,6 +404,8 @@ export interface AppConfig {
 	docket: boolean;
 	/** Peek overlays the editor; pinned docks above it. */
 	docketMode: 'peek' | 'pinned';
+	/** The title bar: 'hidden' (window buttons in Quire's top bar) or 'native' (the system's). Applies on restart. */
+	windowFrame: 'hidden' | 'native';
 	/** Height as a fraction of the window (0.2–0.6). */
 	docketHeight: number;
 	/** The last panel shown. */
@@ -435,6 +437,7 @@ export const DEFAULT_CONFIG: AppConfig = {
 	spellcheckNames: true,
 	spellcheckLegal: true,
 	autoPairBrackets: false,
+	windowFrame: 'hidden',
 	newFileLocation: 'current',
 	newFileFolderPath: '',
 	attachmentFolder: 'attachments',
