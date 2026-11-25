@@ -57,4 +57,4 @@ export { VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, mediaKind, isMedia, parseTimestamp,
 export { IMAGE_EXTENSIONS, isImage, attachmentFolder, availablePath, saveAttachment, attachFiles, embedMarkdown } from './attachments';
 
 /** This API's version. */
-export const apiVersion = '0.12.1';
+export const apiVersion = '0.13.0';

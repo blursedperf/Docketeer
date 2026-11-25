@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.13.0
 
 - **Your own Docket panels.** Build panels from **commands** (any command, a plugin's too, with its key), **file
   trees** (any folder, or the whole homebase), **note lists** (in a folder, with a tag, recent, pinned, or matching
