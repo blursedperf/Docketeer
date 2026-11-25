@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.15.1
+
+0.15.0 was tagged but not published (its release build failed a test); 0.15.1 is everything listed under 0.15.0,
+and:
+
+- **Fixed**: *Every note citing this* (Authorities) missed a note whose citation was typed but not yet saved (notes
+  save half a second after typing stops). Notes open in an editor are now searched as they are on screen.
+
 ## v0.15.0
 
 - **Back and Forward.** Each pane remembers what it showed: when a note is replaced by another (a link followed, a
