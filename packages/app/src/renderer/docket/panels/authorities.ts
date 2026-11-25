@@ -3,7 +3,7 @@
  * often each appears. Enter goes to the next place it appears; → offers every note citing it, citing it
  * again, and confirming or merging unsure finds. A jurisdiction filter narrows the list.
  */
-import { type App, type Authority, type DocketPanel, JURISDICTIONS, type SearchResult, type Source, findAuthorities, nextOccurrence } from '@quire/api';
+import { type App, type Authority, type DocketPanel, JURISDICTIONS, MarkdownView, type SearchResult, type Source, findAuthorities, nextOccurrence } from '@quire/api';
 import type { ActionItem, Docket } from '../docket';
 import type { AuthorityStore } from '../authority-store';
 import { openFileIn } from '../providers';
@@ -35,7 +35,11 @@ export function authoritiesPanel(app: App, docket: Docket, store: AuthorityStore
 	/** Every note citing `a`: notes containing its name's words (from the index), then checked exactly. */
 	const citing = async (a: Authority) => {
 		const words = a.kind === 'secondary' ? a.name : a.name.replace(/\[No \d+\]/, '');
-		const paths = app.search.index.candidates(words) ?? app.vault.getMarkdownFiles().map((f) => f.path);
+		// Notes open in an editor are read as they are now, not as last saved (a citation just added counts).
+		const open = new Map<string, string>();
+		app.workspace.iterateAllLeaves((l) => { if (l.view instanceof MarkdownView && l.view.file) open.set(l.view.file.path, l.view.editor.getValue()); });
+		const indexed = app.search.index.candidates(words);
+		const paths = indexed ? [...new Set([...indexed, ...open.keys()])] : app.vault.getMarkdownFiles().map((f) => f.path);
 		const decisions = await store.load();
 		const out: SearchResult[] = [];
 		let n = 0;
@@ -43,7 +47,7 @@ export function authoritiesPanel(app: App, docket: Docket, store: AuthorityStore
 			const f = app.vault.getFileByPath(p);
 			if (!f || app.isLocked(f)) continue;
 			if (++n % 100 === 0) await new Promise((r) => setTimeout(r, 0));
-			const found = findAuthorities(await app.vault.cachedRead(f), decisions).find((x) => x.key === a.key);
+			const found = findAuthorities(open.get(p) ?? await app.vault.cachedRead(f), decisions).find((x) => x.key === a.key);
 			if (!found) continue;
 			const first = found.occurrences[0]!;
 			out.push({

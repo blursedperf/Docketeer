@@ -2122,6 +2122,31 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return (offered && created && tagged.includes('Renamed note')) || `offered=${offered} created=${created} tagged=${tagged.join('|')}`;
 	});
 
+	await check('authorities: "every note citing this" counts a citation not yet saved', async () => {
+		const f = await vault.create('Unsaved cite.md', '');
+		const leaf = workspace.getLeaf('tab');
+		await leaf.openFile(f);
+		const view = leaf.view as MarkdownView;
+		// Typed, not saved (saving waits 600 ms after the last keystroke): the search must see it anyway.
+		view.editor.setValue('Held in *Unsaved v Example* (2001) 210 CLR 1, 5.');
+		const saved = await vault.adapter.read('Unsaved cite.md');
+		press('p', { ctrl: true });
+		press('1', { ctrl: true });
+		await sleep(120);
+		focusRow('Unsaved v Example');
+		press('ArrowRight');
+		await sleep(30);
+		const i = titles().indexOf('Every note citing this');
+		for (let k = 0; k < i; k++) press('ArrowDown');
+		press('Enter');
+		await sleep(150);
+		const listed = titles().includes('Unsaved cite');
+		press('Escape'); press('Escape'); press('Escape');
+		await view.save();
+		leaf.detach();
+		await vault.delete(f);
+		return (saved === '' && i >= 0 && listed) || `saved before=${JSON.stringify(saved)} action=${i} listed=${listed} (${titles().join('|')})`;
+	});
 	await check('journey (keyboard only): brief a case, cite it in an essay, side by side, find every note citing it', async () => {
 		const steps: string[] = [];
 		const choose = (title: string) => { const i = titles().indexOf(title); if (i < 0) return false; for (let k = 0; k < i; k++) press('ArrowDown'); press('Enter'); return true; };
