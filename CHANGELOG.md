@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.12.0
 
 - **Units shows what you mark.** Only folders marked as a **subject (unit)** or **topic** appear in Units, with
   their notes; attachments, readings folders and scratch folders no longer crowd it. Mark a folder with → on it
