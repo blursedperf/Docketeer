@@ -194,7 +194,7 @@ Every row of the parity table (§6), and where it is now reachable from the Dock
 | Page preview | ✓ | Cite panel → "Page preview"; opens as a normal tab (Phase 6), Mod+Alt+Shift+→ puts it beside the note |
 | Version history | ✓ | Homebase panel → "Version history of this note"; → on a note (plugin action) |
 | AGLC4 problems list, fixes | ✓ | Cite panel → "List citation problems", "Fix all fixable problems", "Tidy footnotes" |
-| Cite a kind of source, next element | ✓ | Cite panel: builder for cases (reported, MNC), legislation, articles, books; full / Ibid / (n X) chosen automatically. The plugin's as-you-type suggestions stay via "Insert a footnote" |
+| Cite a kind of source, next element | ✓ | Cite panel: builder for cases (reported, MNC), legislation, articles, books, government, Productivity Commission and law reform reports, web pages and treaties; full / Ibid / (n X) chosen automatically. The plugin's as-you-type suggestions stay via "Insert a footnote" |
 | Bibliography, export Word/HTML | ✓ | Cite panel → "Insert a bibliography"; plugin exports via → on a note; Homebase → "Export…" (Markdown/HTML, confirm, redaction) |
 | Command palette | ✓ | `>` prefix, shortcuts shown (Phase 2) |
 | Quick switcher | ✓ | Docket input, ranked by use (Phase 3) |

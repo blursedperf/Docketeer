@@ -3,7 +3,7 @@
  * another file, not a rewrite. Output is Markdown (*italic*), ready for a footnote.
  */
 
-export type SourceKind = 'case-reported' | 'case-mnc' | 'legislation' | 'article' | 'book';
+export type SourceKind = 'case-reported' | 'case-mnc' | 'legislation' | 'article' | 'book' | 'report' | 'pc-report' | 'law-reform' | 'web' | 'treaty';
 
 export interface FieldDef {
 	id: string;

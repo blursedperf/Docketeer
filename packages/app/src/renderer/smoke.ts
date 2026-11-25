@@ -1669,6 +1669,42 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		return ok || `p1=${p1} p2=${p2} text=${JSON.stringify(text.slice(-160))}`;
 	});
 
+	await check('cite: reports, web pages and treaties are listed; a treaty goes in as a footnote, then Ibid with an article', async () => {
+		pressDocketKey();
+		press('4', { ctrl: true });
+		await sleep(80);
+		const kinds = [...document.querySelectorAll('.docket-panel .docket-item')].map((r) => r.textContent ?? '');
+		const listed = ['Government report', 'Productivity Commission report', 'Law reform commission', 'Web page', 'Treaty'].every((k) => kinds.some((t) => t.includes(k)));
+		press('Escape'); press('Escape');
+		const file = await vault.create('Treaty cite.md', 'Children have rights.\n');
+		await workspace.getLeaf(false).openFile(file);
+		await sleep(150);
+		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		const fill = async (pin: string, at: () => number) => {
+			ed.dispatch({ selection: { anchor: at() } });
+			ed.focus();
+			pressDocketKey();
+			press('4', { ctrl: true });
+			await sleep(80);
+			focusRow('Treaty');
+			press('Enter');
+			await sleep(80);
+			const set = (name: string, v: string) => { const i = document.querySelector<HTMLInputElement>(`.docket-form [name="${name}"]`); if (i) { i.value = v; i.dispatchEvent(new Event('input')); } };
+			set('title', 'Convention on Example Rights'); set('opened', '1 January 1990'); set('series', '1999 UNTS 1'); set('force', '1 July 1991'); set('pinpoint', pin);
+			const preview = document.querySelector('.docket-preview-text')?.textContent ?? '';
+			document.querySelector<HTMLInputElement>('.docket-form [name="pinpoint"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+			await sleep(80);
+			return preview;
+		};
+		const p1 = await fill('3', () => ed.state.doc.toString().indexOf('rights.') + 7);
+		// Straight after the first footnote's reference: Ibid.
+		const p2 = await fill('4', () => ed.state.doc.toString().indexOf('[^1]') + 4);
+		const text = ed.state.doc.toString();
+		const ok = listed && p1 === 'Convention on Example Rights, opened for signature 1 January 1990, 1999 UNTS 1 (entered into force 1 July 1991) art 3.'
+			&& /\[\^1\]: \*Convention on Example Rights\*, opened for signature 1 January 1990, 1999 UNTS 1 \(entered into force 1 July 1991\) art 3\./.test(text) && p2 === 'Ibid art 4.';
+		return ok || `listed=${listed} p1=${p1} p2=${p2} text=${JSON.stringify(text.slice(-200))}`;
+	});
+
 	await check('units: only marked folders; existing ones marked in one go; Homebase › Files lists everything and marks', async () => {
 		const problems: string[] = [];
 		const store = unitsStore(app);

@@ -10,6 +10,13 @@
   (Super+Alt+F, Ctrl+Alt+Shift+K). The empty-tab links, the Docket mode setting, the README, the example homebase and
   the AGLC4 guide show the keys as they are.
 - The empty Docket search shows `+` (create a note) among the prefixes.
+- **More kinds of source in the Cite panel** (Docket › Cite), each formatted to AGLC4, with Ibid and "(n X)" worked
+  out as before:
+  - **Government report**: a department, inquiry or royal commission (*Final Report, vol 1*, and the date).
+  - **Productivity Commission report**: inquiry and draft reports.
+  - **Law reform commission report or paper**, with paragraph pinpoints ([5.12]).
+  - **Web page**: the page's title, the site, the date and the URL.
+  - **Treaty**: opened for signature, the treaty series, entry into force, and article pinpoints.
 
 ## v0.16.0
 

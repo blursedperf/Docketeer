@@ -60,3 +60,44 @@ describe('Ibid and (n X)', () => {
 		expect(empty.changes[1]!.insert).toBe('\n\n[^1]: X.\n');
 	});
 });
+
+describe('AGLC4 reports, web pages and treaties', () => {
+	const report: Source = { kind: 'report', fields: { author: 'Department of Imaginary Affairs', title: 'Review of the Example Scheme', doc: 'Final Report, vol 1', date: 'March 2021' } };
+	const plainReport: Source = { kind: 'report', fields: { author: 'Example Inquiry', title: 'Findings', date: '2019' } };
+	const pc: Source = { kind: 'pc-report', fields: { title: 'Made-Up Markets', doc: 'Inquiry Report No 99', date: '30 June 2022', short: 'Markets' } };
+	const alrc: Source = { kind: 'law-reform', fields: { author: 'Example Law Reform Commission', title: 'Imaginary Freedoms', doc: 'Report No 140', date: 'December 2020' } };
+	const web: Source = { kind: 'web', fields: { title: 'Example Rights', site: 'Example Department', date: '12 May 2023', url: 'https://example.gov.au/rights' } };
+	const treaty: Source = { kind: 'treaty', fields: { title: 'Convention on Example Rights', opened: '1 January 1990', series: '1999 UNTS 1', force: '1 July 1991', short: 'CER' } };
+
+	it('formats government, Productivity Commission and law reform reports', () => {
+		expect(AGLC4.full(report, '12')).toBe('Department of Imaginary Affairs, *Review of the Example Scheme* (Final Report, vol 1, March 2021) 12'); // VERIFY against AGLC
+		expect(AGLC4.full(plainReport)).toBe('Example Inquiry, *Findings* (Report, 2019)'); // VERIFY against AGLC
+		expect(AGLC4.full(pc, '45')).toBe('Productivity Commission, *Made-Up Markets* (Inquiry Report No 99, 30 June 2022) 45 (‘*Markets*’)'); // VERIFY against AGLC
+		expect(AGLC4.full(alrc, '5.12')).toBe('Example Law Reform Commission, *Imaginary Freedoms* (Report No 140, December 2020) [5.12]'); // VERIFY against AGLC
+	});
+	it('formats a web page, with the URL last', () => {
+		expect(AGLC4.full(web)).toBe('‘Example Rights’, *Example Department* (Web Page, 12 May 2023) <https://example.gov.au/rights>'); // VERIFY against AGLC
+		expect(AGLC4.full({ ...web, fields: { ...web.fields, author: 'Jo Example' } }, '3')).toBe('Jo Example, ‘Example Rights’, *Example Department* (Web Page, 12 May 2023) [3] <https://example.gov.au/rights>'); // VERIFY against AGLC
+	});
+	it('formats a treaty with an article', () => {
+		expect(AGLC4.full(treaty, '3')).toBe('*Convention on Example Rights*, opened for signature 1 January 1990, 1999 UNTS 1 (entered into force 1 July 1991) art 3 (‘*CER*’)'); // VERIFY against AGLC
+	});
+	it('refers back to them, and Ibid', () => {
+		expect(AGLC4.subsequent(pc, 2, '50')).toBe('Productivity Commission, *Markets* (n 2) 50'); // VERIFY against AGLC
+		expect(AGLC4.subsequent(report, 4)).toBe('Department of Imaginary Affairs (n 4)'); // VERIFY against AGLC
+		expect(AGLC4.subsequent(treaty, 1, '12')).toBe('*CER* (n 1) art 12'); // VERIFY against AGLC
+		expect(AGLC4.subsequent(web, 6)).toBe('Example Department (n 6)'); // VERIFY against AGLC
+		expect(AGLC4.ibid(treaty, '4')).toBe('Ibid art 4');
+		expect(AGLC4.ibid(alrc, '6.1')).toBe('Ibid [6.1]');
+	});
+	it('plans Ibid and (n X) for them in a note', () => {
+		const text = `A.[^1] B.[^2] C.\n\n[^1]: ${AGLC4.full(treaty)}.\n[^2]: Ibid art 2.\n`;
+		expect(planCitation(AGLC4, text, text.indexOf('C.'), treaty, '5').body).toBe('Ibid art 5.');
+		const text2 = `A.[^1] B.[^2] C.\n\n[^1]: ${AGLC4.full(pc)}.\n[^2]: ${AGLC4.full(act)}.\n`;
+		expect(planCitation(AGLC4, text2, text2.indexOf('C.'), pc, '7').body).toBe('Productivity Commission, *Markets* (n 1) 7.');
+	});
+	it('asks for what each needs', () => {
+		expect(AGLC4.missing({ kind: 'treaty', fields: { title: 'X' } })).toEqual(['Opened for signature', 'Treaty series']);
+		expect(AGLC4.missing({ kind: 'web', fields: {} })).toEqual(['Title of the page', 'Website', 'Date', 'URL']);
+	});
+});
