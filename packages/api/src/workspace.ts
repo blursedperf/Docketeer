@@ -256,14 +256,22 @@ export class WorkspaceLeaf extends Events {
 		if (!on) { this.spineEl?.remove(); this.spineEl = null; return; }
 		if (!this.spineEl) {
 			this.spineEl = createDiv({ cls: 'workspace-leaf-spine', attr: { role: 'button', tabindex: '-1' } });
+			// Its own close button, since the tab strip (and its close buttons) is hidden while stacked.
+			const close = this.spineEl.createDiv({ cls: 'workspace-leaf-spine-close clickable-icon', attr: { 'aria-label': 'Close' } });
+			setIcon(close, 'x');
+			close.addEventListener('mousedown', (e) => { e.preventDefault(); e.stopPropagation(); });
+			close.addEventListener('click', (e) => { e.stopPropagation(); this.detach(); });
+			this.spineEl.createDiv({ cls: 'workspace-leaf-spine-title' });
 			this.spineEl.addEventListener('mousedown', (e) => {
 				e.preventDefault();
+				if (e.button === 1) { this.detach(); return; }
+				if (e.button !== 0) return;
 				this.parent?.selectTab(this);
 				this.workspace.setActiveLeaf(this, { focus: true });
 			});
 			this.containerEl.prepend(this.spineEl);
 		}
-		this.spineEl.setText(this.view.getDisplayText());
+		this.spineEl.querySelector('.workspace-leaf-spine-title')!.setText(this.view.getDisplayText());
 		this.spineEl.setAttribute('aria-label', `Show ${this.view.getDisplayText()}`);
 	}
 	/** When it was last active, for getMostRecentLeaf. */
@@ -412,7 +420,7 @@ export class WorkspaceLeaf extends Events {
 		setIcon(this.tabIconEl, this.view.getIcon());
 		this.tabTitleEl.setText(this.view.getDisplayText());
 		this.tabHeaderEl.setAttribute('aria-label', this.view.getDisplayText());
-		if (this.spineEl) this.spineEl.setText(this.view.getDisplayText());
+		if (this.spineEl) this.setSpine(true);
 		if (this.view instanceof ItemView) this.view.updateTitle();
 	}
 

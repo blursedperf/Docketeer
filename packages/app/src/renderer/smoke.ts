@@ -2131,6 +2131,14 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(100);
 		if (workspace.activeLeaf !== tabs.children[0]) problems.push('a spine did not bring its tab forward');
 		if (!JSON.stringify(workspace.getLayout()).includes('"stacked":true')) problems.push('stacking is not saved');
+		// Each spine closes its own tab (the tab strip is hidden while stacked).
+		const lastTab = tabs.children[tabs.children.length - 1]!;
+		const stackedCount = tabs.children.length;
+		const spineClose = lastTab.containerEl.querySelector<HTMLElement>('.workspace-leaf-spine-close');
+		if (!spineClose) problems.push('a spine has no close button');
+		spineClose?.click();
+		await sleep(150);
+		if (tabs.children.length !== stackedCount - 1 || tabs.children.includes(lastTab)) problems.push('a spine close button did not close its tab');
 		commands.executeCommandById('app:toggle-stacked-tabs');
 		await sleep(100);
 		if (tabs.stacked || tabs.contentEl.querySelector('.workspace-leaf-spine')) problems.push('not unstacked');
