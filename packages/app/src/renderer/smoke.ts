@@ -8,6 +8,7 @@ import { Vim, getCM } from '@replit/codemirror-vim';
 import { type App, MarkdownView, Platform, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
+import { revealInUnits } from './docket/panels/units';
 
 interface Check { name: string; ok: boolean; detail?: string; }
 
@@ -1241,6 +1242,7 @@ export async function runShots(app: App): Promise<void> {
 	await app.lock.lock();
 	// Units lists marked folders: mark the subject and topic the locked note is in.
 	await unitsStore(app).replace({ Torts: 'subject', 'Torts/Negligence': 'topic' });
+	revealInUnits('Torts/Negligence');
 	document.querySelectorAll('.notice').forEach((n) => n.detach());
 	docket.open({ panel: 'core:units' });
 	await sleep(150);
