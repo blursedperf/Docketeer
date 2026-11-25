@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.12.1
 
 - **New notes and folders from Homebase › Files.** Each opened folder, and the top of the homebase, ends with
   *+ New note* and *+ New folder*; on any row, **N** makes a new note and **F** a new folder there (in a folder's
