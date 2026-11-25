@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Slash commands.** Type `/` at the start of a line or after a space for a menu of things to insert: headings,
+  bulleted and numbered lists, tasks, quotes, tables, code blocks, dividers, links and embeds, footnotes (through the
+  AGLC4 plugin when it is on), highlights, comments, today's date, a timestamp in the recording, and two law
+  scaffolds: a case brief (Facts, Issues, Held, Ratio, Obiter) and an IRAC answer. Type to filter (`/tab`, `/h2`,
+  `/brief`). Headings, lists and quotes turn the current line into one, keeping its text; a table or scaffold goes on
+  lines of its own, and a new table has "Column 1" selected so you can type its name. The menu stays out of prose
+  (`and/or`, `this / that`) and code.
+
 ## v0.10.0
 
 - **Properties as a table while you write.** A note's properties (the YAML at the top) show as the same small

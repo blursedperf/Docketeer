@@ -13,6 +13,7 @@ import { registerTiling } from './tiling';
 import { registerMedia } from './media';
 import { registerPdf } from './pdf/view';
 import { registerHomebases } from './homebases';
+import { SlashSuggest } from './slash';
 import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
 import { LinkSuggest } from './link-suggest';
@@ -477,7 +478,7 @@ function wrapSelection(app: App, before: string, after = before) {
 
 export function registerCore(app: App): { reveal(): void } {
 	const { workspace, vault } = app;
-	app.editorSuggests.push(new LinkSuggest(app));
+	app.editorSuggests.push(new LinkSuggest(app), new SlashSuggest(app));
 	for (const tab of [new EditorTab(app), new FilesTab(app), new AppearanceTab(app), new HotkeysTab(app), new PluginsTab(app), new AboutTab(app)]) app.setting.addCoreTab(tab);
 	// Vim's ex commands act on the app: save, close the tab.
 	const vimView = () => workspace.getActiveViewOfType(MarkdownView);

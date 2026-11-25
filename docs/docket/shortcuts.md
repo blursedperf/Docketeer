@@ -40,6 +40,22 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 
 Layouts: Layout panel (Mod+6) or `>layout`: Single, Brief + Source, Revision, Exam, and layouts you save.
 
+## Slash commands
+
+Type `/` at the start of a line or after a space, then a few letters to filter (`/tab`, `/h2`, `/brief`), and
+Enter. It does not open inside a word (`and/or`), after `/ ` or in code.
+
+| Item | Inserts |
+|---|---|
+| Heading 1–3, Bulleted list, Numbered list, Task, Quote | Turns the line into that kind of line, keeping its text |
+| Table, Table two columns | A table on lines of its own, with "Column 1" selected to type over |
+| Code block, Divider | On lines of their own |
+| Link to a note, Embed a recording, PDF or picture | `[[` or `![[`, with name completion |
+| Footnote | The AGLC4 plugin's footnote (or a plain `[^n]`) |
+| Highlight, Comment, Today's date | At the cursor |
+| Timestamp in the recording | When a recording is playing (as Alt+T) |
+| Case brief, IRAC answer | The headings of the scaffold, the cursor under the first |
+
 ## Recordings
 
 These act on the recording in use: the one last played or clicked, embedded in a note or in its own tab. They

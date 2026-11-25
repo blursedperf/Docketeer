@@ -692,6 +692,71 @@ export async function runSmoke(app: App): Promise<void> {
 		return ok || `open=${open} first=${first} tail=${JSON.stringify(text.slice(-40))}`;
 	});
 
+	await check('slash commands insert tables, headings and scaffolds, and stay out of prose and code', async () => {
+		const problems: string[] = [];
+		const note = await vault.create('Slash smoke.md', '');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		cm.focus();
+		const items = () => [...document.querySelectorAll('.suggestion-container .suggestion-item')].filter((e) => (e as HTMLElement).offsetParent !== null);
+		const selected = () => document.querySelector('.suggestion-container .suggestion-item.is-selected .suggestion-content')?.textContent ?? '';
+		const type = async (text: string) => {
+			const at = cm.state.selection.main.head;
+			cm.dispatch({ changes: { from: at, insert: text }, selection: { anchor: at + text.length }, userEvent: 'input.type' });
+			await sleep(60);
+		};
+		const key = async (k: string) => { cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); await sleep(60); };
+		const reset = async (text = '') => { view.editor.setValue(text); view.editor.setCursor({ line: view.editor.lineCount() - 1, ch: view.editor.getLine(view.editor.lineCount() - 1).length }); await sleep(60); };
+		// A table, with "Column 1" selected so typing names it.
+		await type('/tab');
+		if (!(await until(() => items().length > 0, 2000))) problems.push('no menu after /tab');
+		else if (selected() !== 'Table') problems.push(`first was ${selected()}`);
+		await key('Enter');
+		const value = view.editor.getValue();
+		if (!value.startsWith('| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |')) problems.push(`table: ${JSON.stringify(value.slice(0, 60))}`);
+		if (view.editor.getSelection() !== 'Column 1') problems.push(`selection: ${JSON.stringify(view.editor.getSelection())}`);
+		// A line becomes a heading, keeping its text.
+		await reset('Duty of care');
+		await type(' /h2');
+		await until(() => items().length > 0, 2000);
+		await key('Enter');
+		if (view.editor.getValue() !== '## Duty of care') problems.push(`heading: ${JSON.stringify(view.editor.getValue())}`);
+		// A scaffold after text goes on lines of its own, the cursor under the first heading.
+		await reset('Notes');
+		await type(' /case');
+		await until(() => selected() === 'Case brief', 2000);
+		await key('Enter');
+		if (!view.editor.getValue().startsWith('Notes\n\n## Facts\n\n\n\n## Issues')) problems.push(`case brief: ${JSON.stringify(view.editor.getValue().slice(0, 40))}`);
+		if (view.editor.getCursor().line !== 4) problems.push(`case brief cursor on line ${view.editor.getCursor().line}`);
+		// Ranking: names starting with what was typed first, in the menu's order; then aliases; nothing for nonsense.
+		const names = () => items().map((e) => e.querySelector('.suggestion-content')?.textContent ?? '');
+		await reset('');
+		await type('/ta');
+		await until(() => items().length > 0, 2000);
+		if (names().slice(0, 3).join(',') !== 'Task,Table,Table, two columns') problems.push(`"/ta" lists ${names().slice(0, 4).join(' | ')}`);
+		await type('x');
+		await key('Escape');
+		await reset('');
+		await type('/brief');
+		await until(() => items().length > 0, 2000);
+		if (names()[0] !== 'Case brief') problems.push(`"/brief" lists ${names()[0]} first`);
+		await type('zzz');
+		await sleep(60);
+		if (items().length > 0) problems.push('the menu stayed open with no match');
+		// Not in prose ("and/or", "this / that") or in code.
+		for (const [setup, typed] of [['Read and', '/or'], ['This', ' / that'], ['`code ', '/tab'], ['```\nlet x = 1\n', '/tab']] as const) {
+			await reset(setup);
+			await type(typed);
+			if (items().length > 0) { problems.push(`menu opened for ${JSON.stringify(setup + typed)}`); await key('Escape'); }
+		}
+		await reset('');
+		leaf.detach();
+		await vault.delete(note);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	// The AGLC4 plugin.
 	const id = 'aglc-citations';
 	await check('AGLC4 plugin loaded', () => !!app.plugins.getPlugin(id) || `errors: ${app.plugins.loadError(id)}; manifests: ${Object.keys(app.plugins.manifests).join(', ')}`);
