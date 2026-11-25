@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.11.0
 
 - **Slash commands.** Type `/` at the start of a line or after a space for a menu of things to insert: headings,
   bulleted and numbered lists, tasks, quotes, tables, code blocks, dividers, links and embeds, footnotes (through the
