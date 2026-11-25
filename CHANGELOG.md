@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.17.1
 
 - **Panels start at the top**: opening the Docket on a panel, choosing a panel or clearing the search shows it from
   its first row, and ↓ goes to that row. Before, a panel could open scrolled to where another one was left.
