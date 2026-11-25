@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.17.3
+
+- **Stacked tabs can be closed one by one**: stacking hides the tab strip, and its close buttons went with it. Each
+  tab's spine now has its own ×, shown on hover and on the current tab, and a middle-click on a spine closes it too,
+  as on a tab. Renaming a note no longer clears its spine.
+
 ## v0.17.2
 
 - **The "+" rows say only what they make**: *New note*, *New topic* and *New folder*, not "New note in Constitutional
