@@ -3,7 +3,7 @@ vi.mock('../src/ui', async (orig) => ({ ...(await orig<object>()), Notice: class
 
 import { Commands } from '../src/app';
 import { DocketRegistry } from '../src/docket-registry';
-import { eventString, formatHotkey, hotkeyString, parseHotkey, reservedFor } from '../src/keymap';
+import { defaultDocketKey, defaultDocketModeKey, eventString, formatHotkey, hotkeyString, parseHotkey, reservedFor } from '../src/keymap';
 import { Plugin } from '../src/plugin';
 
 const linux = { isMacOS: false };
@@ -259,5 +259,30 @@ describe('panel arrangement', () => {
 		expect(r.allPanels().map((p) => p.id)).toEqual(['c', 'a', 'b', 'plugin']);
 		expect(r.orderedPanels().map((p) => p.id)).toEqual(['c', 'a', 'plugin']);
 		expect(r.panels.has('b')).toBe(true);
+	});
+});
+
+describe('the Docket key and the Super key', () => {
+	const linux = { isMacOS: false, isLinux: true };
+	const mac = { isMacOS: true };
+	const win = { isMacOS: false, isWin: true };
+	it('is Super+D (⌘D on macOS), and Ctrl+P on Windows, where Win+D shows the desktop', () => {
+		expect(formatHotkey(defaultDocketKey(linux), linux)).toBe('Super+D');
+		expect(formatHotkey(defaultDocketKey(mac), mac)).toBe('⌘D');
+		expect(formatHotkey(defaultDocketKey(win), win)).toBe('Ctrl+P');
+		expect(formatHotkey(defaultDocketModeKey(linux), linux)).toBe('Super+Shift+D');
+		expect(formatHotkey(defaultDocketModeKey(win), win)).toBe('Ctrl+Shift+P');
+	});
+	it('calls the Meta key Super on Linux and Win on Windows', () => {
+		const footnote = { modifiers: ['Meta' as const, 'Alt' as const], key: 'f' };
+		expect(formatHotkey(footnote, linux)).toBe('Super+Alt+F');
+		expect(formatHotkey(footnote, win)).toBe('Win+Alt+F');
+		expect(formatHotkey(footnote, mac)).toBe('⌥⌘F');
+		expect(formatHotkey({ modifiers: ['Mod', 'Shift', 'Alt'], key: 'k' }, linux)).toBe('Ctrl+Alt+Shift+K');
+	});
+	it('keeps Win+D for the system on Windows only', () => {
+		expect(reservedFor({ modifiers: ['Meta'], key: 'd' }, win)).toBe('Show the desktop');
+		expect(reservedFor({ modifiers: ['Meta'], key: 'd' }, linux)).toBeNull();
+		expect(reservedFor({ modifiers: ['Meta'], key: 'd' }, mac)).toBeNull();
 	});
 });

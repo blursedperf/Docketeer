@@ -21,7 +21,7 @@ aglc-prompts: critical
 TRY THE PLUGIN ON THIS ESSAY. (This box is a comment: you see it while editing, but it is hidden in Reading view and never exported.)
 
 1. Underlines. Part VI has citations with mistakes. Hover a red or orange underline to see the AGLC4 rule and a Fix button, or run "Fix all automatically fixable problems" from the command palette.
-2. Next element. Put the cursor after "remains open." at the end of Part V and run "Insert footnote". Start typing a citation, eg *Mabo v Queensland [No 2]* and a space: the plugin suggests the year, the report series and so on. Press Enter after the closing full stop to go back to the text.
+2. Next element. Put the cursor after "remains open." at the end of Part V and press Super+Alt+F (Insert footnote; ⌘⌥F on a Mac). Start typing a citation, eg *Mabo v Queensland [No 2]* and a space: the plugin suggests the year, the report series and so on. Press Enter after the closing full stop to go back to the text.
 3. Ibid and (n X). Footnote 9 is "Ibid" with a new pinpoint, and later footnotes refer back with short titles and "(n X)", such as "*Mabo* (n 8) 60". Move or delete a footnote and every "(n X)" stays pointing at the right one.
 4. Headings. The headings are plain Markdown, numbered I, A, 1 … in the AGLC4 style because this note's property "aglc-headings" is set to aglc.
 5. Paragraph guides. Click into any paragraph: a guide above it shows what that paragraph of a critical essay does, sentence by sentence, because the property "aglc-prompts" is set to critical. Click a sentence, ⟳ or ‹ › to change it. Run "New legal essay or problem answer" to start your own.

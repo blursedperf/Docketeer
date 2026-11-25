@@ -11,7 +11,7 @@ The High Court rejected terra nullius.[^1] It was applied again later.[^2]
 
 ## Inserting a footnote
 
-Run **Insert footnote** with the cursor where the footnote belongs. The plugin:
+Press **Super+Alt+F** (⌘⌥F on a Mac), or run **Insert footnote**, with the cursor where the footnote belongs. The plugin:
 
 - puts the footnote number after any punctuation at the cursor, as AGLC4 requires (r 1.1.2): `held.[^3]`, not `held[^3].`;
 - adds the footnote at the bottom of the note, in reading order, and renumbers the footnotes;
@@ -22,7 +22,7 @@ Where you write the footnote depends on **Write new footnotes in** ([settings](s
 - **A pane below the note** (the default on desktop). A second pane opens under the note, showing the same note at the new footnote, with the cursor in it. The text you were writing stays where it was in the main pane. The pane is reused for later footnotes. Both panes show the same note, so underlines, hints and suggestions work in the pane too.
 - **The note.** The cursor jumps to the new footnote at the bottom of the note. This is always used on phones.
 
-Give **Insert footnote** a hotkey in **Settings → Hotkeys**: it is the command you will use most.
+**Insert footnote** is the command you will use most, so it has a key of its own: **Super+Alt+F** (⌘⌥F on a Mac). Change it in **Settings → Hotkeys**.
 
 To choose what the footnote cites as you insert it, turn on **Choose a kind of source for new footnotes**. **Insert footnote** then opens the list of kinds of source (a case, an Act, a government or Productivity Commission report, a journal article …). Choose one, and its AGLC4 form is put in the new footnote, with Tab between its placeholders ([citing a kind of source](next-element.md#citing-a-kind-of-source)). Press Escape to leave the footnote empty and write it yourself. Without the setting, **Cite a kind of source** does the same at any time.
 

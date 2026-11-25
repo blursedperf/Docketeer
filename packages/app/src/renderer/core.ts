@@ -7,7 +7,7 @@ import type { EditorView } from '@codemirror/view';
 import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, type CommandContext, fontStack, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp,
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
@@ -108,6 +108,13 @@ function swatch(parent: HTMLElement, palette: Palette | null) {
 }
 
 const ICON_PREVIEW = ['file-text', 'folder-open', 'search', 'history', 'book-open', 'settings', 'square-pen', 'trash-2', 'terminal', 'zoom-in'];
+
+/** A command's first hotkey as shown to people ("Super+Shift+D"), or '' if it has none. */
+function keyText(app: App, id: string): string {
+	const cmd = app.commands.findCommand(id);
+	const k = cmd ? app.commands.hotkeysFor(cmd)[0] : undefined;
+	return k ? formatHotkey(k) : '';
+}
 
 class AppearanceTab extends SettingTab {
 	override id = 'appearance';
@@ -213,7 +220,7 @@ class AppearanceTab extends SettingTab {
 		}
 		new Setting(el).setName('Docket').setHeading();
 		new Setting(el).setName('Mode')
-			.setDesc('Peek: over the note, closing when you are done. Pinned: docked above the note. Mod+Shift+P switches.')
+			.setDesc(`Peek: over the note, closing when you are done. Pinned: docked above the note. ${keyText(this.app, 'app:docket-toggle-mode') || 'A hotkey'} switches.`)
 			.addDropdown((d) => d.addOption('peek', 'Peek').addOption('pinned', 'Pinned').setValue(c.docketMode === 'pinned' ? 'pinned' : 'peek').onChange((v) => { void this.app.setConfig('docketMode', v as 'peek' | 'pinned'); }));
 		new Setting(el).setName('Icons').setHeading();
 		const packs = getIconPacks();
@@ -365,7 +372,7 @@ class HotkeysTab extends SettingTab {
 		for (const k of keys) row.controlEl.createSpan({ cls: 'hotkey-pill', text: formatHotkey(k) });
 		if (keys.length === 0) row.controlEl.createSpan({ cls: 'hotkey-none', text: 'Blank' });
 		if (cmds.isAppCustomised(cmd.id) || cmds.isCustomised(cmd.id)) {
-			row.addExtraButton((b) => b.setIcon('rotate-ccw').setTooltip(`Back to ${formatHotkey({ modifiers: ['Mod'], key: 'p' })}`).onClick(async () => {
+			row.addExtraButton((b) => b.setIcon('rotate-ccw').setTooltip(`Back to ${formatHotkey(defaultDocketKey(Platform))}`).onClick(async () => {
 				await setDocketKey(this.app, null);
 				this.display();
 			}));

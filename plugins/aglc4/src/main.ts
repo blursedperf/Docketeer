@@ -238,6 +238,8 @@ export default class Aglc4Plugin extends Plugin {
 		this.addCommand({
 			id: 'insert-footnote',
 			name: 'Insert footnote',
+			// Super+Alt+F (⌘⌥F on macOS); Settings › Hotkeys changes it.
+			hotkeys: [{ modifiers: ['Meta', 'Alt'], key: 'f' }],
 			editorCallback: (editor) => {
 				void this.insertFootnote(editor).then((target) => {
 					if (target && this.settings.chooseKindOnInsert) this.chooseKind(target);

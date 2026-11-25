@@ -78,7 +78,7 @@ export class Docket {
 			attr: {
 				type: 'text', role: 'combobox', 'aria-expanded': 'false', 'aria-controls': 'docket-results', 'aria-autocomplete': 'list',
 				'aria-label': 'Search notes, commands and more. Type > for commands, # for folders and tags, / for headings, ? for shortcuts.',
-				placeholder: 'Search, or type > # / @ ?', spellcheck: 'false', autocomplete: 'off',
+				placeholder: 'Search, or type > # / @ + ?', spellcheck: 'false', autocomplete: 'off',
 			},
 		});
 		this.modeBtn = head.createEl('button', { cls: 'clickable-icon docket-mode', attr: { type: 'button' } });
@@ -173,7 +173,7 @@ export class Docket {
 	// -----------------------------------------------------------------------------------------------
 	// Opening and closing
 
-	/** The Docket key (Mod+P unless changed): open (on the panel the cursor suggests), focus it when pinned elsewhere, or close. */
+	/** The Docket key (Super+D unless changed): open (on the panel the cursor suggests), focus it when pinned elsewhere, or close. */
 	toggle(): void {
 		if (!this.opened) this.open();
 		else if (this.mode === 'pinned' && !this.el.contains(document.activeElement)) this.focusZone('input');

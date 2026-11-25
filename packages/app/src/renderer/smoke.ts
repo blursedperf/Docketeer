@@ -5,7 +5,7 @@
  */
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
-import { type App, MarkdownView, Platform, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
+import { type App, MarkdownView, Platform, defaultDocketKey, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { genericPanels } from './docket/panels-model';
@@ -328,7 +328,7 @@ export async function runSmoke(app: App): Promise<void> {
 			key, code, shiftKey: shift, ctrlKey: !Platform.isMacOS, metaKey: Platform.isMacOS, bubbles: true, cancelable: true,
 		}));
 		const handleKey = () => document.querySelector('.docket-handle [data-docket-key="handle"]')?.textContent ?? '';
-		const modP = formatHotkey({ modifiers: ['Mod'], key: 'p' });
+		const modP = formatHotkey(defaultDocketKey(Platform));
 		const next = { modifiers: ['Mod' as const, 'Shift' as const], key: 'k' };
 		if (docketKeyProblem(app, next)) problems.push(`refused ${formatHotkey(next)}: ${docketKeyProblem(app, next)}`);
 		if (!docketKeyProblem(app, { modifiers: [], key: 'k' })) problems.push('a plain letter was accepted');
@@ -343,7 +343,7 @@ export async function runSmoke(app: App): Promise<void> {
 		press('K', 'KeyK', true);
 		await sleep(50);
 		if (app.docketOpen) { problems.push('the new key did not close the Docket'); ui?.close(true); }
-		press('p', 'KeyP', false);
+		pressDocketKey();
 		await sleep(50);
 		if (app.docketOpen) { problems.push('the old key still opens the Docket'); ui?.close(true); }
 		const saved = (await app.host.app.getConfig()).hotkeys as Record<string, unknown> | undefined;
@@ -657,7 +657,7 @@ export async function runSmoke(app: App): Promise<void> {
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ctrlKey: true, altKey: true, bubbles: true }));
 		const toggled = app.config.livePreview !== before;
 		if (toggled) await app.setConfig('livePreview', before);
-		const clash = cmds.conflicts({ modifiers: ['Mod'], key: 'p' }).map((c) => c.id).includes('app:docket');
+		const clash = cmds.conflicts(defaultDocketKey(Platform)).map((c) => c.id).includes('app:docket');
 		const saved = (await vault.adapter.read('.quire/hotkeys.json')).includes('app:toggle-live-preview');
 		await cmds.setHotkeys('app:toggle-live-preview', null);
 		const reset = !cmds.isCustomised('app:toggle-live-preview');
@@ -1296,6 +1296,18 @@ export async function runShots(app: App): Promise<void> {
 type CheckFn = (name: string, fn: () => Promise<boolean | string> | boolean | string) => Promise<void>;
 
 /** Press a key where the keyboard is (the window's capture handlers see it too). */
+/** Press the Docket key as it comes on this system (Super+D; Ctrl+P on Windows), with Shift for peek/pinned. */
+function pressDocketKey(shift = false): void {
+	const k = defaultDocketKey(Platform);
+	const mod = k.modifiers.includes('Mod');
+	const target = document.activeElement ?? document.body;
+	target.dispatchEvent(new KeyboardEvent('keydown', {
+		key: k.key, code: `Key${k.key.toUpperCase()}`, shiftKey: shift,
+		ctrlKey: mod && !Platform.isMacOS, metaKey: k.modifiers.includes('Meta') || (mod && Platform.isMacOS),
+		bubbles: true, cancelable: true,
+	}));
+}
+
 function press(key: string, mods: { ctrl?: boolean; shift?: boolean; alt?: boolean } = {}): void {
 	const target = document.activeElement ?? document.body;
 	target.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: !!mods.ctrl, shiftKey: !!mods.shift, altKey: !!mods.alt, bubbles: true, cancelable: true }));
@@ -1311,7 +1323,18 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	const titles = () => [...document.querySelectorAll('.docket-option-title')].map((e) => e.textContent);
 	const rootLeaves = () => { let n = 0; workspace.iterateRootLeaves(() => { n++; }); return n; };
 
-	await check('docket: on from the start, with Mod+P', async () => {
+	await check('keys: Docket on Super+D, Insert footnote on Super+Alt+F, neither shared; "+" shown in the empty search', () => {
+		const cmds = app.commands;
+		const fn = cmds.findCommand('aglc-citations:insert-footnote');
+		const fnKeys = fn ? cmds.hotkeysFor(fn).map((k) => formatHotkey(k)) : [];
+		const docketKey = formatHotkey(defaultDocketKey(Platform));
+		const clashes = [...cmds.conflicts(defaultDocketKey(Platform), 'app:docket'), ...cmds.conflicts({ modifiers: ['Meta', 'Alt'], key: 'f' }, 'aglc-citations:insert-footnote')].map((c) => c.id);
+		const placeholder = document.querySelector<HTMLInputElement>('.docket-input, .docket input')?.placeholder ?? '';
+		const expectFn = Platform.isMacOS ? '⌥⌘F' : Platform.isWin ? 'Win+Alt+F' : 'Super+Alt+F';
+		return (fnKeys[0] === expectFn && (Platform.isWin || docketKey === (Platform.isMacOS ? '⌘D' : 'Super+D')) && clashes.length === 0 && / \+ /.test(placeholder))
+			|| `footnote=${fnKeys.join(',')} docket=${docketKey} clashes=${clashes.join(',')} placeholder="${placeholder}"`;
+	});
+	await check('docket: on from the start, with Super+D', async () => {
 		const before = !!document.querySelector('.docket') && commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 0;
 		ui()?.close(true);
 		const built = !!ui() && !!document.querySelector('.docket-handle');
@@ -1326,11 +1349,11 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	if (view.getMode() !== 'source') await view.setMode('source');
 	const cm = view.editor.cm;
 
-	await check('docket: Mod+P opens it with the cursor in the input, within 50 ms', async () => {
+	await check('docket: its key (Super+D) opens it with the cursor in the input, within 50 ms', async () => {
 		ui()?.close(true);
 		cm.focus();
 		cm.dispatch({ selection: { anchor: 20, head: 25 } });
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await sleep(30);
 		const opened = !!ui()?.isOpen && document.activeElement === input();
 		ui()!.close(true);
@@ -1346,7 +1369,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('docket: Esc returns to the same cursor and selection', async () => {
 		cm.dispatch({ selection: { anchor: 20, head: 25 } });
 		cm.focus();
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('welc');
 		press('Escape'); // clears the input
 		const cleared = input().value === '' && ui()!.isOpen;
@@ -1358,7 +1381,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('docket: ">" lists commands with their shortcuts; Enter runs one', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('>new tab');
 		const first = titles()[0];
 		const hint = document.querySelector('.docket-option.is-selected .docket-option-hint')?.textContent;
@@ -1372,7 +1395,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('docket: notes search; Mod+Enter opens to the right; announced', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('renamed');
 		const group = document.querySelector('.docket-group')?.getAttribute('aria-label');
 		const live = document.querySelector('.docket [role=status]')?.textContent ?? '';
@@ -1392,7 +1415,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const ed = v.editor.cm;
 		ed.focus();
 		ed.dispatch({ selection: { anchor: ed.state.doc.length } });
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('welcome');
 		press('Enter', { shift: true });
 		await sleep(50);
@@ -1403,7 +1426,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('docket: → shows actions for a result; Esc goes back', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('renamed');
 		press('ArrowRight');
 		await sleep(20);
@@ -1418,7 +1441,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('docket: Mod+2 shows the outline; Tab moves between input, panel and tabs', async () => {
 		cm.focus();
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('2', { ctrl: true });
 		await sleep(50);
 		const outline = document.querySelectorAll('.docket-outline-item').length > 3;
@@ -1458,7 +1481,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('docket: pinned mode stays docked, resizes from the keyboard, is remembered', async () => {
 		cm.focus();
-		press('p', { ctrl: true, shift: true });
+		pressDocketKey(true);
 		await sleep(30);
 		const pinned = ui()!.el.classList.contains('is-pinned') && app.config.docketMode === 'pinned';
 		const h0 = Number(app.config.docketHeight);
@@ -1467,17 +1490,17 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('Escape');
 		await sleep(20);
 		const docked = ui()!.isOpen && !ui()!.el.contains(document.activeElement);
-		press('p', { ctrl: true }); // focuses the docked Docket
+		pressDocketKey(); // focuses the docked Docket
 		const refocused = document.activeElement === input();
 		press('ArrowUp', { ctrl: true, alt: true });
-		press('p', { ctrl: true, shift: true }); // back to peek
+		pressDocketKey(true); // back to peek
 		press('Escape');
 		await sleep(20);
 		return (pinned && taller && docked && refocused && app.config.docketMode === 'peek') || `pinned=${pinned} taller=${taller} docked=${docked} refocused=${refocused} mode=${app.config.docketMode}`;
 	});
 
 	await check('docket: "?" lists shortcuts; a plugin panel takes the next number', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('?new note');
 		const help = titles().includes('Create new note');
 		const remove = app.docket.addPanel({ id: 'test:panel', title: 'Test panel', render: (el) => { el.setText('hello'); } });
@@ -1493,7 +1516,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('search: full text, with the matching words marked', async () => {
 		await app.search.ready;
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('footnote');
 		const groups = [...document.querySelectorAll('.docket-group')].map((g) => g.getAttribute('aria-label'));
 		const marked = [...document.querySelectorAll('.docket-group[aria-label="In notes"] mark')].some((m) => m.textContent?.toLowerCase() === 'footnote');
@@ -1514,7 +1537,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('search: "show all" lists a whole group; Esc comes back', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('e');
 		const more = [...document.querySelectorAll('.docket-option.mod-more')];
 		const target = more[0];
@@ -1533,7 +1556,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('search: settings and used notes rank in', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('vim');
 		await sleep(50);
 		await type('vim');
@@ -1556,7 +1579,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const ed = await openEssay();
 		ed.dispatch({ selection: { anchor: 0 } });
 		ed.focus();
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('1', { ctrl: true });
 		await sleep(150);
 		const groups = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
@@ -1570,7 +1593,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('authorities: → lists every note citing it; "@" searches them', async () => {
 		await openEssay();
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('1', { ctrl: true });
 		await sleep(150);
 		focusRow(rowsText().find((t) => t.startsWith('Mabo v Queensland')) ?? '');
@@ -1595,7 +1618,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(150);
 		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
 		ed.focus();
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('2', { ctrl: true });
 		await sleep(100);
 		const fields = rowsText().slice(0, 5).join('|');
@@ -1622,7 +1645,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		ed.dispatch({ selection: { anchor: end } });
 		ed.focus();
 		const fill = async () => {
-			press('p', { ctrl: true });
+			pressDocketKey();
 			press('4', { ctrl: true });
 			await sleep(80);
 			focusRow('Case (reported)');
@@ -1650,7 +1673,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const problems: string[] = [];
 		const store = unitsStore(app);
 		await until(() => store.loaded, 3000);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('3', { ctrl: true });
 		await sleep(120);
 		if (rowsText().includes('Folder')) problems.push('an unmarked folder is in Units');
@@ -1691,7 +1714,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 	await check('homebase files: N and F make a note or folder where you are; "+ New" rows at the top and in opened folders', async () => {
 		const problems: string[] = [];
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('5', { ctrl: true });
 		await sleep(150);
 		if (!rowsText().includes('New note') || !rowsText().includes('New folder')) problems.push('no "+ New" rows at the top');
@@ -2036,7 +2059,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const brief = vault.getFileByPath('Brief test.md')!;
 		commands.executeCommandById('app:toggle-pin-note', { file: brief });
 		await sleep(50);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('3', { ctrl: true });
 		await sleep(100);
 		const sections = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
@@ -2055,7 +2078,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('homebase: export asks first and redacts', async () => {
 		await openEssay();
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('5', { ctrl: true });
 		await sleep(80);
 		const lock = rowsText().includes('Set up locking…');
@@ -2077,7 +2100,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const first = workspace.activeLeaf!;
 		await workspace.duplicateLeaf(first, 'vertical');
 		await sleep(80);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('6', { ctrl: true });
 		await sleep(80);
 		const panes = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent).filter((t) => t?.startsWith('Pane')).length;
@@ -2098,7 +2121,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('mentions: listed in the Docket, and turned into a link', async () => {
 		const note = await vault.create('Mention test.md', 'See Welcome for more.\n');
 		await sleep(150);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('welcome');
 		press('ArrowRight');
 		await sleep(30);
@@ -2119,7 +2142,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('note actions include links and the plugins\' file actions', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('aglc4 example');
 		press('ArrowRight');
 		await sleep(30);
@@ -2129,7 +2152,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('docket: creates a note that does not exist; # lists notes with a tag', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('Brand new idea');
 		const offered = titles().includes('Create note “Brand new idea”');
 		const i = titles().indexOf('Create note “Brand new idea”');
@@ -2139,7 +2162,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const created = !!vault.getMarkdownFiles().find((f) => f.basename === 'Brand new idea') && workspace.getActiveFile()?.basename === 'Brand new idea';
 		const made = vault.getMarkdownFiles().find((f) => f.basename === 'Brand new idea');
 		if (made) await vault.trash(made, true);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('#test');
 		const j = titles().indexOf('#test');
 		for (let k = 0; k < j; k++) press('ArrowDown');
@@ -2158,7 +2181,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		// Typed, not saved (saving waits 600 ms after the last keystroke): the search must see it anyway.
 		view.editor.setValue('Held in *Unsaved v Example* (2001) 210 CLR 1, 5.');
 		const saved = await vault.adapter.read('Unsaved cite.md');
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('1', { ctrl: true });
 		await sleep(120);
 		focusRow('Unsaved v Example');
@@ -2180,12 +2203,12 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const choose = (title: string) => { const i = titles().indexOf(title); if (i < 0) return false; for (let k = 0; k < i; k++) press('ArrowDown'); press('Enter'); return true; };
 		const typeInEditor = (text: string) => { const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm; ed.dispatch(ed.state.replaceSelection(text), { userEvent: 'input' }); return ed; };
 		// 1. A case brief, created from the Docket.
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('Journey brief');
 		if (!choose('Create note “Journey brief”')) steps.push('create brief');
 		await sleep(200);
 		typeInEditor('---\ntype: case-brief\n---\n# Example v Commonwealth\n\n## Facts\n\nA duty question.\n');
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('2', { ctrl: true });
 		await sleep(80);
 		if (!focusRow('Held')) steps.push('brief fields');
@@ -2193,12 +2216,12 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(50);
 		if (!workspace.getActiveViewOfType(MarkdownView)!.editor.getValue().includes('## Held')) steps.push('add Held');
 		// 2. An essay citing it, with an AGLC footnote from the Cite panel.
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('Journey essay');
 		if (!choose('Create note “Journey essay”')) steps.push('create essay');
 		await sleep(200);
 		const essayEd = typeInEditor('The duty was settled.');
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('4', { ctrl: true });
 		await sleep(80);
 		focusRow('Case (reported)');
@@ -2212,7 +2235,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		// 3. The brief beside the essay.
 		press('\\', { ctrl: true });
 		await sleep(150);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('Journey brief');
 		press('Enter');
 		await sleep(200);
@@ -2222,7 +2245,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('ArrowLeft', { ctrl: true, alt: true });
 		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
 		ed.dispatch({ selection: { anchor: 0 } });
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('1', { ctrl: true });
 		await sleep(120);
 		focusRow('Example v Commonwealth');
@@ -2244,7 +2267,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		// As a real click: mousedown focuses the element, then click runs it.
 		const click = async (el: HTMLElement | null | undefined) => { if (!el) return false; el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); el.focus(); el.click(); el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); await sleep(60); return true; };
 		const docketOpen = () => !!document.querySelector('.docket.is-open');
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await sleep(30);
 		const tabs = () => [...document.querySelectorAll<HTMLElement>('.docket-tab')];
 		await click(tabs()[2]); // Units
@@ -2261,7 +2284,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const wv = workspace.getActiveViewOfType(MarkdownView);
 		if (wv && wv.getMode() !== 'source') await wv.setMode('source');
 		await sleep(100);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await sleep(30);
 		const cmContent = wv?.editor.cm.contentDOM ?? null;
 		const openBefore = docketOpen();
@@ -2294,7 +2317,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.create('Torts/Week 10.md', '');
 		await vault.create('Torts/Week 2.md', '');
 		await unitsStore(app).set('Torts', 'subject');
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('3', { ctrl: true });
 		await sleep(100);
 		const help = !!document.querySelector('.docket-panel .docket-help');
@@ -2310,7 +2333,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		if (ti) { ti.value = 'Negligence'; ti.dispatchEvent(new Event('input')); ti.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); }
 		await sleep(200);
 		const topic = !!vault.getFolderByPath('Torts/Negligence');
-		press('p', { ctrl: true });
+		pressDocketKey();
 		press('3', { ctrl: true });
 		await sleep(100);
 		focusRow('Negligence')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true, cancelable: true }));
@@ -2321,7 +2344,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('search: Enter opens the best match; "Create note" is last unless nothing matches', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('welc');
 		const first = document.querySelector('.docket-option.is-selected .docket-option-title')?.textContent ?? '';
 		const groups = [...document.querySelectorAll('.docket-group')].map((g) => g.getAttribute('aria-label'));
@@ -2332,7 +2355,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('search: "Create note" says where, and → puts it somewhere else', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('Remedies overview');
 		const createRow = [...document.querySelectorAll('.docket-option')].find((o) => o.textContent?.includes('Create note “Remedies overview”'));
 		const where = createRow?.querySelector('.docket-option-detail')?.textContent ?? '';
@@ -2358,7 +2381,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('search: subjects and topics by name, notes once, commands grouped, no duplicate plugin commands', async () => {
 		await vault.createFolder('Contracts/Formation').catch(() => undefined);
 		await vault.create('Contracts/Formation/Offer and acceptance.md', 'Offer and acceptance.\n').catch(() => undefined);
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('contracts');
 		const firstGroup = document.querySelector('.docket-group')?.getAttribute('aria-label');
 		const folderRow = [...document.querySelectorAll('.docket-group[aria-label="Folders"] .docket-option')].find((o) => o.textContent?.includes('Contracts'));
@@ -2380,7 +2403,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('keys: ↑ from the top goes back to the search; ← → switch panels; Units deletes and renames, and follows changes', async () => {
 		const input = () => document.querySelector<HTMLInputElement>('.docket-input')!;
 		// ↑ from the first result (keyboard in the list) and from the first panel row: back to the input.
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('welcome');
 		press('Tab'); // into the results list
 		press('ArrowUp');
@@ -2434,7 +2457,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('cheat sheet: "?" lists the Docket keys, prefixes and every shortcut by section', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('?');
 		const groups = [...document.querySelectorAll('.docket-group')].map((g) => g.getAttribute('aria-label'));
 		const docketKeys = titles().includes('Open to the right');
@@ -2453,12 +2476,12 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			await sleep(100);
 			const seen: string[] = [];
 			for (const q of ['AGLC4 example', 'native title', 'extinguishment', '@mabo', '#a']) {
-				press('p', { ctrl: true });
+				pressDocketKey();
 				await type(q);
 				if ([...document.querySelectorAll('.docket-option')].some((o) => /AGLC4 example essay/.test(o.textContent ?? ''))) seen.push(q);
 				press('Escape'); press('Escape');
 			}
-			press('p', { ctrl: true });
+			pressDocketKey();
 			press('3', { ctrl: true });
 			await sleep(80);
 			// Units lists a locked note by name only, with a lock and no actions.
@@ -2476,7 +2499,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('security: a search that is typed is never logged', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('QUIRE-QUERY-5521');
 		await type('>QUIRE-QUERY-5521');
 		press('Escape'); press('Escape');
@@ -2484,7 +2507,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	});
 
 	await check('accessibility: the Docket\'s roles, names, live region and reduced motion', async () => {
-		press('p', { ctrl: true });
+		pressDocketKey();
 		await type('welcome');
 		const dock = document.querySelector('.docket')!;
 		const problems: string[] = [];

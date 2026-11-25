@@ -47,10 +47,16 @@ export function eventString(e: { altKey: boolean; ctrlKey: boolean; metaKey: boo
 	return [...mods.sort(), key].join('+');
 }
 
-/** For display: ⌘ ⌥ ⇧ ⌃ on macOS, words elsewhere. */
+/** For display: ⌘ ⌥ ⇧ ⌃ on macOS, words elsewhere (the Meta key is Super on Linux and Win on Windows). */
 export function formatHotkey(h: Hotkey, p: Platformish): string {
 	const s = hotkeyString(h, p);
-	if (!p.isMacOS) return s;
+	if (!p.isMacOS) {
+		// The usual reading order (Super+Alt+F, Ctrl+Alt+Shift+K), not the sorted one used for matching.
+		const parts = s.split('+');
+		const key = parts.pop()!;
+		const order = ['Meta', 'Ctrl', 'Alt', 'Shift'];
+		return [...parts.sort((a, b) => order.indexOf(a) - order.indexOf(b)), key].join('+').replace('Meta', p.isWin ? 'Win' : 'Super');
+	}
 	return s.replace('Meta', '⌘').replace('Alt', '⌥').replace('Shift', '⇧').replace('Ctrl', '⌃').replace(/\+/g, '');
 }
 
@@ -67,7 +73,7 @@ export function parseHotkey(s: string): Hotkey {
  * Shortcuts taken by the operating system, the window or text editing. Binding a command to one either
  * never fires or takes away something people rely on. Each entry: the hotkey and what it does.
  */
-const RESERVED: { keys: string; what: string; on?: 'mac' | 'other' }[] = [
+const RESERVED: { keys: string; what: string; on?: 'mac' | 'other' | 'win' }[] = [
 	{ keys: 'Mod+Q', what: 'Quit', on: 'mac' },
 	{ keys: 'Mod+H', what: 'Hide the app', on: 'mac' },
 	{ keys: 'Mod+M', what: 'Minimise the window', on: 'mac' },
@@ -77,6 +83,7 @@ const RESERVED: { keys: string; what: string; on?: 'mac' | 'other' }[] = [
 	{ keys: 'Alt+F4', what: 'Close the window', on: 'other' },
 	{ keys: 'Alt+Tab', what: 'Switch apps', on: 'other' },
 	{ keys: 'Meta+L', what: 'Lock the screen', on: 'other' },
+	{ keys: 'Meta+D', what: 'Show the desktop', on: 'win' },
 	{ keys: 'Mod+Alt+Delete', what: 'System menu', on: 'other' },
 	{ keys: 'Mod+C', what: 'Copy' },
 	{ keys: 'Mod+X', what: 'Cut' },
@@ -89,12 +96,27 @@ const RESERVED: { keys: string; what: string; on?: 'mac' | 'other' }[] = [
 	{ keys: 'Mod+Shift+I', what: 'Developer tools' },
 ];
 
+/**
+ * The Docket key as it comes: Super+D (⌘D on macOS). Windows keeps Win+D for showing the desktop and never passes it
+ * to apps, so there it is Ctrl+P.
+ */
+export function defaultDocketKey(p: Platformish): Hotkey {
+	return p.isWin ? { modifiers: ['Mod'], key: 'p' } : { modifiers: ['Meta'], key: 'd' };
+}
+
+/** Switching the Docket between peek and pinned: the Docket key with Shift. */
+export function defaultDocketModeKey(p: Platformish): Hotkey {
+	const k = defaultDocketKey(p);
+	return { modifiers: [...k.modifiers, 'Shift'], key: k.key };
+}
+
 /** What the system or shell already does with this hotkey, if anything. */
 export function reservedFor(h: Hotkey, p: Platformish): string | null {
 	const key = hotkeyString(h, p);
 	for (const r of RESERVED) {
 		if (r.on === 'mac' && !p.isMacOS) continue;
 		if (r.on === 'other' && p.isMacOS) continue;
+		if (r.on === 'win' && !p.isWin) continue;
 		if (hotkeyString(parseHotkey(r.keys), p) === key) return r.what;
 	}
 	return null;

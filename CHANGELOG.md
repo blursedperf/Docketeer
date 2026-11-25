@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **The Docket key is now Super+D** (⌘D on macOS), and switching it between peek and pinned is Super+Shift+D.
+  Windows keeps Ctrl+P and Ctrl+Shift+P, because Windows uses Win+D to show the desktop and never passes it to apps.
+  A key you chose under *Settings › Hotkeys* stays as it is.
+- **Insert footnote (AGLC4) has a key: Super+Alt+F** (⌘⌥F on macOS).
+- Shortcuts call the Super key *Super* on Linux and *Win* on Windows, and list modifiers in the usual order
+  (Super+Alt+F, Ctrl+Alt+Shift+K). The empty-tab links, the Docket mode setting, the README, the example homebase and
+  the AGLC4 guide show the keys as they are.
+- The empty Docket search shows `+` (create a note) among the prefixes.
+
 ## v0.16.0
 
 - **Quire ships its own fonts**, so it looks the same on every computer: **Inter** for the interface and notes,

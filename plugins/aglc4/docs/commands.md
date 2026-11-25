@@ -1,12 +1,12 @@
 # Commands
 
-Run commands from the command palette (Ctrl/Cmd+P; type "AGLC4" to list them). Give the ones you use most a hotkey in **Settings → Hotkeys**: **Insert footnote** especially.
+Run commands from the Docket (Super+D: ⌘D on a Mac, Ctrl+P on Windows; type "AGLC4" to list them). **Insert footnote** has its own key, **Super+Alt+F** (⌘⌥F on a Mac); give the others you use most a hotkey in **Settings → Hotkeys**.
 
 ## Writing
 
 | Command | What it does |
 | --- | --- |
-| **Insert footnote** | Adds a footnote at the cursor (after any punctuation) and takes you to it ([writing footnotes](writing-footnotes.md)) |
+| **Insert footnote** (Super+Alt+F, ⌘⌥F) | Adds a footnote at the cursor (after any punctuation) and takes you to it ([writing footnotes](writing-footnotes.md)) |
 | **Return from footnote to its reference** | Goes back from the footnote at the cursor to its number in the text |
 | **Jump between footnote and its reference** | Moves between a footnote and its number within one editor |
 | **Cite a kind of source** | Choose a kind of source (a case, an Act, a government or inquiry report, a journal article …) and insert its AGLC4 form, with Tab between its placeholders. Outside a footnote, adds a footnote first ([citing a kind of source](next-element.md#citing-a-kind-of-source)) |

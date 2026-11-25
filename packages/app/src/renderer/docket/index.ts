@@ -1,9 +1,9 @@
 /**
  * The Docket's commands, and building it. The Docket is the way into everything since the sidebars
- * went (Phase 6): Mod+P opens it; the old palette, switcher and sidebar commands open it where their
+ * went (Phase 6): its key (Super+D, ⌘D on macOS, Ctrl+P on Windows) opens it; the old palette, switcher and sidebar commands open it where their
  * feature now lives. The `docket` setting exists only so tests can take it down and build it again.
  */
-import type { App, Hotkey } from '@quire/api';
+import { type App, Platform, defaultDocketKey, defaultDocketModeKey } from '@quire/api';
 import { Docket } from './docket';
 import { registerCorePanels } from './panels';
 import { registerCoreProviders } from './providers';
@@ -11,7 +11,6 @@ import { registerNoteCommands, showLinksFrom, showLinksTo, showMentions } from '
 import { revealInUnits } from './panels/units';
 import { registerCustomPanels } from './custom-panels';
 
-const MOD_P: Hotkey = { modifiers: ['Mod'], key: 'p' };
 
 export function registerDocket(app: App): { start(): void; get(): Docket | null } {
 	let docket: Docket | null = null;
@@ -22,11 +21,11 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 
 	add({
 		id: 'app:docket', name: 'Open or close the Docket', icon: 'panel-top', aliases: ['Docket', 'Everything'],
-		hotkeys: [MOD_P], when: on, run: () => docket?.toggle(),
+		hotkeys: [defaultDocketKey(Platform)], when: on, run: () => docket?.toggle(),
 	});
 	add({
 		id: 'app:docket-toggle-mode', name: 'Docket: switch between peek and pinned', icon: 'pin',
-		hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 'p' }], when: on, run: () => { docket?.toggleMode(); if (!docket?.isOpen) docket?.open(); },
+		hotkeys: [defaultDocketModeKey(Platform)], when: on, run: () => { docket?.toggleMode(); if (!docket?.isOpen) docket?.open(); },
 	});
 	add({ id: 'app:docket-taller', name: 'Docket: make taller', context: 'docket', hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'ArrowDown' }], when: () => !!docket?.isOpen, run: () => docket?.resize(0.05) });
 	add({ id: 'app:docket-shorter', name: 'Docket: make shorter', context: 'docket', hotkeys: [{ modifiers: ['Mod', 'Alt'], key: 'ArrowUp' }], when: () => !!docket?.isOpen, run: () => docket?.resize(-0.05) });

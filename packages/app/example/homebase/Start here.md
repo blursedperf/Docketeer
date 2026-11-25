@@ -2,7 +2,7 @@ This is an example homebase: a few weeks of notes for a law subject, to try Quir
 
 ## Find your way
 
-- **The Docket** is the way into everything. Press its key (Ctrl+P, ⌘P on a Mac, unless you changed it under Settings → Hotkeys) and type: note names, words inside notes, commands. `?` in the Docket lists every shortcut.
+- **The Docket** is the way into everything. Press its key (Super+D: ⌘D on a Mac, Ctrl+P on Windows, unless you changed it under Settings → Hotkeys) and type: note names, words inside notes, commands. `?` in the Docket lists every shortcut.
 - **Units** (in the Docket) shows the subjects and topics: here, [[Duty of care|Torts → Negligence]] and [[Consideration|Contracts → Formation]]. Subjects are the top folders; topics are the folders inside them.
 - **Switch homebase** (Ctrl+Shift+O, or the homebase name at the bottom left) goes back to your own notes.
 

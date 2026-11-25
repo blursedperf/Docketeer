@@ -8,7 +8,7 @@ The first plugin, **AGLC4 Citations** (`plugins/aglc4`), is a port of
 [obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0 and ships built in.
 
 Everything is reached from the keyboard through **the Docket**, a tray that drops from the top of the window
-(**Ctrl+P**, ⌘P on macOS): search across notes, commands, and panels for authorities, the outline, units
+(**Super+D**: ⌘D on macOS, Ctrl+P on Windows): search across notes, commands, and panels for authorities, the outline, units
 (subjects and topics), citations, the homebase and the layout. Panels can be hidden, reordered, and built from
 commands, file trees, note lists and sections ([docs/docket/panels.md](docs/docket/panels.md)). Notes tile into panes from the keyboard. See
 [docs/docket/shortcuts.md](docs/docket/shortcuts.md) and [docs/docket/walkthrough.md](docs/docket/walkthrough.md).

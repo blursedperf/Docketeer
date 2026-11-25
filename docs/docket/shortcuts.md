@@ -7,8 +7,8 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 
 | Keys | Action |
 |---|---|
-| Mod+P | Open or close the Docket (change it under Settings → Hotkeys → Docket key; it applies to every homebase) |
-| Mod+Shift+P | Switch between peek and pinned |
+| Super+D (⌘D on macOS, Ctrl+P on Windows) | Open or close the Docket (change it under Settings → Hotkeys → Docket key; it applies to every homebase) |
+| Super+Shift+D (⌘⇧D, Ctrl+Shift+P on Windows) | Switch between peek and pinned |
 | Mod+1 … Mod+9 | Show a panel (while the Docket has the keyboard) |
 | Mod+Alt+↓ / ↑ | Taller / shorter |
 | ↑ ↓ | Move through results and panel rows; ↑ at the top goes back to the search |

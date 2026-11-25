@@ -410,7 +410,7 @@ export interface AppConfig {
 	docketHeight: number;
 	/** The last panel shown. */
 	docketPanel: string;
-	/** The first-run hint ("Press Mod+P for everything") was seen. */
+	/** The first-run hint ("Press the Docket key for everything") was seen. */
 	docketHintSeen: boolean;
 	/** Notes pinned in the Units panel (paths). */
 	pinnedNotes: string[];

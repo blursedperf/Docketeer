@@ -1,4 +1,6 @@
 import type { App } from './app';
+import { formatHotkey } from './keymap';
+import { Platform } from './util';
 import { Component } from './component';
 import { TFile } from './files';
 import { setIcon } from './icons';
@@ -148,12 +150,15 @@ export class EmptyView extends ItemView {
 		box.createDiv({ cls: 'empty-state-title', text: 'No file is open' });
 		const actions = box.createDiv({ cls: 'empty-state-action-list' });
 		const action = (label: string, command: string) => {
-			const a = actions.createDiv({ cls: 'empty-state-action', text: label });
+			// The command's own hotkey (as changed in Settings › Hotkeys, and named for this system).
+			const cmd = this.app.commands.findCommand(command);
+			const key = cmd ? this.app.commands.hotkeysFor(cmd)[0] : undefined;
+			const a = actions.createDiv({ cls: 'empty-state-action', text: key ? `${label} (${formatHotkey(key, Platform)})` : label });
 			a.addEventListener('click', () => this.app.commands.executeCommandById(command));
 		};
-		action('Create new note (Ctrl+N)', 'app:new-note');
-		action('Go to file (Ctrl+O)', 'app:quick-switcher');
-		action('Open command palette (Ctrl+P)', 'app:command-palette');
+		action('Create new note', 'app:new-note');
+		action('Go to file', 'app:quick-switcher');
+		action('Open the Docket', 'app:docket');
 		action('Close', 'app:close-tab');
 	}
 }
