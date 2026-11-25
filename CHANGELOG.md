@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.16.2
 
 - **Units is now called Subjects**: the Docket panel, its help, the "Mark as subject" and "Remove from Subjects"
   actions, *Pin to Subjects*, *Show this note in Subjects*, the cheat sheet and the docs. Nothing to redo: the same
