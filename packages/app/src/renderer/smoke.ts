@@ -932,8 +932,16 @@ export async function runSmoke(app: App): Promise<void> {
 		app.setting.close();
 		return (widths.length > 5 && widths.every((w) => w === widths[0])) || widths.join(',');
 	});
+	await check('the fonts shipped with Quire load, and are the defaults', async () => {
+		const families = ['Inter', 'JetBrains Mono', 'Source Serif 4'];
+		for (const f of families) { await document.fonts.load(`16px "${f}"`, 'Mabo ā'); await document.fonts.load(`italic 16px "${f}"`, 'Mabo'); }
+		const loaded = families.map((f) => [...document.fonts].filter((x) => x.family.replace(/"/g, '') === f && x.status === 'loaded').length);
+		const ui = getComputedStyle(document.body).getPropertyValue('--font-interface');
+		const mono = getComputedStyle(document.body).getPropertyValue('--font-monospace');
+		return (loaded.every((n) => n >= 3) && /^\s*"Inter"/.test(ui) && /^\s*"JetBrains Mono"/.test(mono)) || `loaded=${loaded.join(',')} ui=${ui} mono=${mono}`;
+	});
 	await check('fonts are chosen from the installed fonts, with a sample', async () => {
-		const fonts = (await app.host.app.fonts?.()) ?? [];
+		const fonts = ((await app.host.app.fonts?.()) ?? []).filter((f) => !['Inter', 'JetBrains Mono', 'Source Serif 4'].includes(f.family));
 		app.setting.openTabById('appearance');
 		await sleep(100);
 		const row = [...document.querySelectorAll<HTMLElement>('.setting-item.mod-font')].find((r) => r.textContent?.includes('Interface font'));

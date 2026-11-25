@@ -6,7 +6,7 @@ import { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { Vim } from '@replit/codemirror-vim';
 import {
-	type App, type AppConfig, type Command, type CommandContext, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
+	type App, type AppConfig, type Command, type CommandContext, fontStack, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
 	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp,
 } from '@quire/api';
 import { registerDocket } from './docket';
@@ -145,14 +145,16 @@ class AppearanceTab extends SettingTab {
 
 		new Setting(el).setName('Type and spacing').setHeading();
 		/**
-		 * A font: chosen from the fonts installed on this computer (monospaced ones first for the monospace font), or
-		 * typed (Other…). A line of sample text shows it.
+		 * A font: one that ships with Quire (Inter, JetBrains Mono, Source Serif 4: the same on every computer), the
+		 * system's, one installed on this computer (monospaced ones first for the monospace font), or typed (Other…).
+		 * A line of sample text shows it.
 		 */
 		const OTHER = '\u0000other';
-		const font = (name: string, desc: string, key: 'interfaceFont' | 'textFont' | 'monospaceFont', empty: string, mono: boolean) => {
+		const SHIPPED = ['Inter', 'JetBrains Mono', 'Source Serif 4'];
+		const font = (name: string, desc: string, key: 'interfaceFont' | 'textFont' | 'monospaceFont', empty: string, mono: boolean, builtIn: [value: string, label: string][]) => {
 			const row = new Setting(el).setName(name).setDesc(desc).setClass('mod-font');
 			const sample = row.descEl.createDiv({ cls: 'setting-font-sample', text: mono ? 'const ratio = 0.5; // [1932] AC 562' : 'Donoghue v Stevenson [1932] AC 562: the neighbour principle.' });
-			const show = (v: string) => { sample.style.fontFamily = v ? `"${v.replace(/"/g, '')}", ${mono ? 'monospace' : 'sans-serif'}` : ''; };
+			const show = (v: string) => { sample.style.fontFamily = fontStack(v, mono) || (mono ? 'var(--font-monospace)' : ''); };
 			const typing = this.typingFonts.has(key);
 			row.addDropdown((d) => {
 				const sel = d.selectEl;
@@ -160,13 +162,16 @@ class AppearanceTab extends SettingTab {
 					const current = String(c[key] ?? '');
 					sel.empty();
 					sel.createEl('option', { value: '', text: empty });
+					const shipped = sel.createEl('optgroup', { attr: { label: 'Built into Quire' } });
+					for (const [value, label] of builtIn) shipped.createEl('option', { value, text: label });
 					const group = (label: string, list: { family: string }[]) => {
 						if (!list.length) return;
 						const g = sel.createEl('optgroup', { attr: { label } });
 						for (const f of list) g.createEl('option', { value: f.family, text: f.family });
 					};
-					if (mono) { group('Monospaced', fonts.filter((f) => f.mono)); group('Other fonts', fonts.filter((f) => !f.mono)); } else group('Installed fonts', fonts);
-					if (current && !fonts.some((f) => f.family === current)) sel.createEl('option', { value: current, text: fonts.length ? `${current} (typed; not found)` : current });
+					fonts = fonts.filter((f) => !SHIPPED.includes(f.family));
+					if (mono) { group('Installed: monospaced', fonts.filter((f) => f.mono)); group('Installed: other fonts', fonts.filter((f) => !f.mono)); } else group('Installed on this computer', fonts);
+					if (current && !fonts.some((f) => f.family === current) && !builtIn.some(([v]) => v === current)) sel.createEl('option', { value: current, text: fonts.length ? `${current} (typed; not found)` : current });
 					sel.createEl('option', { value: OTHER, text: 'Other… (type a name)' });
 					sel.value = current;
 					show(current);
@@ -188,9 +193,10 @@ class AppearanceTab extends SettingTab {
 				row.addExtraButton((b) => b.setIcon('list').setTooltip('Choose from the installed fonts').onClick(() => { this.typingFonts.delete(key); this.display(); }));
 			}
 		};
-		font('Interface font', 'Menus, tabs, settings.', 'interfaceFont', 'System default', false);
-		font('Text font', 'The text of notes.', 'textFont', 'Same as the interface', false);
-		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'Default', true);
+		const systemFont: [string, string] = ['system-ui', 'The system\'s font'];
+		font('Interface font', 'Menus, tabs, settings.', 'interfaceFont', 'Inter (default)', false, [['Source Serif 4', 'Source Serif 4 (serif)'], systemFont]);
+		font('Text font', 'The text of notes.', 'textFont', 'Same as the interface', false, [['Inter', 'Inter'], ['Source Serif 4', 'Source Serif 4 (serif)'], systemFont]);
+		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'JetBrains Mono (default)', true, [['ui-monospace', 'The system\'s monospace font']]);
 		new Setting(el).setName('Text size').setDesc('Size of the text in notes, in pixels.')
 			.addSlider((s) => s.setLimits(10, 30, 1).setValue(c.fontSize).onChange((v) => set('fontSize', v)));
 		new Setting(el).setName('Density').setDesc('How much space the interface leaves around rows, tabs and controls.')

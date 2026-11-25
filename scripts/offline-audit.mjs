@@ -49,7 +49,9 @@ const SOURCE_ONLY_RULES = [[/\.innerHTML\s*[+]?=/, 'innerHTML assignment']];
 
 const CSS_RULES = [
 	[/@import\b/i, '@import'],
-	[/url\(\s*(?!["']?(?:data:|#))/i, 'url() that is not an inline data: URI'],
+	// Allowed: inline data: URIs, #fragments, and the fonts shipped with the app (a relative path under fonts/, which
+	// loads from quire://app).
+	[/url\(\s*(?!["']?(?:data:|#|fonts\/[\w.-]+\.woff2["']?\s*\)))/i, 'url() that is not an inline data: URI or a shipped font'],
 	[/https?:\/\//i, 'remote URL'],
 ];
 

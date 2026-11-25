@@ -30,7 +30,8 @@ body {
 	--line-height-tight: 1.35;
 
 	/* Font roles: chrome (tabs, tree, modeline, keys, paths) is monospace; prose is the UI font. */
-	--font-interface: system-ui, -apple-system, "Segoe UI", "Inter", "Cantarell", "Noto Sans", sans-serif;
+	/* Inter and JetBrains Mono ship with Quire (see build.mjs), so it looks the same on every computer. */
+	--font-interface: "Inter", system-ui, -apple-system, "Segoe UI", "Cantarell", "Noto Sans", sans-serif;
 	--font-monospace: "JetBrains Mono", "Iosevka", "Fira Code", "Source Code Pro", "Cascadia Code", ui-monospace, monospace;
 	--font-chrome: var(--font-monospace);
 	--font-text-theme: var(--font-interface);

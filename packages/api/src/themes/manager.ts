@@ -73,6 +73,17 @@ function block(selector: string, vars: Record<string, string>): string {
  * installed CSS theme and CSS snippets. Settings are kept in the homebase's app.json; themes and
  * snippets are files in `.quire/themes/<name>/theme.css` and `.quire/snippets/<name>.css`.
  */
+/** CSS generic families, used as they are ("system-ui" is the system's font, not a font named so). */
+const GENERIC_FONTS = new Set(['system-ui', 'ui-sans-serif', 'ui-serif', 'ui-monospace', 'sans-serif', 'serif', 'monospace']);
+
+/** The font-family value for a font setting: the family named (quoted), then a fallback; '' for none. */
+export function fontStack(name: string, mono: boolean): string {
+	const n = name.trim().replace(/"/g, '');
+	if (!n) return '';
+	const fallback = mono ? 'monospace' : 'sans-serif';
+	return GENERIC_FONTS.has(n) ? `${n}, ${fallback}` : `"${n}", ${fallback}`;
+}
+
 export class CustomCss extends Events {
 	/** Installed CSS themes (folder names) and snippets (file names without .css). */
 	themes: string[] = [];
@@ -137,7 +148,8 @@ export class CustomCss extends Events {
 		body.dataset.paletteLight = lightP.id;
 
 		const font = (prop: string, value: unknown) => {
-			if (typeof value === 'string' && value.trim()) body.style.setProperty(prop, `"${value.trim().replace(/"/g, '')}", ${prop === '--font-monospace' ? 'monospace' : 'sans-serif'}`);
+			const stack = typeof value === 'string' ? fontStack(value, prop === '--font-monospace') : '';
+			if (stack) body.style.setProperty(prop, stack);
 			else body.style.removeProperty(prop);
 		};
 		font('--font-interface', c.interfaceFont);

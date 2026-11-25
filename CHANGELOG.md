@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Quire ships its own fonts**, so it looks the same on every computer: **Inter** for the interface and notes,
+  **JetBrains Mono** for code and the chrome (tabs, file tree, status bar), and **Source Serif 4** as a serif for note
+  text (*Appearance › Text font*). Latin and Latin Extended (accents, macrons), regular to bold and italic: 588 KB in
+  all, loaded from the app, offline. The system's own fonts remain a choice in each font dropdown.
 - **Chambers Dark and Chambers Light**: muted, formal palettes. Warm charcoal or ivory paper, ink blue, oxblood, brass
   and sage, every pairing meeting WCAG AA.
 - **Title bar hidden by default**: the window buttons sit in Quire's top bar (the Docket bar), which moves the

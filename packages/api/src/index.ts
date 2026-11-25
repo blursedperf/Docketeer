@@ -11,7 +11,7 @@ export { Events, type EventRef } from './events';
 export { Component } from './component';
 export { debounce, normalizePath, Platform, escapeRegExp, fuzzyScore, wordMatch, type Debouncer } from './util';
 export { setIcon, getIcon, addIcon, getIconIds, registerIconPack, getIconPacks, setIconPack, getActiveIconPack, type IconPack, type IconData } from './icons';
-export { CustomCss, cssProblems, accentVars, type Palette } from './themes/manager';
+export { CustomCss, cssProblems, accentVars, fontStack, type Palette } from './themes/manager';
 export { BUILTIN_PALETTES } from './themes/palettes';
 export { CONTRAST_PAIRS, contrastFixes, contrastRatio } from './themes/contrast';
 export { TAbstractFile, TFile, TFolder, type FileStats } from './files';

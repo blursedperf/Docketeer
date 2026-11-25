@@ -1,5 +1,7 @@
 # A default font for Quire
 
+*Done in 0.16.0: recommendations 1–4 below.*
+
 ## Now
 
 Quire ships no fonts. Each setting falls back to what the computer has:
