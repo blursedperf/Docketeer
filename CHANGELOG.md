@@ -10,7 +10,8 @@ Buttons, spacing and settings (see docs/research/ui-review.md):
 - **Dialog buttons** are laid out one way everywhere: at the right, spaced, the main action last. Delete and Export
   had them touching at the left.
 - **Deleting asks with a red *Move to trash*** rather than a blue *Continue*; removing a lock says *Remove lock*.
-- *After idle time* (Security) is a styled number box with "minutes" after it.
+- *After idle time* (Security) is a styled number box with "minutes" after it, and the passphrase boxes in the
+  lock dialogs match the other fields.
 - Settings controls end at the same place on every page, whether it scrolls or not.
 - Shorter *Default location for new notes* options, so none are cut off.
 - Ordinary settings buttons are no longer in the accent colour; the snippets buttons sit in a named row at the right.

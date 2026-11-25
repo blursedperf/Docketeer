@@ -219,7 +219,7 @@ button.mod-cta:hover { background: var(--interactive-accent-hover); }
 button.mod-warning { background: var(--doom-red); color: var(--doom-on-accent); border-color: transparent; }
 button.mod-icon { padding: 0 var(--space-2); }
 
-input[type="text"], input[type="search"], input[type="number"], input:not([type]), textarea, select {
+input[type="text"], input[type="search"], input[type="number"], input[type="password"], input:not([type]), textarea, select {
 	height: var(--control-h);
 	padding: 0 var(--space-2);
 	font: inherit;

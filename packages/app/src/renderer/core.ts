@@ -190,7 +190,7 @@ class AppearanceTab extends SettingTab {
 		};
 		font('Interface font', 'Menus, tabs, settings.', 'interfaceFont', 'System default', false);
 		font('Text font', 'The text of notes.', 'textFont', 'Same as the interface', false);
-		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'Default (a coding font installed here)', true);
+		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'Default', true);
 		new Setting(el).setName('Text size').setDesc('Size of the text in notes, in pixels.')
 			.addSlider((s) => s.setLimits(10, 30, 1).setValue(c.fontSize).onChange((v) => set('fontSize', v)));
 		new Setting(el).setName('Density').setDesc('How much space the interface leaves around rows, tabs and controls.')
