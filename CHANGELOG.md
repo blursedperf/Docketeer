@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.15.2
 
 Buttons, spacing and settings (see docs/research/ui-review.md):
 
