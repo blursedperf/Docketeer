@@ -96,6 +96,7 @@ name teach people to ignore the spellchecker.
 | B2 punctuation after links | **Done.** Cause confirmed: widget buffers (inline images) around the replaced `]]`. Hidden syntax followed by text is now a `display: none` mark. |
 | B3 accented words | **Done.** A word whose accent-free form is in the dictionary is accepted (tested with the real en-AU dictionary). |
 | B5 gap above embeds | **Done.** An embed-only line collapses while not edited; an embed of a missing file stays visible. |
+| B4 / W8 names | **Done.** Words in note and file names, and in the authorities found in the note (parties, short titles, authors), are accepted with their possessives; *Skip names* (on by default) leaves capitalised words mid-sentence alone. Finding authorities costs ~5 ms per edit on a 59,000-character note (cached per document version). |
 
 Smoke check: *live preview: citation brackets are not links, punctuation stays with its link, embeds take their
 line*.

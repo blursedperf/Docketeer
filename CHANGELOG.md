@@ -11,6 +11,11 @@
   line above the player or picture; it comes back when you move onto it to edit it. An embed of a file that is
   not in the homebase now stays visible as written, so it can be fixed, instead of disappearing.
 - **"café", "naïve", "rôle" are not marked as misspelt** when the dictionary has the plain spelling.
+- **Names are not marked as misspelt.** Words in your notes' names ("Donoghue v Stevenson" teaches Donoghue and
+  Stevenson) and in the authorities you cite in a note (*Wyong Shire Council v Shirt*) are accepted, with their
+  possessives (Donoghue's). And a new setting, **Skip names** (Settings → Editor → Spelling, on by default), leaves
+  capitalised words in the middle of a sentence alone: judges, parties, places. Words that start a sentence are
+  still checked.
 
 ## v0.9.0
 

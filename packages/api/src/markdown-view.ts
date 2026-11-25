@@ -147,7 +147,10 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	}
 
 	private spellExtension() {
-		return this.app.vault.getConfig('spellcheck') !== false ? spellcheckExtension(this.app.spellchecker, () => this.app.vault.getConfig('spellcheckFootnotes') === true) : [];
+		return this.app.vault.getConfig('spellcheck') !== false ? spellcheckExtension(this.app.spellchecker, {
+			footnotes: () => this.app.vault.getConfig('spellcheckFootnotes') === true,
+			skipNames: () => this.app.vault.getConfig('spellcheckNames') !== false,
+		}) : [];
 	}
 
 	/**

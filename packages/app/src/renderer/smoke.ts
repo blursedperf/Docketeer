@@ -442,6 +442,28 @@ export async function runSmoke(app: App): Promise<void> {
 		const ok = ready && au === 'sentense,mispelled' && us.includes('Colour') && us.includes('organise') && withNotes.includes('teh');
 		return ok || `ready=${ready} au=${au} us=${us.join(',')} footnotes=${withNotes.join(',')}`;
 	});
+	await check('spelling: names from note titles and cited authorities pass, and mid-sentence names unless turned off', async () => {
+		const sp = app.spellchecker;
+		await until(() => sp.ready, 10000);
+		const party = await vault.create('Donoghue v Stevenson.md', 'A case brief.\n');
+		const file = await vault.create('Names.md', "Donoghue's friend bought it.\n\nLords Atkin, Thankerton and Buckmaster sat. Negligance was argued.\n\nSee *Wyong Shire Council v Shirt* (1980) 146 CLR 40.\n\nWyong was cited.\n\nZqxville is a typo at the start.\n");
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(file);
+		const cm = (leaf.view as MarkdownView).editor.cm;
+		cm.dispatch({ selection: { anchor: cm.state.doc.length } });
+		await sleep(150);
+		const marked = () => [...(leaf.view as MarkdownView).contentEl.querySelectorAll('.cm-misspelled')].map((e) => e.textContent).join(',');
+		const on = marked();
+		await app.setConfig('spellcheckNames', false);
+		await sleep(150);
+		const off = marked();
+		await app.setConfig('spellcheckNames', true);
+		leaf.detach();
+		await vault.delete(file);
+		await vault.delete(party);
+		// On: real misspellings only. Off: mid-sentence names are marked, but not those in note titles or authorities.
+		return (on === 'Negligance,Zqxville' && off === 'Atkin,Thankerton,Buckmaster,Negligance,Zqxville') || `on=${on} off=${off}`;
+	});
 	await check('legal terms are accepted, and marked again when turned off', async () => {
 		const sp = app.spellchecker;
 		const file = await vault.create('Legal.md', 'The obiter dicta, eg on extinguishment, are not justiciable.\n\n');

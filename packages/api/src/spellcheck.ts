@@ -5,12 +5,13 @@
  * on) footnotes, where citations would be flagged throughout.
  */
 import { syntaxTree } from '@codemirror/language';
-import { type Extension, StateEffect } from '@codemirror/state';
+import { type Extension, StateEffect, type Text } from '@codemirror/state';
 import { Decoration, type DecorationSet, type EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import nspell from 'nspell';
 import type { App } from './app';
 import { Events } from './events';
 import { LEGAL_WORDS } from './legal-words';
+import { findAuthorities } from './authorities';
 
 /** Quire's own words and the names of keys, which notes about Quire use: never marked as misspelt. */
 export const APP_WORDS = ['homebase', 'homebases', 'Ctrl', 'Cmd', 'Esc', 'Alt'];
@@ -89,6 +90,28 @@ export class Spellchecker extends Events {
 		if (lang) await this.load(lang);
 	}
 
+	private noteNames: Set<string> | null = null;
+	private watchingNames = false;
+
+	/**
+	 * Capitalised words in the homebase's note and file names ("Donoghue v Stevenson" → Donoghue, Stevenson):
+	 * the parties, places and people the notes are about, so not misspellings.
+	 */
+	nameWords(): Set<string> {
+		if (!this.watchingNames) {
+			this.watchingNames = true;
+			const stale = () => { this.noteNames = null; };
+			this.app.vault.on('create', stale);
+			this.app.vault.on('delete', stale);
+			this.app.vault.on('rename', stale);
+		}
+		if (!this.noteNames) {
+			this.noteNames = new Set();
+			for (const f of this.app.vault.getFiles()) for (const w of nameTokens(f.basename)) this.noteNames.add(w);
+		}
+		return this.noteNames;
+	}
+
 	/** True when `word` is spelled correctly (or not checked yet). */
 	check(word: string): boolean {
 		if (!this.checker || this.ignored.has(word)) return true;
@@ -129,6 +152,37 @@ export class Spellchecker extends Events {
 	}
 }
 
+/** Capitalised words of two letters or more in `text`: the words that can be names. */
+export function nameTokens(text: string): string[] {
+	return [...text.matchAll(/\p{Lu}[\p{L}\p{M}]+/gu)].map((m) => m[0]);
+}
+
+const authorityCache = new WeakMap<Text, Set<string>>();
+
+/** Name words of the authorities in a note: parties, short titles and authors ("Wyong", "Shirt", "Fleming"). */
+export function authorityWords(doc: Text): Set<string> {
+	let words = authorityCache.get(doc);
+	if (!words) {
+		words = new Set();
+		for (const a of findAuthorities(doc.toString())) {
+			for (const s of [a.name, ...a.aliases, a.author ?? '']) for (const w of nameTokens(s)) words.add(w);
+		}
+		authorityCache.set(doc, words);
+	}
+	return words;
+}
+
+/**
+ * Whether the word at `index` in `text` starts a sentence: at the start of a line (after any list, task,
+ * quote or heading marks), or after . ! ? or :, with any opening quotes, brackets or emphasis between.
+ */
+export function startsSentence(text: string, index: number): boolean {
+	const lineStart = text.lastIndexOf('\n', index - 1) + 1;
+	const before = text.slice(lineStart, index);
+	if (/^\s*(?:(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?|>\s*|#{1,6}\s+)*["'“‘(\[*_]*$/.test(before)) return true;
+	return /[.!?:]["'”’)\]*_]*\s+["'“‘(\[*_]*$/.test(before);
+}
+
 /** `word` without accents or other combining marks: "café" → "cafe", "naïve" → "naive". */
 export function withoutAccents(word: string): string {
 	return word.normalize('NFD').replace(/\p{M}/gu, '').normalize('NFC');
@@ -159,8 +213,27 @@ function skipRanges(view: EditorView, from: number, to: number, text: string, fo
 	return skip;
 }
 
-function build(view: EditorView, checker: Spellchecker, footnotes: boolean): DecorationSet {
+export interface SpellcheckOptions {
+	/** Check footnotes too. */
+	footnotes(): boolean;
+	/** Skip capitalised words in mid-sentence (names). */
+	skipNames?(): boolean;
+}
+
+/** A name: in the homebase's note names, an authority in this note, or (with skipNames) capitalised mid-sentence. */
+function isName(word: string, names: Set<string>, authorities: Set<string>, skip: boolean, text: string, index: number): boolean {
+	if (!/^\p{Lu}/u.test(word)) return false;
+	const base = word.replace(/['’]s$/u, '');
+	if (names.has(base) || authorities.has(base)) return true;
+	return skip && !startsSentence(text, index);
+}
+
+function build(view: EditorView, checker: Spellchecker, opts: SpellcheckOptions): DecorationSet {
+	const footnotes = opts.footnotes();
+	const skipNames = opts.skipNames?.() ?? false;
 	if (!checker.ready) return Decoration.none;
+	const names = checker.nameWords();
+	const authorities = authorityWords(view.state.doc);
 	const ranges = [];
 	const head = view.state.selection.main.head;
 	for (const { from, to } of view.visibleRanges) {
@@ -173,20 +246,20 @@ function build(view: EditorView, checker: Spellchecker, footnotes: boolean): Dec
 			if (word.length < 2 || /^\p{Lu}+$/u.test(word)) continue;
 			if (head >= a && head <= b) continue; // the word being typed
 			if (skip.some(([s, e]) => a < e && b > s)) continue;
-			if (!checker.check(word)) ranges.push(misspelled.range(a, a + word.length));
+			if (!checker.check(word) && !isName(word, names, authorities, skipNames, text, m.index)) ranges.push(misspelled.range(a, a + word.length));
 		}
 	}
 	return Decoration.set(ranges, true);
 }
 
 /** Mark misspellings in an editor. */
-export function spellcheckExtension(checker: Spellchecker, footnotes: () => boolean): Extension {
+export function spellcheckExtension(checker: Spellchecker, opts: SpellcheckOptions): Extension {
 	return ViewPlugin.fromClass(class {
 		decorations: DecorationSet;
-		constructor(view: EditorView) { this.decorations = build(view, checker, footnotes()); }
+		constructor(view: EditorView) { this.decorations = build(view, checker, opts); }
 		update(u: ViewUpdate) {
 			const refresh = u.transactions.some((t) => t.effects.some((e) => e.is(spellRefresh)));
-			if (u.docChanged || u.viewportChanged || u.selectionSet || refresh) this.decorations = build(u.view, checker, footnotes());
+			if (u.docChanged || u.viewportChanged || u.selectionSet || refresh) this.decorations = build(u.view, checker, opts);
 		}
 	}, { decorations: (v) => v.decorations });
 }
