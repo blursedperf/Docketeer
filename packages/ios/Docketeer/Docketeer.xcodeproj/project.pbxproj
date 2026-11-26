@@ -3,20 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		D0C4E7E3000000000000001C /* app in Resources */ = {isa = PBXBuildFile; fileRef = D0C4E7E3000000000000001B /* app */; };
-		D0C4E7E3000000000000001F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E3000000000000001E /* AppDelegate.swift */; };
-		D0C4E7E30000000000000021 /* PageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E30000000000000020 /* PageViewController.swift */; };
-		D0C4E7E30000000000000023 /* Bridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E30000000000000022 /* Bridge.swift */; };
-		D0C4E7E30000000000000025 /* Channels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E30000000000000024 /* Channels.swift */; };
-		D0C4E7E30000000000000027 /* Lockdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E30000000000000026 /* Lockdown.swift */; };
-		D0C4E7E30000000000000029 /* AppFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E30000000000000028 /* AppFiles.swift */; };
-		D0C4E7E3000000000000002B /* QuireSchemeHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E3000000000000002A /* QuireSchemeHandler.swift */; };
-		D0C4E7E3000000000000002D /* AppFilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E3000000000000002C /* AppFilesTests.swift */; };
-		D0C4E7E300000000000000F2 /* ConsoleRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C4E7E300000000000000F1 /* ConsoleRelay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,16 +25,16 @@
 		D0C4E7E30000000000000005 /* DocketeerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocketeerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C4E7E3000000000000001B /* app */ = {isa = PBXFileReference; lastKnownFileType = folder; name = app; path = Resources/app; sourceTree = "<group>"; };
 		D0C4E7E3000000000000001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D0C4E7E3000000000000001E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		D0C4E7E30000000000000020 /* PageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageViewController.swift; sourceTree = "<group>"; };
-		D0C4E7E30000000000000022 /* Bridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bridge.swift; sourceTree = "<group>"; };
-		D0C4E7E30000000000000024 /* Channels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channels.swift; sourceTree = "<group>"; };
-		D0C4E7E30000000000000026 /* Lockdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lockdown.swift; sourceTree = "<group>"; };
-		D0C4E7E30000000000000028 /* AppFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFiles.swift; sourceTree = "<group>"; };
-		D0C4E7E3000000000000002A /* QuireSchemeHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuireSchemeHandler.swift; sourceTree = "<group>"; };
-		D0C4E7E3000000000000002C /* AppFilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFilesTests.swift; sourceTree = "<group>"; };
-		D0C4E7E300000000000000F1 /* ConsoleRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsoleRelay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D0C4E7E3000000000000002E /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; path = App; sourceTree = "<group>"; };
+		D0C4E7E3000000000000002F /* Bridge */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Bridge; sourceTree = "<group>"; };
+		D0C4E7E30000000000000030 /* Lockdown */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Lockdown; sourceTree = "<group>"; };
+		D0C4E7E30000000000000031 /* Scheme */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Scheme; sourceTree = "<group>"; };
+		D0C4E7E30000000000000032 /* Homebase */ = {isa = PBXFileSystemSynchronizedRootGroup; path = Homebase; sourceTree = "<group>"; };
+		D0C4E7E3000000000000001A /* DocketeerTests */ = {isa = PBXFileSystemSynchronizedRootGroup; name = DocketeerTests; path = ../DocketeerTests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		D0C4E7E3000000000000000A /* Frameworks */ = {
@@ -87,56 +78,12 @@
 				D0C4E7E3000000000000002E /* App */,
 				D0C4E7E3000000000000002F /* Bridge */,
 				D0C4E7E30000000000000030 /* Lockdown */,
+				D0C4E7E30000000000000032 /* Homebase */,
 				D0C4E7E30000000000000031 /* Scheme */,
 				D0C4E7E3000000000000001B /* app */,
 				D0C4E7E3000000000000001D /* Info.plist */,
 			);
 			name = Docketeer;
-			sourceTree = "<group>";
-		};
-		D0C4E7E3000000000000001A /* DocketeerTests */ = {
-			isa = PBXGroup;
-			children = (
-				D0C4E7E3000000000000002C /* AppFilesTests.swift */,
-			);
-			name = DocketeerTests;
-			path = ../DocketeerTests;
-			sourceTree = "<group>";
-		};
-		D0C4E7E3000000000000002E /* App */ = {
-			isa = PBXGroup;
-			children = (
-				D0C4E7E3000000000000001E /* AppDelegate.swift */,
-				D0C4E7E300000000000000F1 /* ConsoleRelay.swift */,
-				D0C4E7E30000000000000020 /* PageViewController.swift */,
-			);
-			path = App;
-			sourceTree = "<group>";
-		};
-		D0C4E7E3000000000000002F /* Bridge */ = {
-			isa = PBXGroup;
-			children = (
-				D0C4E7E30000000000000022 /* Bridge.swift */,
-				D0C4E7E30000000000000024 /* Channels.swift */,
-			);
-			path = Bridge;
-			sourceTree = "<group>";
-		};
-		D0C4E7E30000000000000030 /* Lockdown */ = {
-			isa = PBXGroup;
-			children = (
-				D0C4E7E30000000000000026 /* Lockdown.swift */,
-			);
-			path = Lockdown;
-			sourceTree = "<group>";
-		};
-		D0C4E7E30000000000000031 /* Scheme */ = {
-			isa = PBXGroup;
-			children = (
-				D0C4E7E30000000000000028 /* AppFiles.swift */,
-				D0C4E7E3000000000000002A /* QuireSchemeHandler.swift */,
-			);
-			path = Scheme;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -153,6 +100,13 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D0C4E7E3000000000000002E /* App */,
+				D0C4E7E3000000000000002F /* Bridge */,
+				D0C4E7E30000000000000030 /* Lockdown */,
+				D0C4E7E30000000000000031 /* Scheme */,
+				D0C4E7E30000000000000032 /* Homebase */,
 			);
 			name = Docketeer;
 			productName = Docketeer;
@@ -171,6 +125,9 @@
 			);
 			dependencies = (
 				D0C4E7E30000000000000018 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D0C4E7E3000000000000001A /* DocketeerTests */,
 			);
 			name = DocketeerTests;
 			productName = DocketeerTests;
@@ -193,7 +150,6 @@
 				};
 			};
 			buildConfigurationList = D0C4E7E3000000000000000E /* Build configuration list for PBXProject "Docketeer" */;
-			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -234,14 +190,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C4E7E3000000000000001F /* AppDelegate.swift in Sources */,
-				D0C4E7E300000000000000F2 /* ConsoleRelay.swift in Sources */,
-				D0C4E7E30000000000000021 /* PageViewController.swift in Sources */,
-				D0C4E7E30000000000000023 /* Bridge.swift in Sources */,
-				D0C4E7E30000000000000025 /* Channels.swift in Sources */,
-				D0C4E7E30000000000000027 /* Lockdown.swift in Sources */,
-				D0C4E7E30000000000000029 /* AppFiles.swift in Sources */,
-				D0C4E7E3000000000000002B /* QuireSchemeHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,7 +197,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C4E7E3000000000000002D /* AppFilesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

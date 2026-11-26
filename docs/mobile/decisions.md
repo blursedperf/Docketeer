@@ -106,8 +106,9 @@ and there is no third-party code for the offline audit to check.
 
 What else Phase 0 settled:
 
-- **The Xcode project is written by hand** (`project.pbxproj` lists each file), so no project generator is
-  needed. A new Swift file has to be added to the project as well (Xcode does this when the file is created there).
+- **The Xcode project uses synchronised folders** (Xcode 16 and later): `App/`, `Bridge/`, `Homebase/`,
+  `Lockdown/`, `Scheme/` and `DocketeerTests/` are included whole, so a new Swift file needs no change to
+  `project.pbxproj`. No project generator is needed.
 - **Bundle id `io.github.blursedperf.docketeer`**, the same as the desktop app id, until the owner chooses the
   App Store one (PLAN §6). **iOS 17** is the minimum, as assumed in PLAN §6.
 - **The offline audit covers Swift** now: network APIs, web addresses, opening URLs, ATS exceptions, Swift
