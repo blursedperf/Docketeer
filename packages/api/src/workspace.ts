@@ -612,10 +612,17 @@ export class Workspace extends Events {
 
 	getUnpinnedLeaf(): WorkspaceLeaf { return this.getLeaf(false); }
 
-	/** A new leaf beside (vertical) or below (horizontal) `leaf`. */
+	/**
+	 * One pane at a time (a narrow window, such as an iPhone; set by the app): nothing splits, and what would open
+	 * in a new pane opens as a new tab in this one. Panes already there stay, out of sight.
+	 */
+	singlePane = false;
+
+	/** A new leaf beside (vertical) or below (horizontal) `leaf`; a new tab beside it when there is one pane at a time. */
 	createLeafBySplit(leaf: WorkspaceLeaf, direction: SplitDirection = 'vertical', before = false): WorkspaceLeaf {
 		const tabs = leaf.parent;
 		if (!tabs) return this.getLeaf('tab');
+		if (this.singlePane) return this.createLeafInTabs(tabs, tabs.children.indexOf(leaf) + 1);
 		const split = tabs.parent!;
 		const newTabs = new WorkspaceTabs(this);
 		const fresh = new WorkspaceLeaf(this);
@@ -661,6 +668,7 @@ export class Workspace extends Events {
 	private leafBeside(dir: 'left' | 'right'): WorkspaceLeaf {
 		const leaf = this.activeRootLeaf() ?? this.getMostRecentLeaf();
 		if (!leaf?.parent) return this.createLeafInTabs(this.activeRootTabs());
+		if (this.singlePane) return this.createLeafBySplit(leaf, 'vertical', dir === 'left');
 		const { tree, panes } = this.layoutTree();
 		const id = [...panes].find(([, t]) => t === leaf.parent)?.[0];
 		const next = id ? neighbour(tree, id, dir) : null;
