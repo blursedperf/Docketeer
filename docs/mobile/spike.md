@@ -19,9 +19,10 @@ Tried by the owner on an iPhone 15 Pro Max, from Xcode.
 
 - **Editing feels great.** No problems reported with typing or live preview.
 - **Opening is very fast**: the example homebase is there at once.
-- **The Docket is too wide for the iPhone.** Expected: the phone gets the Docket as a sheet in Phase 3.
+- **The Docket is too wide for the iPhone.** Expected: the phone gets the Docket as a sheet in Phase 3 (now Phase 2: the
+  iPhone comes before the iPad, decisions.md §8).
 - **Tabs take too much room.** The owner suggests putting open tabs behind a "show open tabs" button on the
-  phone. Added to Phase 3 (compact layout).
+  phone. Added to Phase 3 (now Phase 2), compact layout.
 
 Not reported on separately: selection handles and the edit menu, autocorrect, dictation, undo (shake or
 three-finger swipe), `[[` suggestions by touch. None came up as a problem.
@@ -33,10 +34,10 @@ Tried by the owner with a Logitech keyboard for iPad.
 - **Works as intended**: editing, and the shortcuts tried (⌘D for the Docket, ⌘2 for its panels, ⌘\ to
   split) reach the page; iPadOS does not take them.
 - **The keyboard has no Escape key.** For now: Settings → General → Keyboard → Hardware Keyboard → Modifier
-  Keys, Caps Lock → Escape. Docketeer should not need Escape alone: Phase 2 adds ⌘. as Escape (a `UIKeyCommand`
+  Keys, Caps Lock → Escape. Docketeer should not need Escape alone: Phase 2 (now Phase 3) adds ⌘. as Escape (a `UIKeyCommand`
   forwarded to the page). The Docket key already closes the Docket.
 
 ## Verdict
 
 Editing feels right on both. The owner confirmed the Phase 0 exit check on 2026-11-27. What is left is layout
-(the phone, Phase 3) and Escape on keyboards without one (Phase 2).
+(the phone, now Phase 2) and Escape on keyboards without one (now Phase 3).

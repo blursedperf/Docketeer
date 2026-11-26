@@ -5,10 +5,9 @@ This plan is written for a coding agent such as Claude Code. Work through it in 
 
 **Goal.** Build one universal iOS app from this repository:
 
-- **iPhone:** a *companion*. It is for reading, search, quick capture, light edits, tasks and AGLC4 citation
-  checks.
-- **iPad:** *parity* with the desktop app. That means the Docket tray, tiling panes, every shortcut, both
-  plugins in full, and PDF beside notes.
+- **iPhone:** the owner's second device, after macOS. It is for reading, search, quick capture, tasks and AGLC4
+  citation checks, and comfortable for real writing: footnotes, citing and exports (decisions.md §8).
+- **iPad:** a distant third. It gets what the iPhone has, in the regular layout; the rest of iPad parity waits.
 
 Both run the same code. The layout depends on the window's width, not on the device.
 
@@ -331,42 +330,12 @@ that editing feels right, or decides what changes. Stop here and report.
 in both directions, through iCloud Drive (the owner does not use Syncthing, §6), and forces a conflict once. Nothing is lost.
 Stop and report.
 
-### Phase 2: iPad parity (3 to 4 weeks)
+### Phase 2: iPhone, with full editing (3 to 4 weeks)
 
-- [ ] Pointer and trackpad: hover preview and context menus work. Long-press opens the same menus on touch.
-      Context menus are in `markdown-view.ts`, `workspace.ts`, `embeds-editor.ts`, `docket/docket.ts`,
-      `docket/panels/common.ts` and `pdf/view.ts`.
-- [ ] Keyboard:
-      - Every keymap works with a hardware keyboard.
-      - Register a `UIKeyCommand` for each Docket-level command and forward it to the command id, so iPadOS
-        shows it in the ⌘-hold overlay and doesn't take the key itself.
-      - Check that ⌘D and the other defaults aren't system-reserved. If one is, propose an alternative in
-        `decisions.md` and ask the user.
-      - ⌘. as Escape (a `UIKeyCommand` that sends the page an Escape key): many iPad keyboards, such as the
-        owner's Logitech one, have no Escape key (`spike.md`).
-- [ ] Multitasking: Split View, Slide Over and Stage Manager resize cleanly. Below the compact width, switch to
-      the compact layout (Phase 3 builds it; for now, make sure nothing breaks).
-- [ ] Docket drag-to-rearrange (`docket/drag.ts`, `drag-paths.ts`) works with touch and with the pointer.
-- [ ] AGLC4 page preview:
-      - Bundle a metric-compatible serif for Times New Roman (Tinos or Liberation Serif).
-      - Check its licence and add it to `THIRD_PARTY_NOTICES`.
-      - Use it on iOS.
-      - Run the fidelity tests (`plugins/aglc4/test/fidelity`) against it and record any differences.
-- [ ] Export: AGLC4 Word, HTML and Markdown exports still write into the homebase. Add an optional
-      `app.shareFile?(path)` to `HostBridge` that opens the share sheet on iOS, and offer "Share…" after an
-      export. Desktop leaves it out and keeps its current behaviour.
-- [ ] PDF viewer: pdf.js loads its engine, CMaps, standard fonts and wasm from the bundle, and opens a
-      PDF from the homebase.
-- [ ] Settings:
-      - Hide desktop-only items, such as title bar colours and relaunch.
-      - Everything else shows on iPad.
-- [ ] Screenshots: add iPad viewports (portrait, landscape and half-screen Split View) to `npm run shots`
-      for the iOS run, with baselines in `test/visual/ios/`.
-
-**Exit check:** every test suite is green, the screenshots are reviewed, and the AGLC4 fidelity results are
-recorded. **The user studies on the iPad alone for a week.** Stop and report.
-
-### Phase 3: iPhone companion (2 to 3 weeks)
+The owner's devices, in order: macOS, then iPhone, with the iPad a distant third (decisions.md §8). So the iPhone
+comes before the iPad, and it is more than a companion: reading, search, capture, tasks and citation checks, and
+comfortable for real writing, with footnotes, AGLC4 citing and exports. Tiling and the desktop-only editors stay
+hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) are done here, once.
 
 - [ ] Compact layout (`body.is-compact`):
       - one pane, with tiling turned off and the current pane kept;
@@ -374,7 +343,7 @@ recorded. **The user studies on the iPad alone for a week.** Stop and report.
       - open tabs behind a "show open tabs" button instead of the tab bar (the owner's suggestion after
         trying Phase 0 on an iPhone, `spike.md`);
       - Phone, and an iPad in Slide Over, both use it.
-- [ ] The Docket as a sheet:
+- [ ] The Docket as a sheet (it is too wide for the iPhone now, `spike.md`):
       - Pull down from the top edge, or tap a Docket button.
       - The search field gets focus and the keyboard opens.
       - Panels become tabs in the order set in `panels-model.ts`.
@@ -383,8 +352,17 @@ recorded. **The user studies on the iPad alone for a week.** Stop and report.
       - `[[` link, bold, task, heading, footnote, AGLC4 cite, slash menu (`slash.ts`), undo, and a button to
         hide the keyboard;
       - each button runs an existing command id.
+- [ ] Touch: long-press opens the menus a right-click opens on desktop. Context menus are in `markdown-view.ts`,
+      `workspace.ts`, `embeds-editor.ts`, `docket/docket.ts`, `docket/panels/common.ts` and `pdf/view.ts`.
+- [ ] Export: AGLC4 Word, HTML and Markdown exports still write into the homebase. Add an optional
+      `app.shareFile?(path)` to `HostBridge` that opens the share sheet on iOS, and offer "Share…" after an
+      export. Desktop leaves it out and keeps its current behaviour. Export to PDF on iOS: `printToPdf` with
+      WebKit's own PDF output (`WKWebView.createPDF`), a page that runs no scripts, as desktop.
+- [ ] PDF viewer: pdf.js loads its engine, CMaps, standard fonts and wasm from the bundle, and opens a
+      PDF from the homebase.
 - [ ] Hide these in compact mode: tiling commands, the hotkey editor, vim mode, custom-panel editing and AGLC4
       page preview.
+- [ ] Settings: hide desktop-only items, such as title bar colours and relaunch.
 - [ ] Safe areas: `viewport-fit=cover` and `env(safe-area-inset-*)` in `app.css`.
 - [ ] On touch, density defaults to "spacious" when no density has been saved.
 - [ ] Locking: lock when the app goes to the background (when locking is enabled). **Face ID / Touch ID
@@ -392,9 +370,33 @@ recorded. **The user studies on the iPad alone for a week.** Stop and report.
       - Write the design in `docs/docket/locking.md`: wrap the homebase key in the Keychain with
         `.biometryCurrentSet`, and add a fallback to the passphrase.
       - Stop for the user's sign-off before implementing it.
-- [ ] Screenshots: add iPhone viewports, portrait and with the keyboard up.
+- [ ] The simulator smoke run on an iPhone-sized window as well as the iPad-sized one.
+- [ ] Screenshots: iPhone viewports, portrait and with the keyboard up, with baselines in `test/visual/ios/`.
 
 **Exit check:** all suites are green. **The user uses it daily on their iPhone for a week.** Stop and report.
+
+### Phase 3: iPad, later and trimmed
+
+The iPad is a distant third (decisions.md §8): what is shared with the iPhone came in Phase 2, and the rest waits
+until the owner asks for it.
+
+- [ ] Pointer and trackpad: hover preview and context menus work.
+- [ ] Keyboard:
+      - Every keymap works with a hardware keyboard.
+      - Register a `UIKeyCommand` for each Docket-level command and forward it to the command id, so iPadOS
+        shows it in the ⌘-hold overlay and doesn't take the key itself.
+      - ⌘. as Escape (a `UIKeyCommand` that sends the page an Escape key): many iPad keyboards, such as the
+        owner's Logitech one, have no Escape key (`spike.md`).
+- [ ] Multitasking: Split View, Slide Over and Stage Manager resize cleanly between the compact and regular
+      layouts.
+- [ ] Docket drag-to-rearrange (`docket/drag.ts`, `drag-paths.ts`) works with touch and with the pointer.
+- [ ] AGLC4 page preview:
+      - Bundle a metric-compatible serif for Times New Roman (Tinos or Liberation Serif).
+      - Check its licence and add it to `THIRD_PARTY_NOTICES`.
+      - Run the fidelity tests (`plugins/aglc4/test/fidelity`) against it and record any differences.
+- [ ] Screenshots: iPad viewports (portrait, landscape and half-screen Split View).
+
+**Exit check:** all suites are green. The user tries it on their iPad. Stop and report.
 
 ### Phase 4: Release (1 to 2 weeks)
 

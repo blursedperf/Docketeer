@@ -121,7 +121,7 @@ What else Phase 0 settled:
   homebase on both, with no console errors and no refused navigations. WebKit logs that it could not read
   WebPrivacy's fingerprinting list; that is a list the system keeps, not a request from Docketeer.
 - **Phone layout:** the iPhone shows the desktop layout squeezed (two panes, the first-run hint running off the
-  side). That is expected until the compact layout in Phase 3.
+  side). That is expected until the compact layout in Phase 3 (now Phase 2, §8).
 
 ## 5. Phase 1: homebases on disk
 
@@ -319,3 +319,21 @@ would then run without AGLC4 or Tasks until it was restarted.
   tab had closed; it compared saved settings as JSON text, which depends on key order (native keeps settings in an
   unordered map); and a scroll check allowed 1px of rounding, where WebKit needs 2.
 - **Console errors in the relay** now carry the error's name and message: WebKit's `stack` has neither.
+
+## 8. The iPhone before the iPad (2026-11-27)
+
+The plan assumed the iPad would be the main study device, with the iPhone as a companion. The owner's devices
+are, in order, macOS, then the iPhone, with the iPad a distant third. So:
+
+- **Phase 2 is now the iPhone**, and it is more than a companion: reading, search, capture, tasks and citation
+  checks, and comfortable for real writing (the toolbar above the keyboard, footnotes and AGLC4 citing, and
+  exports with the share sheet). Tiling, the hotkey editor, vim mode, custom-panel editing and the AGLC4 page
+  preview stay hidden on a narrow window.
+- **Items the iPad also needs are done with the iPhone**, once: export and Share, Export to PDF, the PDF viewer,
+  long-press menus, the settings to hide.
+- **Phase 3 is the iPad, later and trimmed**: pointer and keyboard commands (⌘. as Escape among them),
+  multitasking, Docket dragging, the AGLC4 page preview and its fidelity tests, waiting until the owner asks.
+
+**Found on the iPhone before Phase 2:** the page scrolled sideways and the first-run hint's × was off the screen
+(the hint was one line wider than the screen). Fixed: on a narrow window the hint wraps within the screen and the
+status bar scrolls within itself.
