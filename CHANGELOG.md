@@ -10,6 +10,19 @@
   of the link instead of breaking the line, also after an alias (`[[Note|text]]`) where no suggestions are shown.
 - **Selected text has one highlight**: the browser's own selection was painted over the editor's, so selected text
   showed two overlapping highlights.
+- **Live preview keeps the cursor's line formatted**: only what the cursor touches shows its Markdown (one **bold**
+  word, one link, one highlight, a list marker), and the rest of the line stays formatted. A heading's `#` and a
+  quote's `>` still show on the cursor's line.
+- **Lists in live preview look as they do in reading view**: each level indented the same amount, bullets by level
+  (•, ◦, ▪), numbers and task boxes in the space before the text, and wrapped lines starting under the text rather than
+  under the marker. A marker shows as written while the cursor is on it, in the same place, so the text does not move.
+  Reading view's markers take the accent colour.
+- **A hidden embed is easy to get back to**: a picture or player has a button (on hover) that shows its `![[…]]` with
+  the cursor in it, and a right-click menu: open, open in a new tab or to the right, rename the file, copy, show the
+  text, remove the embed.
+- **A fuller right-click menu in the editor**: on a link, Open link (or Create note), Open in new tab, Open to the right,
+  Rename, Copy link; on a selection, Bold, Italics, Highlight, Strikethrough, Inline code and Make a link; Insert link
+  with nothing selected; and Undo and Redo. Menus no longer end in a separator.
 
 ## v0.17.3
 

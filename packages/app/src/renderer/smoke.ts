@@ -567,7 +567,7 @@ export async function runSmoke(app: App): Promise<void> {
 	});
 
 	// Live preview (Phase 3).
-	await check('live preview formats away from the cursor, raw on its line', async () => {
+	await check('live preview formats away from the cursor; only what the cursor touches shows its marks', async () => {
 		const file = await vault.create('Live.md', '# Heading\n\nSome **bold** and *em* and `code` and ==hi==.\n\nA [link](Welcome.md) and [[Welcome|home]].\n\n- bullet\n- [ ] task\n\n> quote\n\n---\n\nEnd');
 		await workspace.getLeaf(false).openFile(file);
 		const view = workspace.getActiveViewOfType(MarkdownView)!;
@@ -587,9 +587,17 @@ export async function runSmoke(app: App): Promise<void> {
 		box?.click();
 		await sleep(30);
 		const ticked = cm.state.doc.line(8).text === '- [x] task';
+		// In "bold": that word shows its marks, the rest of its line stays formatted; at the line's start, nothing shows.
+		cm.dispatch({ selection: { anchor: cm.state.doc.line(3).from + 8 } });
+		await sleep(30);
+		const inBold = lineText(3);
 		cm.dispatch({ selection: { anchor: cm.state.doc.line(3).from + 2 } });
 		await sleep(30);
-		const raw = lineText(3) === 'Some **bold** and *em* and `code` and ==hi==.';
+		const inSome = lineText(3);
+		cm.dispatch({ selection: { anchor: cm.state.doc.line(1).from + 4 } });
+		await sleep(30);
+		const headingRaw = lineText(1);
+		const raw = inBold === 'Some **bold** and em and code and hi.' && inSome === 'Some bold and em and code and hi.' && headingRaw === '# Heading';
 		cm.dispatch({ selection: { anchor: cm.state.doc.length } });
 		await sleep(30);
 		const link = [...document.querySelectorAll<HTMLElement>('.cm-lp-wikilink')].find((e) => e.textContent === 'home');
@@ -603,7 +611,116 @@ export async function runSmoke(app: App): Promise<void> {
 		await app.setConfig('livePreview', true);
 		const source = sourceLine === 'Some **bold** and *em* and `code` and ==hi==.';
 		const ok = formatted && ticked && raw && opened && source;
-		return ok || `formatted=${formatted} [h=${JSON.stringify(heading)} i=${JSON.stringify(inline)} l=${JSON.stringify(links)} bullets=${bullets} box=${!!box} q=${quote} hr=${rule}] ticked=${ticked} raw=${raw} opened=${opened} source=${source}`;
+		return ok || `formatted=${formatted} [h=${JSON.stringify(heading)} i=${JSON.stringify(inline)} l=${JSON.stringify(links)} bullets=${bullets} box=${!!box} q=${quote} hr=${rule}] ticked=${ticked} raw=${raw} [${JSON.stringify(inBold)} ${JSON.stringify(inSome)} ${JSON.stringify(headingRaw)}] opened=${opened} source=${source}`;
+	});
+
+	await check('live preview lists: indented by level, wrapped lines under the text, markers as written when touched', async () => {
+		const file = await vault.create('Lists smoke.md', 'Top\n\n- one, a point long enough to wrap onto a second line in the pane so that its wrapped part can be measured against the start of its text\n\t- two\n- [ ] task\n1. first\n');
+		await workspace.getLeaf(false).openFile(file);
+		const cm = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		cm.dispatch({ selection: { anchor: 0 } });
+		await sleep(80);
+		const lineEl = (n: number) => { const d = cm.domAtPos(cm.state.doc.line(n).to).node; return (d instanceof HTMLElement ? d : d.parentElement)!.closest<HTMLElement>('.cm-line')!; };
+		const problems: string[] = [];
+		const one = lineEl(3);
+		const two = lineEl(4);
+		if (!one.classList.contains('cm-lp-li') || !two.classList.contains('cm-lp-li')) problems.push('no list class');
+		const pad = (el: HTMLElement) => parseFloat(getComputedStyle(el).paddingLeft);
+		if (!(pad(two) > pad(one) && pad(one) > 0)) problems.push(`padding ${pad(one)} ${pad(two)}`);
+		// The text starts where wrapped lines do: at the line's padding.
+		const range = document.createRange();
+		const walker = document.createTreeWalker(one, NodeFilter.SHOW_TEXT);
+		let textNode: Node | null = null;
+		for (let n = walker.nextNode(); n; n = walker.nextNode()) if (n.textContent?.startsWith('one')) { textNode = n; break; }
+		if (textNode) {
+			range.setStart(textNode, 0); range.setEnd(textNode, 1);
+			const rects = [...range.getClientRects()];
+			const lineLeft = one.getBoundingClientRect().left + pad(one);
+			if (rects[0] && Math.abs(rects[0].left - lineLeft) > 2) problems.push(`text at ${rects[0].left}, wrap at ${lineLeft}`);
+		} else problems.push('no text node');
+		if (one.querySelector('.cm-lp-bullet')?.textContent !== '•' || two.querySelector('.cm-lp-bullet')?.textContent !== '◦') problems.push('bullets by level');
+		if (!lineEl(5).querySelector('.cm-lp-task-slot input')) problems.push('task box');
+		if (lineEl(6).querySelector('.cm-lp-list-number')?.textContent !== '1. ') problems.push('number');
+		cm.dispatch({ selection: { anchor: cm.state.doc.line(3).from } });
+		await sleep(50);
+		if (!lineEl(3).innerText.startsWith('- one')) problems.push(`touched marker: ${JSON.stringify(lineEl(3).innerText.slice(0, 8))}`);
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await vault.delete(file);
+		return problems.length === 0 || problems.join('; ');
+	});
+
+	await check('right-click menu: link actions on a link, formatting for a selection, undo and redo', async () => {
+		const file = await vault.create('Menu smoke.md', 'Go to [[Welcome]] now.\n\nFormat these words please.\n');
+		await workspace.getLeaf(false).openFile(file);
+		const view = workspace.getActiveViewOfType(MarkdownView)!;
+		const cm = view.editor.cm;
+		cm.focus();
+		cm.dispatch({ selection: { anchor: cm.state.doc.length } });
+		await sleep(50);
+		const titles = () => [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
+		const close = async () => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); document.querySelectorAll('.menu').forEach((m) => m.remove()); await sleep(30); };
+		const problems: string[] = [];
+		const link = document.querySelector<HTMLElement>('.cm-lp-wikilink');
+		if (!link) problems.push('no link');
+		else {
+			const r = link.getBoundingClientRect();
+			link.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 3, clientY: r.top + r.height / 2 }));
+			const t = titles();
+			for (const want of ['Open link', 'Open in new tab', 'Open to the right', 'Rename note…', 'Copy link', 'Undo', 'Paste']) if (!t.includes(want)) problems.push(`link menu lacks ${want}: ${t.join('|')}`);
+			await close();
+		}
+		const line3 = cm.state.doc.line(3);
+		cm.dispatch({ selection: { anchor: line3.from + 7, head: line3.from + 18 } });
+		await sleep(30);
+		const c = cm.coordsAtPos(line3.from + 10)!;
+		cm.contentDOM.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: c.left, clientY: (c.top + c.bottom) / 2 }));
+		const t = titles();
+		for (const want of ['Bold', 'Italics', 'Highlight', 'Make a link', 'Cut', 'Copy']) if (!t.includes(want)) problems.push(`selection menu lacks ${want}: ${t.join('|')}`);
+		[...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent === 'Bold')?.click();
+		await sleep(50);
+		if (cm.state.doc.line(3).text !== 'Format **these words** please.') problems.push(`bold: ${cm.state.doc.line(3).text}`);
+		await close();
+		cm.contentDOM.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: c.left, clientY: (c.top + c.bottom) / 2 }));
+		[...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent === 'Undo')?.click();
+		await sleep(50);
+		if (cm.state.doc.line(3).text !== 'Format these words please.') problems.push(`undo: ${cm.state.doc.line(3).text}`);
+		await close();
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await vault.delete(file);
+		return problems.length === 0 || problems.join('; ');
+	});
+
+	await check('a hidden embed comes back: its button shows the text; its right-click menu acts on it', async () => {
+		const wav = await vault.createBinary('Embed button smoke.wav', silentWav(1));
+		const file = await vault.create('Embed button smoke.md', 'Before\n\n![[Embed button smoke.wav]]\n\nAfter\n');
+		await workspace.getLeaf(false).openFile(file);
+		const cm = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
+		cm.dispatch({ selection: { anchor: 0 } });
+		const problems: string[] = [];
+		if (!(await until(() => !!document.querySelector('.cm-media-embed .cm-embed-edit'), 3000))) problems.push('no button');
+		else {
+			document.querySelector<HTMLElement>('.cm-media-embed .cm-embed-edit')!.click();
+			await sleep(50);
+			const line = cm.state.doc.lineAt(cm.state.selection.main.head);
+			if (line.text !== '![[Embed button smoke.wav]]') problems.push(`cursor on ${JSON.stringify(line.text)}`);
+			const shown = cm.dom.querySelector('.cm-lp-embed-line');
+			if (shown) problems.push('line still hidden');
+			cm.dispatch({ selection: { anchor: 0 } });
+			await sleep(50);
+			const wrap = document.querySelector<HTMLElement>('.cm-media-embed')!;
+			const r = wrap.getBoundingClientRect();
+			wrap.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 5, clientY: r.top + 5 }));
+			const t = [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
+			for (const want of ['Open link', 'Rename file…', 'Show the embed\'s text', 'Remove embed']) if (!t.includes(want)) problems.push(`embed menu lacks ${want}: ${t.join('|')}`);
+			[...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent === 'Remove embed')?.click();
+			await sleep(50);
+			if (cm.state.doc.toString() !== 'Before\n\nAfter\n') problems.push(`removed: ${JSON.stringify(cm.state.doc.toString())}`);
+			document.querySelectorAll('.menu').forEach((m) => m.remove());
+		}
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await vault.delete(file);
+		await vault.delete(wav);
+		return problems.length === 0 || problems.join('; ');
 	});
 
 	// Vim mode and hotkeys (Phase 3).
@@ -1331,6 +1448,41 @@ export async function runShots(app: App): Promise<void> {
 	await shot('35-docket-cheat-sheet');
 	docket.close(true);
 	// Locking: the Security settings page, Units with a locked note, and the unlock dialog.
+	// Live preview: only what the cursor touches shows its Markdown; lists laid out as in reading view.
+	{
+		const note = await app.vault.create('Lists and formatting.md', [
+			'# Lists and formatting', '',
+			'The cursor is in **this word**, so only it shows its marks: *italics*, ==a highlight== and a [[Welcome|link]] stay formatted.', '',
+			'- A first point, long enough to wrap onto a second line, so that the wrapped part can be seen starting under the text and not under the bullet',
+			'\t- A nested point with `code`',
+			'\t\t- A third level',
+			'- [ ] A task still to do, also long enough to wrap onto a second line under its text rather than under its box',
+			'- [x] A task done',
+			'', '1. A numbered point',
+			'2. Another, long enough to wrap onto a second line, to show that numbers hang in the margin like bullets do',
+			'\t1. A nested number', '',
+		].join('\n'));
+		const leaf = workspace.getLeaf('tab');
+		await leaf.openFile(note);
+		const v = leaf.view as MarkdownView;
+		const at = v.editor.getValue().indexOf('this word') + 3;
+		v.editor.cm.focus();
+		v.editor.cm.dispatch({ selection: { anchor: at } });
+		await shot('39-live-preview-lists');
+		// The right-click menu on a selection: formatting, then editing.
+		const word = v.editor.getValue().indexOf('a highlight');
+		v.editor.cm.dispatch({ selection: { anchor: word, head: word + 'a highlight'.length } });
+		await sleep(50);
+		const c = v.editor.cm.coordsAtPos(word + 3);
+		if (c) v.editor.cm.contentDOM.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: c.left, clientY: c.bottom }));
+		await shot('41-editor-menu');
+		document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+		await v.setMode('preview');
+		await shot('40-reading-view-lists');
+		await v.setMode('source');
+		leaf.detach();
+		await app.vault.delete(note);
+	}
 	app.setting.openTabById('security');
 	await shot('36-settings-security');
 	app.setting.close();

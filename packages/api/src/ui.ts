@@ -354,6 +354,8 @@ export class Menu extends Component {
 				last = null;
 			}
 		}
+		// No separator at the foot (one added before items that, as it turned out, nothing added).
+		if (last === 'separator' && this.dom.lastElementChild?.matches('.menu-separator')) this.dom.lastElementChild.remove();
 		document.body.appendChild(this.dom);
 		const r = this.dom.getBoundingClientRect();
 		const x = Math.min(pos.x, window.innerWidth - r.width - 4);

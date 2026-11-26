@@ -4,7 +4,8 @@ import { Annotation, type ChangeSet, Compartment, EditorState, type Extension, P
 const paneSync = Annotation.define<boolean>();
 import { EditorView, keymap } from '@codemirror/view';
 import { getCM, vim } from '@replit/codemirror-vim';
-import { baseExtensions, bracketExtensions } from './cm-setup';
+import { redo, undo } from '@codemirror/commands';
+import { type LinkSpan, baseExtensions, bracketExtensions, linkSpanAt } from './cm-setup';
 import { attachFiles, embedMarkdown, isImage } from './attachments';
 import { fileEmbeds } from './embeds-editor';
 import { createPlayer, isMedia, timeFromSubpath } from './media';
@@ -108,7 +109,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 					key: `${f.path}|${start ?? ''}`,
 					create: (width) => createPlayer(app, f, { start, width }),
 				};
-			}),
+			}, (e, embed) => this.showEditorMenu(e, embed.from)),
 			Prec.highest(keymap.of(app.suggestKeymap())),
 			this.pluginCompartment.of(app.getEditorExtensions()),
 			EditorView.updateListener.of((u) => {
@@ -154,13 +155,15 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	}
 
 	/**
-	 * The editor's right-click menu: spelling suggestions for a marked word, cut, copy, paste, and what
-	 * plugins add through the "editor-menu" event.
+	 * The editor's right-click menu: spelling suggestions for a marked word; for a link or embed, opening,
+	 * renaming and copying it; formatting for a selection; undo, cut, copy, paste; and what plugins add
+	 * through the "editor-menu" event. `at` is the place to act on (a picture's or player's embed), when the
+	 * click was not on the text.
 	 */
-	private showEditorMenu(e: MouseEvent): void {
+	private showEditorMenu(e: MouseEvent, at?: number): void {
 		e.preventDefault();
 		const cm = this.editor.cm;
-		const pos = cm.posAtCoords({ x: e.clientX, y: e.clientY });
+		const pos = at ?? cm.posAtCoords({ x: e.clientX, y: e.clientY });
 		const menu = new Menu();
 		const marked = (e.target as HTMLElement).closest('.cm-misspelled');
 		const hit = pos !== null && marked ? wordAt(cm, pos) : null;
@@ -178,8 +181,26 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			menu.addItem((i) => i.setTitle('Ignore').setIcon('eye-off').onClick(() => sp.ignore(hit.word)));
 			menu.addSeparator();
 		}
+		const link = pos !== null ? linkSpanAt(cm.state, at !== undefined ? at + 1 : pos) : null;
+		if (link) { this.addLinkItems(menu, link); menu.addSeparator(); }
 		const sel = cm.state.selection.main;
+		const run = (id: string) => () => { cm.focus(); this.app.commands.executeCommandById(id); };
+		if (!sel.empty) {
+			menu.addItem((i) => i.setTitle('Bold').setIcon('bold').setSection('format').onClick(run('editor:toggle-bold')));
+			menu.addItem((i) => i.setTitle('Italics').setIcon('italic').setSection('format').onClick(run('editor:toggle-italics')));
+			menu.addItem((i) => i.setTitle('Highlight').setIcon('highlighter').setSection('format').onClick(run('editor:toggle-highlight')));
+			menu.addItem((i) => i.setTitle('Strikethrough').setIcon('strikethrough').setSection('format').onClick(run('editor:toggle-strikethrough')));
+			menu.addItem((i) => i.setTitle('Inline code').setIcon('code').setSection('format').onClick(run('editor:toggle-code')));
+			menu.addItem((i) => i.setTitle('Make a link').setIcon('link').setSection('format').onClick(run('editor:insert-wikilink')));
+			menu.addSeparator();
+		} else if (!link) {
+			menu.addItem((i) => i.setTitle('Insert link').setIcon('link').onClick(run('editor:insert-wikilink')));
+			menu.addSeparator();
+		}
 		const clip = this.app.host.clipboard;
+		menu.addItem((i) => i.setTitle('Undo').setIcon('undo-2').onClick(() => { undo(cm); cm.focus(); }));
+		menu.addItem((i) => i.setTitle('Redo').setIcon('redo-2').onClick(() => { redo(cm); cm.focus(); }));
+		menu.addSeparator();
 		menu.addItem((i) => i.setTitle('Cut').setIcon('scissors').setDisabled(sel.empty).onClick(() => {
 			clip.writeText(cm.state.sliceDoc(sel.from, sel.to));
 			cm.dispatch({ changes: { from: sel.from, to: sel.to }, userEvent: 'delete.cut' });
@@ -188,10 +209,57 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		menu.addItem((i) => i.setTitle('Paste').setIcon('clipboard').onClick(() => {
 			void clip.readText().then((t) => { if (t) cm.dispatch(cm.state.replaceSelection(t)); });
 		}));
-		menu.addItem((i) => i.setTitle('Select all').onClick(() => cm.dispatch({ selection: { anchor: 0, head: cm.state.doc.length } })));
+		menu.addItem((i) => i.setTitle('Select all').setIcon('text-select').onClick(() => cm.dispatch({ selection: { anchor: 0, head: cm.state.doc.length } })));
 		menu.addSeparator();
 		this.app.workspace.trigger('editor-menu', menu, this.editor, this);
 		menu.showAtMouseEvent(e);
+	}
+
+	/** The right-click menu's items for the link or embed `link`. */
+	private addLinkItems(menu: Menu, link: LinkSpan): void {
+		const cm = this.editor.cm;
+		const app = this.app;
+		const source = this.file?.path ?? '';
+		const clip = app.host.clipboard;
+		const written = cm.state.sliceDoc(link.from, link.to);
+		if (link.type === 'url') {
+			menu.addItem((i) => i.setTitle('Copy web address').setIcon('copy').onClick(() => clip.writeText(link.target)));
+			return;
+		}
+		const bare = link.target.replace(/[#^].*$/, '');
+		const file = bare ? app.metadataCache.getFirstLinkpathDest(bare, source) : null;
+		const open = (where: false | 'tab' | 'split') => () => { void app.workspace.openLinkText(link.target, source, where); };
+		menu.addItem((i) => i.setTitle(file ? 'Open link' : 'Create note').setIcon(file ? 'file-text' : 'file-plus').setSection('link').onClick(open(false)));
+		menu.addItem((i) => i.setTitle('Open in new tab').setIcon('plus').setSection('link').onClick(open('tab')));
+		menu.addItem((i) => i.setTitle('Open to the right').setIcon('columns').setSection('link').onClick(open('split')));
+		if (file) {
+			menu.addItem((i) => i.setTitle(`Rename ${file.extension === 'md' ? 'note' : 'file'}…`).setIcon('pencil').setSection('link')
+				.onClick(() => { app.commands.executeCommandById('app:rename-file', { file }); }));
+		}
+		menu.addItem((i) => i.setTitle(link.embed ? 'Copy embed' : 'Copy link').setIcon('copy').setSection('link').onClick(() => clip.writeText(written)));
+		if (link.embed) {
+			menu.addItem((i) => i.setTitle('Show the embed\'s text').setIcon('code').setSection('link').onClick(() => {
+				cm.dispatch({ selection: { anchor: link.from + (written.startsWith('![[') ? 3 : 2) }, scrollIntoView: true, userEvent: 'select' });
+				cm.focus();
+			}));
+			menu.addItem((i) => i.setTitle('Remove embed').setIcon('trash-2').setSection('link').setWarning(true).onClick(() => {
+				// The whole line when the embed was all it held, and then one of the empty lines around it, so the
+				// paragraphs either side stay one empty line apart.
+				const doc = cm.state.doc;
+				const line = doc.lineAt(link.from);
+				let from = link.from;
+				let to = link.to;
+				if (line.text.trim() === written) {
+					from = line.from;
+					to = line.to;
+					const blank = (n: number) => n >= 1 && n <= doc.lines && doc.line(n).text.trim() === '';
+					if (line.number < doc.lines) to = line.to + 1;
+					else if (line.number > 1) from = line.from - 1;
+					if (blank(line.number - 1) && blank(line.number + 1)) to = Math.min(doc.length, doc.line(line.number + 1).to + 1);
+				}
+				cm.dispatch({ changes: { from, to }, userEvent: 'delete' });
+			}));
+		}
 	}
 
 	private livePreviewOptions(): LivePreviewOptions {

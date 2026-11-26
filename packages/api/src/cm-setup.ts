@@ -185,27 +185,41 @@ const inlineMarks = ViewPlugin.fromClass(class {
 	}
 }, { decorations: (v) => v.decorations });
 
-/** The [[link]] or URL at a document offset. */
-export function linkAt(state: EditorState, pos: number): { type: 'wiki' | 'url'; target: string } | null {
+/** A link in the text: where it is, whether it is an embed (`![[…]]`, `![](…)`), and what it points to. */
+export interface LinkSpan { from: number; to: number; embed: boolean; type: 'wiki' | 'url'; target: string }
+
+/** The [[link]], [text](link), ![[embed]] or URL at a document offset. */
+export function linkSpanAt(state: EditorState, pos: number): LinkSpan | null {
 	const line = state.doc.lineAt(pos);
 	const text = line.text;
 	const at = pos - line.from;
+	const span = (m: RegExpExecArray, type: 'wiki' | 'url', target: string): LinkSpan =>
+		({ from: line.from + m.index, to: line.from + m.index + m[0].length, embed: m[0].startsWith('!'), type, target });
 	const wiki = /!?\[\[([^\]\n|]+)(?:\|[^\]\n]*)?\]\]/g;
 	for (let m = wiki.exec(text); m; m = wiki.exec(text)) {
-		if (at >= m.index && at <= m.index + m[0].length) return { type: 'wiki', target: m[1]!.trim() };
+		if (at >= m.index && at <= m.index + m[0].length) return span(m, 'wiki', m[1]!.trim());
 	}
-	const md = /\[[^\]\n]*\]\(([^)\s]+)\)/g;
+	const md = /!?\[[^\]\n]*\]\(([^)\s]+)\)/g;
 	for (let m = md.exec(text); m; m = md.exec(text)) {
 		if (at >= m.index && at <= m.index + m[0].length) {
 			const target = m[1]!;
-			return /^[a-z][a-z0-9+.-]*:/i.test(target) ? { type: 'url', target } : { type: 'wiki', target: decodeURIComponent(target) };
+			if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return span(m, 'url', target);
+			let decoded = target;
+			try { decoded = decodeURIComponent(target); } catch { /* as written */ }
+			return span(m, 'wiki', decoded);
 		}
 	}
 	const url = /\bhttps?:\/\/[^\s)>\]]+/g;
 	for (let m = url.exec(text); m; m = url.exec(text)) {
-		if (at >= m.index && at <= m.index + m[0].length) return { type: 'url', target: m[0] };
+		if (at >= m.index && at <= m.index + m[0].length) return span(m, 'url', m[0]);
 	}
 	return null;
+}
+
+/** The [[link]] or URL at a document offset. */
+export function linkAt(state: EditorState, pos: number): { type: 'wiki' | 'url'; target: string } | null {
+	const s = linkSpanAt(state, pos);
+	return s ? { type: s.type, target: s.target } : null;
 }
 
 /**
