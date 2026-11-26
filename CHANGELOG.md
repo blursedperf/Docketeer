@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Tasks are checked off in the Tasks panel**: click a task's box, or press Space on its row; the Docket stays open
+  and the next task is selected, so a list can be worked through from the keyboard. Space or a click again (in
+  *Done* or *All*) reopens one.
+- **Opening a task puts the caret at the end of its line**, ready to add to it, instead of at its start. (For
+  plugins: a note's ephemeral state takes `ch` with `line`.)
+
 ## v0.19.0
 
 - **A calculator in the / menu**: type arithmetic after the slash (`/12*3.5+4`, `/(1200-300)/3`, `/15% of 80`,

@@ -8,3 +8,5 @@
 .task-docket-panel .docket-section-wrap.is-today .docket-section-title { color: var(--text-accent); }
 .task-docket-panel .task-docket-more { color: var(--text-muted); }
 .task-docket-status.has-overdue { color: var(--text-error); }
+.task-docket-panel .task-docket-box { cursor: var(--cursor); border-radius: var(--radius-s); }
+.task-docket-panel .task-docket-box:hover { color: var(--text-accent); background: var(--background-modifier-hover); }

@@ -1,7 +1,8 @@
 /**
  * The Tasks panel in Quire's Docket: every task in the homebase, grouped (by when it is due, by default) and
- * sorted (by urgency). Rows move like the Docket's own: ↑↓ choose, Enter opens the task in its note (Mod+Enter:
- * to the right), → offers its actions (check off, due today or tomorrow, a date, a priority). The row above the
+ * sorted (by urgency). Rows move like the Docket's own: ↑↓ choose, Enter opens the task in its note with the caret
+ * at the end of its line (Mod+Enter: to the right), Space or a click on its box checks it off, → offers its actions
+ * (check off, due today or tomorrow, a date, a priority). The row above the
  * tasks chooses what is shown (open, done, all), the sort and the grouping, or adds a task.
  */
 import type { DocketPanel, DocketPanelUI, OpenWhere } from "@quire/api";
@@ -100,7 +101,7 @@ function taskRow(plugin: TaskDocketPlugin, ui: DocketPanelUI, parent: HTMLElemen
 		note,
 	].filter(Boolean).join(" · ");
 	const open = (where: OpenWhere | "insert") => { ui.close(); void plugin.openTask(t, where === "right" || where === "below" ? "split" : false); };
-	ui.row(parent, plainText(t.text) || "(empty task)", open, {
+	const row = ui.row(parent, plainText(t.text) || "(empty task)", open, {
 		icon: closed ? "check-square" : t.status === "in-progress" ? "square-dot" : "square",
 		detail,
 		badge: !closed && bucket === "overdue" ? "overdue" : undefined,
@@ -122,4 +123,24 @@ function taskRow(plugin: TaskDocketPlugin, ui: DocketPanelUI, parent: HTMLElemen
 			];
 		},
 	});
+	// Checking it off from the list: a click on its box, or Space on its row (Enter still opens it).
+	const box = row.querySelector<HTMLElement>(".docket-option-icon");
+	if (box) {
+		box.addClass("task-docket-box");
+		box.setAttribute("role", "checkbox");
+		box.setAttribute("aria-checked", String(closed));
+		box.setAttribute("aria-label", closed ? "Reopen" : "Check off");
+		box.title = closed ? "Reopen" : "Check off";
+		box.addEventListener("mousedown", (e) => e.preventDefault());
+		box.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); void plugin.toggleTask(t); });
+	}
+	row.addEventListener("keydown", (e) => {
+		if (e.key !== " " || e.ctrlKey || e.metaKey || e.altKey) return;
+		e.preventDefault();
+		e.stopPropagation();
+		if (!e.repeat) void plugin.toggleTask(t);
+	});
+	// The button's own Space (on key up) would open the task.
+	row.addEventListener("keyup", (e) => { if (e.key === " ") e.preventDefault(); });
+	row.setAttribute("aria-keyshortcuts", "Space");
 }

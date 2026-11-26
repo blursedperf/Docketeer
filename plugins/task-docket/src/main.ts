@@ -202,7 +202,8 @@ export default class TaskDocketPlugin extends Plugin {
 		const file = this.app.vault.getFileByPath(task.path);
 		if (!(file instanceof TFile)) return;
 		const leaf = this.app.workspace.getLeaf(where);
-		await leaf.openFile(file, { eState: { line: task.line } });
+		// The caret at the end of the task's line, ready to add to it.
+		await leaf.openFile(file, { eState: { line: task.line, ch: task.raw.length } });
 	}
 
 	/* ---------- editing in the note ---------- */

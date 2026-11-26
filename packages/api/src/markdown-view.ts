@@ -542,7 +542,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	}
 
 	override setEphemeralState(state: unknown): void {
-		const s = (state ?? {}) as { line?: number; from?: number; to?: number; subpath?: string; focus?: boolean };
+		const s = (state ?? {}) as { line?: number; ch?: number; from?: number; to?: number; subpath?: string; focus?: boolean };
 		if (this.mode !== 'source' && (s.line !== undefined || s.from !== undefined)) void this.setMode('source');
 		const cm = this.editor.cm;
 		if (typeof s.from === 'number') {
@@ -550,7 +550,9 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			const to = Math.max(from, Math.min(cm.state.doc.length, s.to ?? from));
 			cm.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: 'center' }) });
 		} else if (typeof s.line === 'number') {
-			const pos = { line: s.line, ch: 0 };
+			// `ch` is the column (past the line's end means its end); without it, the line's start.
+			const line = Math.max(0, Math.min(this.editor.lineCount() - 1, s.line));
+			const pos = { line, ch: Math.max(0, Math.min(this.editor.getLine(line).length, s.ch ?? 0)) };
 			this.editor.setCursor(pos);
 			this.editor.scrollIntoView({ from: pos, to: pos }, true);
 		} else if (typeof s.subpath === 'string') {

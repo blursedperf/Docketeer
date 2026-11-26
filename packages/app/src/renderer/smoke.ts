@@ -1805,7 +1805,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const problems: string[] = [];
 		const plugin = app.plugins.getPlugin('task-docket') as unknown as { index: { all(): { text: string }[] } } | null;
 		if (!plugin) return `not loaded: ${app.plugins.loadError('task-docket')}`;
-		const file = await vault.create('Tasks smoke.md', '- [ ] Overdue smoke task 📅 2020-01-01\n- [ ] Later smoke task 📅 2099-01-01\n- [x] Done smoke task\n');
+		const file = await vault.create('Tasks smoke.md', '- [ ] Overdue smoke task 📅 2020-01-01\n- [ ] Later smoke task 📅 2099-01-01\n- [x] Done smoke task\n- [ ] Box smoke task\n- [ ] Space smoke task\n- [ ] Open smoke task #tag\n');
 		if (!(await until(() => plugin.index.all().some((t) => t.text.includes('Later smoke task')), 4000))) problems.push('not indexed');
 		app.commands.executeCommandById('task-docket:open');
 		await sleep(200);
@@ -1829,6 +1829,27 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		if (!(await until(async () => (await vault.read(file)).startsWith('- [x] Overdue smoke task'), 2000))) problems.push(`check off: ${JSON.stringify(await vault.read(file))}`);
 		const text = await vault.read(file);
 		if (!/Later smoke task 📅 \d{4}-\d{2}-\d{2}/.test(text) || text.includes('2099')) problems.push(`due today: ${JSON.stringify(text)}`);
+		// Checked off from the list itself: a click on the row's box, or Space on the row.
+		app.commands.executeCommandById('task-docket:open');
+		await sleep(150);
+		rowOf('Box smoke task')?.querySelector<HTMLElement>('.task-docket-box')?.click();
+		if (!(await until(async () => (await vault.read(file)).includes('- [x] Box smoke task'), 2000))) problems.push('a click on the box did not check it off');
+		if (!ui()?.isOpen) problems.push('checking off closed the Docket');
+		await sleep(250);
+		const spaceRow = rowOf('Space smoke task');
+		spaceRow?.focus();
+		spaceRow?.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+		if (!(await until(async () => (await vault.read(file)).includes('- [x] Space smoke task'), 2000))) problems.push('Space did not check it off');
+		if (workspace.getActiveFile() === file) problems.push('Space opened the task');
+		// Opening a task puts the caret at the end of its line.
+		await sleep(250);
+		rowOf('Open smoke task')?.click();
+		await until(() => workspace.getActiveFile() === file, 2000);
+		await sleep(100);
+		const ed = workspace.activeEditor?.editor;
+		const cur = ed?.getCursor();
+		if (!ed || !cur || ed.getLine(cur.line) !== '- [ ] Open smoke task #tag' || cur.ch !== '- [ ] Open smoke task #tag'.length) problems.push(`caret at ${JSON.stringify(cur)} on ${JSON.stringify(cur ? ed?.getLine(cur.line) : null)}`);
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
 		ui()?.close(true);
 		await vault.delete(file);
 		return problems.length === 0 || problems.join('; ');
