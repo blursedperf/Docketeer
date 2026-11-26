@@ -57,6 +57,7 @@ export class PdfView extends FileView {
 		button('move-horizontal', 'Fit the width', () => this.handle?.setScale('fit'));
 		this.bodyEl = this.contentEl.createDiv({ cls: 'pdf-body', attr: { tabindex: '0' } });
 		this.bodyEl.addEventListener('contextmenu', (e) => this.onContextMenu(e));
+		watchPinch(this.bodyEl, () => this.handle, (scale) => { this.handle?.setScale(scale); this.showPage(); });
 		this.resizeObserver = new ResizeObserver(() => this.handle?.resized());
 		this.resizeObserver.observe(this.bodyEl);
 	}
@@ -257,4 +258,42 @@ export function registerPdf(app: App): void {
 	add({ id: 'pdf:zoom-in', name: 'Zoom in on the PDF', icon: 'zoom-in', when: () => !!active()?.pdf, run: () => active()?.zoom(1) });
 	add({ id: 'pdf:zoom-out', name: 'Zoom out of the PDF', icon: 'zoom-out', when: () => !!active()?.pdf, run: () => active()?.zoom(-1) });
 	add({ id: 'pdf:fit-width', name: 'Fit the PDF to the width', icon: 'move-horizontal', when: () => !!active()?.pdf, run: () => active()?.pdf?.setScale('fit') });
+}
+
+/** The scale a pinch ends on: `ratio` times what it started at, within what the viewer draws. */
+export function pinchScale(start: number, ratio: number): number {
+	return Math.min(5, Math.max(0.25, Math.round(start * ratio * 100) / 100));
+}
+
+/**
+ * Two fingers zoom the PDF on a touch screen (the page itself does not zoom: maximum-scale=1). While they move, the
+ * pages are stretched to follow them; when they lift, the PDF is drawn again at the new scale.
+ */
+function watchPinch(body: HTMLElement, handle: () => { scale: number } | null, done: (scale: number) => void): void {
+	let pinch: { from: number; scale: number; ratio: number } | null = null;
+	const apart = (t: TouchList) => Math.hypot(t[0]!.clientX - t[1]!.clientX, t[0]!.clientY - t[1]!.clientY);
+	const pages = () => body.querySelector<HTMLElement>('.pdf-pages');
+	body.addEventListener('touchstart', (e) => {
+		const h = handle();
+		if (e.touches.length !== 2 || !h) return;
+		pinch = { from: Math.max(1, apart(e.touches)), scale: h.scale, ratio: 1 };
+		const r = body.getBoundingClientRect();
+		const mid = { x: (e.touches[0]!.clientX + e.touches[1]!.clientX) / 2 - r.left + body.scrollLeft, y: (e.touches[0]!.clientY + e.touches[1]!.clientY) / 2 - r.top + body.scrollTop };
+		pages()?.setCssStyles({ transformOrigin: `${mid.x}px ${mid.y}px` });
+	}, { passive: true });
+	body.addEventListener('touchmove', (e) => {
+		if (!pinch || e.touches.length !== 2) return;
+		e.preventDefault();
+		pinch.ratio = pinchScale(pinch.scale, apart(e.touches) / pinch.from) / pinch.scale;
+		pages()?.setCssStyles({ transform: `scale(${pinch.ratio})` });
+	}, { passive: false });
+	const end = () => {
+		if (!pinch) return;
+		const { scale, ratio } = pinch;
+		pinch = null;
+		pages()?.setCssStyles({ transform: '', transformOrigin: '' });
+		if (Math.abs(ratio - 1) > 0.02) done(pinchScale(scale, ratio));
+	};
+	body.addEventListener('touchend', (e) => { if (e.touches.length < 2) end(); });
+	body.addEventListener('touchcancel', end);
 }

@@ -364,8 +364,9 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
       the notice after any export and in every file menu. `app:printToPdf` is `Printer.swift`: a web view with
       scripts off, the offline rules and its own scheme handler, paginated by `UIPrintPageRenderer` (the print
       formatter keeps CSS page breaks, which `createPDF`'s one tall page would not), page numbers at the foot.
-- [ ] PDF viewer: pdf.js loads its engine, CMaps, standard fonts and wasm from the bundle, and opens a
-      PDF from the homebase.
+- [x] PDF viewer: pdf.js loads its engine, CMaps, standard fonts and wasm from the bundle, and opens a
+      PDF from the homebase. (The bundle and `pdf:asset` came in Phase 0; the WebKit smoke run opens one.) Added
+      for the phone: two fingers zoom the PDF, since the page itself does not zoom (`maximum-scale=1`).
 - [ ] Hide these in compact mode: tiling commands, the hotkey editor, vim mode, custom-panel editing and AGLC4
       page preview.
 - [ ] Settings: hide desktop-only items, such as title bar colours and relaunch.

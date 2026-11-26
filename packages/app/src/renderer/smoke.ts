@@ -330,6 +330,22 @@ export async function runSmoke(app: App): Promise<void> {
 		if (!(doc.scale > before)) problems.push('zoom in did nothing');
 		const state = view.getState();
 		if (state.page !== 3 || typeof state.scale !== 'number') problems.push(`state ${JSON.stringify(state)}`);
+		// Two fingers moving apart zoom in (touch screens; where the engine makes touches).
+		let touches = false;
+		try { touches = typeof Touch === 'function' && !!new Touch({ identifier: 1, target: view.contentEl, clientX: 1, clientY: 1 }); } catch { touches = false; }
+		const body = view.contentEl.querySelector<HTMLElement>('.pdf-body');
+		if (touches && body) {
+			const r = body.getBoundingClientRect();
+			const at = (id: number, x: number) => new Touch({ identifier: id, target: body, clientX: r.left + x, clientY: r.top + 100 });
+			const send = (type: string, list: Touch[], changed: Touch[]) => body.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: list, targetTouches: list, changedTouches: changed }));
+			const was = doc.scale;
+			send('touchstart', [at(1, 100), at(2, 140)], [at(1, 100), at(2, 140)]);
+			send('touchmove', [at(1, 80), at(2, 160)], [at(1, 80), at(2, 160)]);
+			if (!body.querySelector<HTMLElement>('.pdf-pages')?.style.transform.includes('scale(')) problems.push('the pages did not follow the pinch');
+			send('touchend', [], [at(1, 80), at(2, 160)]);
+			if (!(Math.abs(doc.scale - Math.min(5, was * 2)) < 0.02)) problems.push(`a pinch to twice as wide gave ${doc.scale}, from ${was}`);
+			if (body.querySelector<HTMLElement>('.pdf-pages')?.style.transform) problems.push('the stretch stayed after the pinch');
+		}
 		// A link to a PDF that is not there does not make a note called "….pdf.md".
 		await workspace.openLinkText('Missing case.pdf#page=1', note.path, false);
 		if (vault.getFileByPath('Missing case.pdf.md')) problems.push('a missing PDF link made a note');

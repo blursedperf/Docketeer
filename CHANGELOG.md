@@ -25,6 +25,8 @@
   has a Share… button, which opens the system's share sheet (Mail, Messages, AirDrop, Save to Files). Every file's
   menu has Share… too. For plugins: `exportedNotice(app, path, message)` shows an export's notice with the
   button where the system can share; `canShare(app)` and `shareFile(app, path)`; `host.app.shareFile?`.
+- **iPhone and iPad: pinch to zoom a PDF**: the pages follow your fingers, and are drawn sharp again at the new
+  size when you let go.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.
