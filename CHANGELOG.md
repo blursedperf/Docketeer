@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **A narrow window, such as an iPhone, shows one pane at a time**: the note fills the screen, its tabs are behind
+  *Open tabs* (the stacked-layers button at the top right: go to a tab, close one, or open a new one), and a swipe
+  in from the left edge goes back. Splitting, moving between panes and layouts are not offered there; whatever
+  would open beside the note (a PDF, a recording) opens as a new tab. Panes already open stay, and show again
+  when the window is wider. For plugins: `workspace.singlePane`.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.
 

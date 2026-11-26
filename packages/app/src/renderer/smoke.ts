@@ -1566,6 +1566,75 @@ export async function runSmoke(app: App): Promise<void> {
 		return (!wide && narrow && !back && flags) || `wide=${wide} narrow=${narrow} back=${back} flags=${flags} (${f})`;
 	});
 
+	await check('compact layout: one pane, its tabs behind "Open tabs", no tiling, swipe in from the left to go back', async () => {
+		const problems: string[] = [];
+		const real = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+		const width = (w: number) => { Object.defineProperty(window, 'innerWidth', { value: w, configurable: true }); window.dispatchEvent(new Event('resize')); };
+		const shown = (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].filter((e) => e.offsetParent !== null);
+		// Two notes (earlier checks rename some): Welcome and any other.
+		const welcome = vault.getFileByPath('Welcome.md')!;
+		const second = vault.getMarkdownFiles().find((f) => f !== welcome && !f.path.includes('/'))!;
+		// Two panes, as a desktop layout might bring.
+		await workspace.getLeaf(false).openFile(welcome);
+		commands.executeCommandById('app:split-right');
+		await sleep(150);
+		const panesBefore = workspace.rootTabs().length;
+		try {
+			width(393);
+			await sleep(150);
+			if (!workspace.singlePane) problems.push('not one pane at a time');
+			if (shown('.workspace-split.mod-root .workspace-tabs').length !== 1) problems.push(`${shown('.workspace-split.mod-root .workspace-tabs').length} panes showing`);
+			if (shown('.workspace-tab-header-container').length) problems.push('a tab bar shows');
+			if (commands.isAvailable(commands.findCommand('app:split-right')!)) problems.push('Split right is offered');
+			if (commands.isAvailable(commands.findCommand('app:focus-pane-left')!)) problems.push('moving between panes is offered');
+			// What would split opens as a tab in this pane.
+			const before = workspace.rootTabs().length;
+			const leaf = workspace.getLeaf('split');
+			if (workspace.rootTabs().length !== before) problems.push('a split made a new pane');
+			leaf.detach();
+			await sleep(80);
+			// Open tabs: every tab, in every pane; choosing one shows it.
+			const button = shown('.workspace-tabs.mod-active .view-action.mod-open-tabs')[0];
+			if (!button) problems.push('no Open tabs button');
+			button?.click();
+			await sleep(150);
+			const rows = [...document.querySelectorAll<HTMLElement>('.modal.mod-open-tabs .open-tabs-go')];
+			let leaves = 0;
+			workspace.iterateRootLeaves(() => { leaves++; });
+			if (rows.length !== leaves) problems.push(`Open tabs lists ${rows.length} of ${leaves}`);
+			const other = rows.find((r) => !r.parentElement!.classList.contains('is-active'));
+			other?.click();
+			await sleep(150);
+			if (document.querySelector('.modal.mod-open-tabs')) problems.push('Open tabs did not close');
+			if (shown('.workspace-split.mod-root .workspace-tabs').length !== 1) problems.push('after choosing a tab, not one pane showing');
+			// Swipe in from the left edge: back.
+			await workspace.getLeaf(false).openFile(welcome);
+			await workspace.getLeaf(false).openFile(second);
+			await sleep(100);
+			const root = workspace.containerEl;
+			const touch = (type: string, x: number) => root.dispatchEvent(new TouchEvent(type, { bubbles: true, touches: type === 'touchend' ? [] : [new Touch({ identifier: 1, target: root, clientX: x, clientY: 300 })] }));
+			touch('touchstart', 6); touch('touchmove', 40); touch('touchmove', 110); touch('touchend', 110);
+			await sleep(200);
+			const back = workspace.getActiveFile()?.path;
+			if (back !== 'Welcome.md') problems.push(`swiping back from ${second.path} showed ${back}`);
+			// A swipe that starts away from the edge does nothing.
+			touch('touchstart', 200); touch('touchmove', 320); touch('touchend', 320);
+			await sleep(200);
+			if (workspace.getActiveFile()?.path !== 'Welcome.md') problems.push('a swipe away from the edge went back');
+		} finally {
+			if (real) Object.defineProperty(window, 'innerWidth', real); else delete (window as { innerWidth?: number }).innerWidth;
+			window.dispatchEvent(new Event('resize'));
+			await sleep(150);
+		}
+		// Wide again: the panes are all still there, and tiling is back.
+		if (workspace.singlePane) problems.push('still one pane at a time when wide');
+		if (workspace.rootTabs().length < panesBefore) problems.push('a pane was lost');
+		if (!commands.isAvailable(commands.findCommand('app:split-right')!)) problems.push('Split right is not back');
+		commands.executeCommandById('app:close-other-panes');
+		await sleep(80);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
 		try {

@@ -337,7 +337,7 @@ comes before the iPad, and it is more than a companion: reading, search, capture
 comfortable for real writing, with footnotes, AGLC4 citing and exports. Tiling and the desktop-only editors stay
 hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) are done here, once.
 
-- [ ] Compact layout (`body.is-compact`):
+- [x] Compact layout (`body.is-compact`):
       - one pane, with tiling turned off and the current pane kept;
       - a back gesture to the previous note;
       - open tabs behind a "show open tabs" button instead of the tab bar (the owner's suggestion after

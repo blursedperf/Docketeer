@@ -1154,3 +1154,26 @@ body.is-frameless .welcome::before { content: ""; position: fixed; inset: 0 0 au
 }
 .docket-selected .docket-section-title { position: static; height: auto; background: none; }
 .docket-section-wrap + .docket-section-wrap { margin-top: 0; }
+
+/* ------------------------------------------------------------------ compact layout (compact.ts) */
+/* A narrow window (an iPhone): one pane at a time, the active one; its tabs are behind "Open tabs". */
+.view-action.mod-open-tabs { display: none; }
+.is-compact .view-action.mod-open-tabs { display: flex; }
+.is-compact .workspace-split.mod-root .workspace-tabs:not(.mod-active),
+.is-compact .workspace-split.mod-root .workspace-split:not(:has(.workspace-tabs.mod-active)),
+.is-compact .workspace-leaf-resize-handle,
+.is-compact .workspace-tab-header-container,
+.is-compact .workspace-leaf-spine { display: none; }
+.is-compact .workspace-split.mod-root .workspace-tabs.mod-active,
+.is-compact .workspace-split.mod-root .workspace-split:has(.workspace-tabs.mod-active) { flex: 1 1 100% !important; min-width: 0; }
+.is-compact .workspace-tabs.mod-stacked .workspace-tab-container { display: block; overflow: visible; }
+.is-compact .workspace-tabs.mod-stacked .workspace-leaf { width: 100% !important; }
+.is-compact .workspace-tabs.mod-stacked .workspace-leaf:not(.is-stack-active) { display: none !important; }
+
+.open-tabs-list { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-3); }
+.open-tabs-item { display: flex; align-items: center; gap: var(--space-1); border-radius: var(--radius-s); }
+.open-tabs-item.is-active { background: var(--background-modifier-hover); }
+.open-tabs-go { flex: 1; display: flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-2); text-align: left; background: transparent; border: none; box-shadow: none; }
+.open-tabs-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.open-tabs-close { min-width: 44px; min-height: 44px; }
+.open-tabs-new { width: 100%; min-height: 44px; }

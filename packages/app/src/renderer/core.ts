@@ -10,6 +10,7 @@ import {
 	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty, HoverPreview,
 } from '@quire/api';
 import { registerDocket } from './docket';
+import { registerCompact } from './compact';
 import { registerTiling } from './tiling';
 import { registerMedia } from './media';
 import { registerPdf } from './pdf/view';
@@ -758,6 +759,8 @@ export function registerCore(app: App): { reveal(): void } {
 	unitsStore(app);
 	(app as unknown as { tiling: typeof tiling }).tiling = tiling;
 	const docket = registerDocket(app);
+	// Last: it narrows the tiling commands registered above while the window is compact.
+	registerCompact(app);
 	return {
 		reveal: () => { docket.start(); },
 	};
