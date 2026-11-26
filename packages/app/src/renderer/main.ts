@@ -14,7 +14,8 @@ import * as cmMarkdown from '@codemirror/lang-markdown';
 import * as lezerCommon from '@lezer/common';
 import * as lezerHighlight from '@lezer/highlight';
 import * as lezerMarkdown from '@lezer/markdown';
-import { App, getHost, setIcon, setIconPack } from '@quire/api';
+import { App, applyHostPlatform, getHost, setIcon, setIconPack } from '@quire/api';
+import { watchLayout } from './layout-mode';
 import { registerCore } from './core';
 import { registerBundledIconPacks } from './icon-packs';
 import { runBench, runShots, runSmoke } from './smoke';
@@ -117,6 +118,9 @@ function frameless(host: ReturnType<typeof getHost>, app?: App): void {
 
 async function start() {
 	const host = getHost();
+	// iPhone and iPad: the device flags come from the host, before anything reads them.
+	applyHostPlatform(host);
+	watchLayout(document.body);
 	frameless(host);
 	if (!host.vault) {
 		await welcome();

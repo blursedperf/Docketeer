@@ -266,3 +266,10 @@ root, Range answers, conflict detection, a bookmark round trip.
 save and the files to read in order (`workspace.ipad.json`, then `workspace.json`). `HostBridge.formFactor` came in
 with it; the `Platform` flags that follow from it are a separate task. Checked on the iPad simulator: the
 desktop's `workspace.json` is read once and left unchanged.
+
+**The iPhone and iPad flags (Phase 1)** follow PLAN §2.5: `applyHostPlatform()` sets `Platform`'s device flags from
+the host as the page starts (on iOS also `isMacOS` and `isSafari`), and `layoutMode()` with `body.is-compact` (below
+700 CSS pixels) and `body.is-touch` (`pointer: coarse`) are kept current by `layout-mode.ts`. A narrow desktop
+window is compact too, since the layout follows the window; no style uses it yet beyond Compare's columns.
+Checked on the simulators: the iPhone 17 (402 px) is a phone, compact and touch; the iPad Pro 11-inch in portrait
+(834 px) is a tablet, regular and touch.

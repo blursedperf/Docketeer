@@ -65,6 +65,30 @@ export const Platform = {
 	isSafari: false,
 };
 
+/**
+ * Set Platform's device flags from the host, before the app starts (they are desktop's until then). On iPhone and
+ * iPad, isMacOS stays true, so Mod is ⌘ as on a Mac; isPhone and isTablet say which; isSafari, since it is WebKit.
+ * Which layout to use is a separate question, answered by the window's width (layoutMode).
+ */
+export function applyHostPlatform(host: { platform: string; formFactor?: 'desktop' | 'tablet' | 'phone' }, platform: typeof Platform = Platform): void {
+	const mobile = host.formFactor === 'tablet' || host.formFactor === 'phone';
+	const ios = host.platform === 'ios';
+	Object.assign(platform, {
+		isDesktop: !mobile, isMobile: mobile, isDesktopApp: !mobile, isMobileApp: mobile,
+		isIosApp: ios, isAndroidApp: false,
+		isPhone: host.formFactor === 'phone', isTablet: host.formFactor === 'tablet',
+	});
+	if (ios) Object.assign(platform, { isMacOS: true, isWin: false, isLinux: false, isSafari: true });
+}
+
+/** Below this width (CSS pixels) the window gets the compact layout: an iPhone, or an iPad in Slide Over. */
+export const COMPACT_WIDTH = 700;
+
+/** The layout for a window this wide: one pane and the Docket as a sheet ('compact'), or the full one ('regular'). */
+export function layoutMode(width: number): 'compact' | 'regular' {
+	return width < COMPACT_WIDTH ? 'compact' : 'regular';
+}
+
 /** Escape text for a RegExp. */
 export function escapeRegExp(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

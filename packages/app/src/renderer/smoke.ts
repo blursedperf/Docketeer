@@ -1536,6 +1536,17 @@ export async function runSmoke(app: App): Promise<void> {
 	await lockingChecks(app, check);
 	await titleChecks(app, check);
 	await conflictChecks(app, check);
+	await check('layout: the window\'s width sets body.is-compact; desktop flags stay desktop', async () => {
+		const real = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+		const at = (w: number) => { Object.defineProperty(window, 'innerWidth', { value: w, configurable: true }); window.dispatchEvent(new Event('resize')); return document.body.classList.contains('is-compact'); };
+		const wide = at(1200);
+		const narrow = at(393);
+		const back = at(1200);
+		if (real) Object.defineProperty(window, 'innerWidth', real); else delete (window as { innerWidth?: number }).innerWidth;
+		window.dispatchEvent(new Event('resize'));
+		const desktop = Platform.isDesktopApp && !Platform.isMobile && !Platform.isPhone && !Platform.isTablet && !Platform.isIosApp;
+		return (!wide && narrow && !back && desktop) || `wide=${wide} narrow=${narrow} back=${back} desktop=${desktop}`;
+	});
 
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {

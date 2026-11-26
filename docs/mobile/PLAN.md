@@ -310,7 +310,7 @@ that editing feels right, or decides what changes. Stop here and report.
       - Clipboard uses `UIPasteboard`.
 - [x] Per-device workspace file (§2.6), with a vitest test in `packages/api/test`. (`formFactor` is on
       `HostBridge` now; the `Platform` flags are the next task.)
-- [ ] `Platform` and `formFactor` come from the host (§2.5), with a test.
+- [x] `Platform` and `formFactor` come from the host (§2.5), with a test.
 - [ ] **XCTest suite** (`DocketeerTests/`) mirroring `packages/app/test/vault-files.test.ts`:
       - path escapes, hidden files, atomic write, rename and copy;
       - Range responses;

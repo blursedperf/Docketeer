@@ -26,6 +26,10 @@
   `.quire/workspace.ipad.json` and an iPhone in `workspace.iphone.json`, starting from the desktop's layout the first
   time, so opening a homebase on the iPad no longer rearranges your panes on the laptop. Settings, units, hotkeys
   and panels stay shared. For plugins: `HostBridge.formFactor`, and `layoutFiles()` says where the layout is kept.
+- **For plugins: `Platform` knows iPhone and iPad.** Its device flags (`isMobile`, `isPhone`, `isTablet`,
+  `isIosApp`…) now come from the host; on iOS `isMacOS` stays true, so Mod is ⌘. The page has `body.is-compact`
+  when the window is narrower than 700 pixels (an iPhone, an iPad in Slide Over, or a narrow desktop window;
+  `layoutMode()`) and `body.is-touch` on a touch screen. Nothing looks different yet.
 
 ## v0.20.0
 
