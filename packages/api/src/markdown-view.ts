@@ -19,6 +19,7 @@ import { MarkdownRenderer } from './markdown-render';
 import { Component } from './component';
 import { setIcon } from './icons';
 import { Notice } from './ui';
+import { isConflict } from './host';
 import { debounce } from './util';
 import { FileView, type ViewStateResult } from './view';
 import type { WorkspaceLeaf } from './workspace';
@@ -364,9 +365,37 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		try {
 			await this.app.vault.modify(file, text);
 		} catch (e) {
+			if (isConflict(e)) { await this.keepBoth(file, text); return; }
 			this.dirty = true;
 			new Notice(`Could not save ${file.path}: ${e instanceof Error ? e.message : String(e)}`);
 		}
+	}
+
+	/**
+	 * The note changed on another device while this one had edits not saved yet (a host that guards conflicts):
+	 * keep both. Your version becomes a conflict copy beside it, and the editor shows the note as it is on disk.
+	 */
+	private async keepBoth(file: TFile, mine: string): Promise<void> {
+		this.saveSoon.cancel();
+		let copy: TFile;
+		try {
+			copy = await this.app.vault.saveConflictCopy(file, mine);
+		} catch (e) {
+			// Nothing is lost: the edits stay in the editor, to be saved again.
+			this.dirty = true;
+			new Notice(`“${file.basename}” changed on another device, and your version could not be kept beside it: ${e instanceof Error ? e.message : String(e)}`);
+			return;
+		}
+		const disk = await this.app.vault.read(file);
+		if (this.file === file) {
+			this.loading = true;
+			this.editor.replaceWhole(disk, true);
+			this.loading = false;
+			this.lastSaved = disk;
+			this.dirty = false;
+			if (this.mode === 'preview') await this.renderPreview();
+		}
+		new Notice(`“${file.basename}” changed on another device while you were editing it. Both are kept: yours is “${copy.basename}”.`);
 	}
 
 	requestSave(): void { this.saveSoon(); }
@@ -394,6 +423,11 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		if (!file) return;
 		const disk = await this.app.vault.cachedRead(file);
 		if (disk === this.lastSaved) return;
+		if (this.dirty && this.app.host.fs.guardsConflicts) {
+			// Another device changed it while this one has edits: keep both rather than overwrite either.
+			await this.keepBoth(file, this.editor.getValue());
+			return;
+		}
 		this.lastSaved = disk;
 		if (this.dirty) return; // Typing since the last save wins; it is saved next.
 		this.loading = true;

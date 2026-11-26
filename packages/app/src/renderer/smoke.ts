@@ -5,7 +5,7 @@
  */
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
-import { type App, MarkdownView, Platform, defaultDocketKey, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
+import { type App, type HostBridge, type HostFs, MarkdownView, Platform, defaultDocketKey, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { genericPanels } from './docket/panels-model';
@@ -1534,6 +1534,7 @@ export async function runSmoke(app: App): Promise<void> {
 	await tilingChecks(app, check);
 	await lockingChecks(app, check);
 	await titleChecks(app, check);
+	await conflictChecks(app, check);
 
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
@@ -3835,6 +3836,94 @@ async function lockingChecks(app: App, check: CheckFn): Promise<void> {
 }
 
 /** The note's name as an editable title above its text. */
+/**
+ * A host that guards conflicts (iOS): a save over a change from another device keeps both versions. The desktop
+ * host does not guard, so for these checks the app gets a copy of it that does, as HomebaseFS does on iOS:
+ * it remembers each file's time when read or written, and refuses a write when the file changed since.
+ */
+async function conflictChecks(app: App, check: CheckFn): Promise<void> {
+	const { vault, workspace } = app;
+	const original = app.host;
+	const known = new Map<string, number>();
+	const fs: HostFs = {
+		...original.fs,
+		guardsConflicts: true,
+		read: async (p) => { const st = await original.fs.stat(p); if (st) known.set(p, st.mtime); return original.fs.read(p); },
+		write: async (p, data) => {
+			const was = known.get(p);
+			const now = await original.fs.stat(p);
+			if (was !== undefined && now && now.mtime !== was) throw Object.assign(new Error(`${p} changed on disk`), { code: 'conflict' });
+			const st = await original.fs.write(p, data);
+			known.set(p, st.mtime);
+			return st;
+		},
+	};
+	const guarded: HostBridge = { ...original, fs };
+	const setHost = (h: HostBridge) => { app.host = h; (vault as unknown as { host: HostBridge }).host = h; };
+	const copies = () => vault.getMarkdownFiles().filter((f) => f.path.startsWith('Conflict smoke (conflict ')).map((f) => f.path);
+	const open = async (text: string) => {
+		const file = vault.getFileByPath('Conflict smoke.md') ?? await vault.create('Conflict smoke.md', text);
+		await vault.modify(file, text);
+		await workspace.getLeaf(false).openFile(file);
+		const v = workspace.getActiveViewOfType(MarkdownView)!;
+		if (v.getMode() !== 'source') await v.setMode('source');
+		await sleep(150);
+		return { file, v };
+	};
+	/** Type at the end of the note, as a person would (the editor saves 600 ms later). */
+	const type = (v: MarkdownView, text: string) => v.editor.cm.dispatch({ changes: { from: v.editor.cm.state.doc.length, insert: text }, userEvent: 'input.type' });
+	const cleanUp = async () => {
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await sleep(80);
+		for (const p of [...copies(), 'Conflict smoke.md']) { const f = vault.getFileByPath(p); if (f) await vault.delete(f); }
+	};
+
+	setHost(guarded);
+	try {
+		await check('conflicts: a save refused because another device changed the note keeps both versions', async () => {
+			const { file, v } = await open('Base.\n');
+			type(v, 'Mine.\n');
+			await sleep(20);
+			await original.fs.write(file.path, 'Base.\nTheirs.\n'); // another device, through iCloud
+			await v.save(); // before the change is reported: the host refuses it
+			await sleep(400);
+			const [copy] = copies();
+			const disk = await original.fs.read(file.path);
+			const mine = copy ? await original.fs.read(copy) : '';
+			const shown = v.editor.getValue();
+			const notice = [...document.querySelectorAll('.notice')].some((n) => /changed on another device/.test(n.textContent ?? ''));
+			await cleanUp();
+			return (copies().length === 0 && disk === 'Base.\nTheirs.\n' && mine === 'Base.\nMine.\n' && shown === disk && notice)
+				|| `copy=${copy} disk=${JSON.stringify(disk)} mine=${JSON.stringify(mine)} shown=${JSON.stringify(shown)} notice=${notice}`;
+		});
+		await check('conflicts: a change from another device while you have unsaved edits keeps both versions', async () => {
+			const { file, v } = await open('Base.\n');
+			type(v, 'Mine.\n');
+			await original.fs.write(file.path, 'Base.\nTheirs.\n'); // reported before the editor saves
+			await sleep(1200);
+			const [copy] = copies();
+			const disk = await original.fs.read(file.path);
+			const mine = copy ? await original.fs.read(copy) : '';
+			const shown = v.editor.getValue();
+			await cleanUp();
+			return (disk === 'Base.\nTheirs.\n' && mine === 'Base.\nMine.\n' && shown === disk)
+				|| `copy=${copy} disk=${JSON.stringify(disk)} mine=${JSON.stringify(mine)} shown=${JSON.stringify(shown)}`;
+		});
+	} finally {
+		setHost(original);
+	}
+	await check('conflicts: the desktop host does not guard; typing since the last save wins, as before', async () => {
+		const { file, v } = await open('Base.\n');
+		type(v, 'Mine.\n');
+		await original.fs.write(file.path, 'Base.\nTheirs.\n');
+		await sleep(1200);
+		const disk = await original.fs.read(file.path);
+		const none = copies().length === 0;
+		await cleanUp();
+		return (disk === 'Base.\nMine.\n' && none) || `disk=${JSON.stringify(disk)} copies=${!none}`;
+	});
+}
+
 async function titleChecks(app: App, check: CheckFn): Promise<void> {
 	const { vault, workspace } = app;
 	const title = () => [...document.querySelectorAll<HTMLInputElement>('.workspace-leaf.mod-active input.inline-title')].find((e) => e.offsetParent !== null) ?? null;

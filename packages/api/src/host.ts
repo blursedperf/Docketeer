@@ -33,6 +33,17 @@ export interface HostFs {
 	copy(from: string, to: string): Promise<void>;
 	/** Move to the system trash. */
 	trash(path: string): Promise<boolean>;
+	/**
+	 * The host refuses to overwrite a file that changed on disk since Docketeer last read or wrote it (iOS, where
+	 * iCloud brings changes from other devices): `write` and `writeBinary` then reject with an error whose `code`
+	 * is 'conflict' (see isConflict). Desktop leaves it out.
+	 */
+	guardsConflicts?: boolean;
+}
+
+/** A write the host refused because the file changed on disk meanwhile (HostFs.guardsConflicts). */
+export function isConflict(e: unknown): boolean {
+	return typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'conflict';
 }
 
 export interface HostFsEvent {

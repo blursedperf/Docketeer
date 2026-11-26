@@ -49,7 +49,7 @@ export { Usage, frecency, type UsageEntry } from './usage';
 export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type DocketPanelUI, type DocketAction, type DocketRowOptions, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
-export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';
+export { getHost, isConflict, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
 export { addProperty, editFrontmatter } from './properties-editor';
 export { InputSuggest } from './input-suggest';

@@ -42,6 +42,24 @@ function parentOf(path: string): string {
 	return i === -1 ? '/' : path.slice(0, i);
 }
 
+/**
+ * Where to keep your version of a note that changed on another device while you edited it:
+ * "Torts/Duty of care (conflict 2026-11-27 10.32).md" beside it, numbered if that is taken.
+ */
+export function conflictCopyPath(path: string, when: Date, taken: (p: string) => boolean): string {
+	const slash = path.lastIndexOf('/');
+	const dir = slash === -1 ? '' : path.slice(0, slash + 1);
+	const name = path.slice(slash + 1);
+	const dot = name.lastIndexOf('.');
+	const [base, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ''];
+	const two = (n: number) => String(n).padStart(2, '0');
+	const stamp = `${when.getFullYear()}-${two(when.getMonth() + 1)}-${two(when.getDate())} ${two(when.getHours())}.${two(when.getMinutes())}`;
+	for (let n = 1; ; n++) {
+		const candidate = `${dir}${base} (conflict ${stamp}${n === 1 ? '' : ` ${n}`})${ext}`;
+		if (!taken(candidate)) return candidate;
+	}
+}
+
 function isHidden(path: string): boolean {
 	return path.split('/').some((seg) => seg.startsWith('.'));
 }
@@ -209,6 +227,16 @@ export class Vault extends Events {
 		this.cache.delete(file.path);
 		file.stat = { ctime: stat.ctime, mtime: stat.mtime, size: stat.size };
 		this.trigger('modify', file);
+	}
+
+	/**
+	 * Keep `text` (your version of `file`) as a conflict copy beside it, when the host refused to save it because the
+	 * file changed on disk meanwhile. A locked note's copy is locked too.
+	 */
+	async saveConflictCopy(file: TFile, text: string, when = new Date()): Promise<TFile> {
+		const p = conflictCopyPath(file.path, when, (c) => this.files.has(c));
+		this.crypt?.onCopy(file.path, p);
+		return this.create(p, text);
 	}
 
 	/** Change a file's text with `fn`, from its current content on disk. */
