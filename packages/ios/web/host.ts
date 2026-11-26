@@ -7,6 +7,7 @@
  * Bytes cross the bridge as base64. Large media never does: the page loads it from quire://app/vault/.
  */
 import type { HostBridge, HostFs, HostFsEvent, HostPluginInfo, HostStat } from '@quire/api';
+import { genericPanels } from '../../app/src/renderer/docket/panels-model';
 
 /** Ask the native shell: resolves with its answer, rejects with its error. */
 export type Native = (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -84,11 +85,11 @@ export function nativeFs(native: Native): HostFs {
 }
 
 /**
- * window.quire for iOS. `fs` is the homebase: the in-memory example in Phase 0, nativeFs() from Phase 1. Picking
- * and opening other homebases arrives with the folder picker in Phase 1; until then they report that nothing
- * was opened.
+ * window.quire for iOS. The homebase is a folder native opened (from the folder picker, the recent list or the
+ * example), and every fs call goes to native, which checks the path. `vault.path` is where the folder is, in
+ * words ("iCloud Drive/Law"): native keeps the folder's bookmark under it.
  */
-export function createHost(native: Native, info: HostInfo, events: NativeEvents, fs: HostFs): HostBridge {
+export function createHost(native: Native, info: HostInfo, events: NativeEvents): HostBridge {
 	const call = <T>(channel: string, ...args: unknown[]) => native(channel, ...args) as Promise<T>;
 
 	let quitHandler: (() => Promise<void>) | null = null;
@@ -103,7 +104,7 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents,
 		platform: info.platform,
 		appVersion: info.appVersion,
 		vault: info.vault,
-		fs,
+		fs: nativeFs(native),
 		onFsEvents: (cb) => events.on('fs:events', (payload) => cb(payload as HostFsEvent[])),
 		plugins: { list: () => call<HostPluginInfo[]>('plugins:list') },
 		app: {
@@ -113,9 +114,12 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents,
 			frameless: false,
 			getConfig: () => call('app:getConfig'),
 			setConfig: (patch) => call('app:setConfig', patch),
-			recentVaults: async () => (info.vault ? [{ ...info.vault, time: 0, current: true }] : []),
-			chooseVault: async () => false,
-			openVault: async () => false,
+			recentVaults: () => call('app:recent'),
+			forgetVault: (path) => call('app:forgetVault', path),
+			openExample: () => call('app:openExample'),
+			// Native shows the folder picker; a new Generic homebase gets its panels, written by native as on desktop.
+			chooseVault: (create, layout) => call('app:chooseVault', !!create, layout ?? 'legal', create && layout === 'generic' ? JSON.stringify(genericPanels(), null, '\t') : null),
+			openVault: (path) => call('app:openVault', path),
 			showItemInFolder: async () => undefined,
 			onBeforeQuit: (cb) => { quitHandler = cb; },
 			dictionary: (lang) => call('spell:dictionary', lang),

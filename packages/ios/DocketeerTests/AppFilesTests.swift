@@ -35,7 +35,8 @@ final class AppFilesTests: XCTestCase {
 	}
 
 	private func answer(_ url: String) -> AppFiles.Answer {
-		AppFiles(root: root).answer(for: URL(string: url)!)
+		let homebase = try? HomebaseFS(root: root.appendingPathComponent("example-homebase"))
+		return AppFiles(root: root, vault: { homebase }).answer(for: URL(string: url)!)
 	}
 
 	func testIndexCarriesTheCSP() {
@@ -102,6 +103,7 @@ final class AppFilesTests: XCTestCase {
 		XCTAssertEqual(answer("quire://app/vault/Welcome.md").status, 403)
 		XCTAssertEqual(answer("quire://app/vault/").status, 403)
 		XCTAssertEqual(answer("quire://app/vault/pics/dog.png").status, 404)
+		XCTAssertEqual(AppFiles(root: root).answer(for: URL(string: "quire://app/vault/pics/cat.png")!).status, 404, "no homebase open")
 	}
 
 	func testPartsAreDecodedOnce() {
@@ -124,7 +126,7 @@ final class ChannelsTests: XCTestCase {
 			("dictionaries/en-AU/index.aff", "aff"), ("dictionaries/en-AU/index.dic", "dic"),
 			("plugins/task-docket/manifest.json", #"{"id":"task-docket","name":"Tasks"}"#), ("plugins/task-docket/main.js", ""),
 			("plugins/broken/manifest.json", "{"), ("plugins/broken/main.js", ""),
-			("example-homebase/Welcome.md", "# Hi"), ("example-homebase/.quire/units.json", "{}"),
+			("example-homebase/Welcome.md", "# Hi"), ("example-homebase/.quire/example.json", "{}"),
 		] {
 			let url = root.appendingPathComponent(rel)
 			try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -139,8 +141,12 @@ final class ChannelsTests: XCTestCase {
 		try? FileManager.default.removeItem(at: root)
 	}
 
-	private func channels() -> Channels {
-		Channels(root: root, defaults: defaults, clipboard: Clip(), formFactor: "tablet", appVersion: "1.2.3")
+	private func homebases() -> Homebases {
+		Homebases(defaults: defaults, documents: root.appendingPathComponent("Documents"), exampleSource: root.appendingPathComponent("example-homebase"), deviceStorage: "On My iPad")
+	}
+
+	private func channels(_ homebases: Homebases? = nil) -> Channels {
+		Channels(root: root, defaults: defaults, clipboard: Clip(), formFactor: "tablet", appVersion: "1.2.3", homebases: homebases ?? self.homebases())
 	}
 
 	func testUnknownChannelsAndWrongArgumentsAreErrors() {
@@ -179,8 +185,7 @@ final class ChannelsTests: XCTestCase {
 		XCTAssertEqual(plugins?.count, 1)
 		XCTAssertEqual((plugins?.first?["manifest"] as? [String: Any])?["id"] as? String, "task-docket")
 		XCTAssertEqual(plugins?.first?["hasStyles"] as? Bool, false)
-		let files = try channels().answer("example:files", []) as? [[String: String]]
-		XCTAssertEqual(files?.map { $0["path"]! }, [".quire/units.json", "Welcome.md"])
+		XCTAssertThrowsError(try channels().answer("example:files", []), "Phase 0's in-memory example is gone")
 	}
 
 	func testHostInfo() throws {
@@ -188,5 +193,153 @@ final class ChannelsTests: XCTestCase {
 		XCTAssertEqual(info?["platform"] as? String, "ios")
 		XCTAssertEqual(info?["formFactor"] as? String, "tablet")
 		XCTAssertEqual(info?["appVersion"] as? String, "1.2.3")
+		XCTAssertTrue(info?["vault"] is NSNull, "no homebase yet: the page shows its welcome")
+	}
+
+	func testTheExampleOpensFromDocumentsAndTheFsChannelsUseIt() throws {
+		let hb = homebases()
+		let c = channels(hb)
+		var reloaded = 0
+		c.reload = { reloaded += 1 }
+		XCTAssertThrowsError(try c.answer("fs:read", ["Welcome.md"]), "no homebase open")
+		XCTAssertEqual(try c.answer("app:openExample", []) as? String, "On My iPad/Docketeer/Docketeer example")
+		let exp = expectation(description: "reload")
+		DispatchQueue.main.async { exp.fulfill() }
+		wait(for: [exp], timeout: 1)
+		XCTAssertEqual(reloaded, 1)
+		let info = try c.answer("host:info", []) as? [String: Any]
+		XCTAssertEqual((info?["vault"] as? [String: String])?["name"], "Docketeer example")
+
+		XCTAssertEqual(try c.answer("fs:read", ["Welcome.md"]) as? String, "# Hi")
+		let st = try c.answer("fs:write", ["Notes/New.md", "new"]) as? [String: Any]
+		XCTAssertEqual(st?["size"] as? Int, 3)
+		XCTAssertEqual((try c.answer("fs:writeBinary", ["b.bin", "AQID"]) as? [String: Any])?["size"] as? Int, 3)
+		XCTAssertEqual(try c.answer("fs:readBinary", ["b.bin"]) as? String, "AQID")
+		XCTAssertEqual((try c.answer("fs:tree", [""]) as? [[String: Any]])?.compactMap { $0["path"] as? String }, ["Notes", "Notes/New.md", "Welcome.md", "b.bin"])
+		XCTAssertEqual((try c.answer("fs:list", [""]) as? [String: [String]])?["folders"], [".quire", "Notes"])
+		XCTAssertTrue(try c.answer("fs:stat", ["Missing.md"]) is NSNull)
+		XCTAssertEqual(try c.answer("fs:exists", ["Notes/New.md"]) as? Bool, true)
+		_ = try c.answer("fs:rename", ["Notes/New.md", "Notes/Renamed.md"])
+		_ = try c.answer("fs:rmdir", ["Notes", true])
+		XCTAssertEqual(try c.answer("fs:exists", ["Notes"]) as? Bool, false)
+		XCTAssertThrowsError(try c.answer("fs:read", ["../../escape.md"]))
+		XCTAssertThrowsError(try c.answer("fs:write", ["a.md", 3]))
+		XCTAssertThrowsError(try c.answer("fs:writeBinary", ["a.bin", "not base64!"]))
+		XCTAssertThrowsError(try c.answer("fs:nothing", [""]))
+
+		// The copy in Documents is kept: opening the example again reuses it.
+		_ = try c.answer("app:openExample", [])
+		XCTAssertEqual(try c.answer("fs:exists", ["b.bin"]) as? Bool, true)
+	}
+
+	func testChoosingAFolderOpensItAndANewGenericOneGetsItsPanels() throws {
+		let folder = root.appendingPathComponent("Picked/Law")
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		let c = channels()
+		c.chooseFolder = { done in done(folder) }
+		let panels = #"[{"id":"files"}]"#
+		var result: Result<Any, Error>?
+		c.answerLater("app:chooseVault", [true, "generic", panels]) { result = $0 }
+		XCTAssertEqual(try result?.get() as? Bool, true)
+		XCTAssertEqual(try String(contentsOf: folder.appendingPathComponent(".quire/panels.json"), encoding: .utf8), panels)
+		let recent = try c.answer("app:recent", []) as? [[String: Any]]
+		XCTAssertEqual(recent?.first?["name"] as? String, "Law")
+		XCTAssertEqual(recent?.first?["current"] as? Bool, true)
+
+		// An existing panels file is left as it is; a cancelled picker answers false; bad panels are refused.
+		c.answerLater("app:chooseVault", [true, "generic", #"[{"id":"other"}]"#]) { result = $0 }
+		XCTAssertEqual(try String(contentsOf: folder.appendingPathComponent(".quire/panels.json"), encoding: .utf8), panels)
+		c.chooseFolder = { done in done(nil) }
+		c.answerLater("app:chooseVault", [false, "legal", NSNull()]) { result = $0 }
+		XCTAssertEqual(try result?.get() as? Bool, false)
+		c.answerLater("app:chooseVault", [true, "generic", "{not json"]) { result = $0 }
+		XCTAssertThrowsError(try result?.get())
+	}
+}
+
+/** The homebases this device knows: bookmarks, the recent list, the example, where each is in words. */
+final class HomebasesTests: XCTestCase {
+	private var root: URL!
+	private var defaults: UserDefaults!
+	private var suite: String!
+
+	override func setUpWithError() throws {
+		root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		for dir in ["example/.quire", "Law", "Medicine", "Documents"] {
+			try FileManager.default.createDirectory(at: root.appendingPathComponent(dir), withIntermediateDirectories: true)
+		}
+		try "{}".write(to: root.appendingPathComponent("example/.quire/example.json"), atomically: true, encoding: .utf8)
+		suite = "docketeer-homebases-\(UUID().uuidString)"
+		defaults = UserDefaults(suiteName: suite)
+	}
+
+	override func tearDownWithError() throws {
+		defaults.removePersistentDomain(forName: suite)
+		try? FileManager.default.removeItem(at: root)
+	}
+
+	private func make() -> Homebases {
+		Homebases(defaults: defaults, documents: root.appendingPathComponent("Documents"), exampleSource: root.appendingPathComponent("example"), deviceStorage: "On My iPhone")
+	}
+
+	func testABookmarkRoundTrip() throws {
+		let hb = make()
+		let law = try hb.add(folder: root.appendingPathComponent("Law"))
+		try hb.add(folder: root.appendingPathComponent("Medicine"))
+		XCTAssertEqual(hb.current?.name, "Medicine")
+		XCTAssertEqual(hb.recent().map { $0["name"] as? String }, ["Medicine", "Law"])
+
+		// A new launch: the last one opens again, from its bookmark.
+		let again = make()
+		again.reopenLast()
+		XCTAssertEqual(again.current?.name, "Medicine")
+		XCTAssertTrue(again.open(location: law))
+		XCTAssertEqual(again.current?.name, "Law")
+		XCTAssertNotNil(try again.fs?.write("Torts.md", Data("x".utf8)))
+		XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("Law/Torts.md").path))
+		XCTAssertFalse(again.open(location: "Nowhere/Else"))
+	}
+
+	func testAFolderThatWentIsMissingAndCanBeForgotten() throws {
+		let hb = make()
+		let law = try hb.add(folder: root.appendingPathComponent("Law"))
+		try hb.add(folder: root.appendingPathComponent("Medicine"))
+		try FileManager.default.removeItem(at: root.appendingPathComponent("Law"))
+		let gone = hb.recent().first { $0["path"] as? String == law }
+		XCTAssertEqual(gone?["missing"] as? Bool, true)
+		XCTAssertFalse(hb.open(location: law))
+		hb.forget(location: law)
+		XCTAssertEqual(hb.recent().count, 1)
+		XCTAssertEqual(hb.current?.name, "Medicine", "the open one stays open")
+	}
+
+	func testTheExampleIsCopiedOnceAndAnUnrelatedFolderIsLeftAlone() throws {
+		let hb = make()
+		try FileManager.default.createDirectory(at: root.appendingPathComponent("Documents/Docketeer example"), withIntermediateDirectories: true)
+		let location = try hb.openExample()
+		XCTAssertEqual(location, "On My iPhone/Docketeer/Docketeer example 2", "a folder of that name that is not the example is not used")
+		try hb.fs?.write("Mine.md", Data("mine".utf8))
+		XCTAssertEqual(try make().openExample(), location)
+		XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("Documents/Docketeer example 2/Mine.md").path))
+	}
+
+	func testTheListKeepsTwelve() throws {
+		let hb = make()
+		for n in 1...14 {
+			let dir = root.appendingPathComponent("Subject \(n)")
+			try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+			try hb.add(folder: dir)
+		}
+		XCTAssertEqual(hb.recent().count, 12)
+		XCTAssertEqual(hb.recent().first?["name"] as? String, "Subject 14")
+	}
+
+	func testWhereAFolderIsInWords() {
+		let docs = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application/ABC/Documents")
+		let say = { (p: String) in Homebases.location(of: URL(fileURLWithPath: p), documents: docs, deviceStorage: "On My iPad") }
+		XCTAssertEqual(say("/private/var/mobile/Library/Mobile Documents/com~apple~CloudDocs/Law/Torts"), "iCloud Drive/Law/Torts")
+		XCTAssertEqual(say("/var/mobile/Containers/Data/Application/ABC/Documents/Docketeer example"), "On My iPad/Docketeer/Docketeer example")
+		XCTAssertEqual(say("/private/var/mobile/Containers/Shared/AppGroup/X/File Provider Storage/Notes"), "On My iPad/Notes")
+		XCTAssertEqual(say("/Volumes/USB/Uni/Law/Notes"), "Uni/Law/Notes")
 	}
 }

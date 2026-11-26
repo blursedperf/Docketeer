@@ -288,7 +288,7 @@ that editing feels right, or decides what changes. Stop here and report.
         `<homebase>/.trash/` and returns `true`.
 - [ ] Coordinated reads and writes, iCloud placeholders, and the `pending` flag (§2.6). Update `host.ts`,
       the Electron host (no-op) and the search index.
-- [ ] Folder picker and security-scoped bookmarks, with `chooseVault(create, layout)`, `openVault`,
+- [x] Folder picker and security-scoped bookmarks, with `chooseVault(create, layout)`, `openVault`,
       `recentVaults` (with `missing` and `current`) and `forgetVault`. `openExample` copies the example into
       the app's Documents folder. Port the new-homebase layout from `homebase-layout.ts`.
 - [ ] Change watching (`NSMetadataQuery`, plus a rescan on returning to the foreground) sends `fs:events`.

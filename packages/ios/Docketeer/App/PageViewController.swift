@@ -1,4 +1,5 @@
 import UIKit
+import UniformTypeIdentifiers
 import WebKit
 
 /**
@@ -11,6 +12,8 @@ final class PageViewController: UIViewController {
 	private var bridge: Bridge?
 	/** The background task waiting for the page to save, by the token sent with app:before-quit. */
 	private var saving: [String: UIBackgroundTaskIdentifier] = [:]
+	/** Answers the folder picker that is showing. */
+	private var picked: ((URL?) -> Void)?
 
 	static let startURL = URL(string: "quire://app/index.html")!
 
@@ -32,21 +35,36 @@ final class PageViewController: UIViewController {
 	}
 
 	private func load(root: URL, rules: WKContentRuleList) {
+		let pad = traitCollection.userInterfaceIdiom == .pad
+		let homebases = Homebases(
+			defaults: .standard,
+			documents: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0],
+			exampleSource: root.appendingPathComponent("example-homebase", isDirectory: true),
+			deviceStorage: pad ? "On My iPad" : "On My iPhone"
+		)
+		homebases.reopenLast()
+		#if DEBUG
+		// Simulator runs: `-openExample` opens the example homebase without tapping (Debug builds only).
+		if ProcessInfo.processInfo.arguments.contains("-openExample") { _ = try? homebases.openExample() }
+		#endif
 		let channels = Channels(
 			root: root,
 			defaults: .standard,
 			clipboard: Pasteboard(),
-			formFactor: traitCollection.userInterfaceIdiom == .pad ? "tablet" : "phone",
-			appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+			formFactor: pad ? "tablet" : "phone",
+			appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0",
+			homebases: homebases
 		)
 		channels.onQuitReady = { [weak self] token in self?.finishSaving(token) }
+		channels.chooseFolder = { [weak self] done in self?.chooseFolder(done) ?? done(nil) }
+		channels.reload = { [weak self] in self?.webView?.reload() }
 		let bridge = Bridge(channels: channels)
 		self.bridge = bridge
 
 		let config = WKWebViewConfiguration()
 		Lockdown.apply(to: config)
 		config.allowsInlineMediaPlayback = true
-		config.setURLSchemeHandler(QuireSchemeHandler(files: AppFiles(root: root)), forURLScheme: "quire")
+		config.setURLSchemeHandler(QuireSchemeHandler(files: AppFiles(root: root, vault: { homebases.fs })), forURLScheme: "quire")
 		config.userContentController.add(rules)
 		config.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: Bridge.name)
 		#if DEBUG
@@ -71,6 +89,16 @@ final class PageViewController: UIViewController {
 		])
 		self.webView = webView
 		webView.load(URLRequest(url: Self.startURL))
+	}
+
+	/** The system folder picker. Only the folder picked becomes reachable (through its security-scoped URL). */
+	private func chooseFolder(_ done: @escaping (URL?) -> Void) {
+		picked?(nil)
+		picked = done
+		let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
+		picker.delegate = self
+		picker.allowsMultipleSelection = false
+		present(picker, animated: true)
 	}
 
 	/** Lock the homebase if locking is on, and let the page save, in a background task that ends when it has. */
@@ -99,5 +127,19 @@ final class PageViewController: UIViewController {
 			label.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
 			label.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
 		])
+	}
+}
+
+extension PageViewController: UIDocumentPickerDelegate {
+	func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+		let done = picked
+		picked = nil
+		done?(urls.first)
+	}
+
+	func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+		let done = picked
+		picked = nil
+		done?(nil)
 	}
 }

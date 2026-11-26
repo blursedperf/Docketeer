@@ -40,6 +40,8 @@ stays until it is deleted.
 - **The boot order is in `start.ts`, apart from `boot.ts`**, so it can be tested without a WebView. `boot.ts`
   shows an error on the page if starting fails, as the renderer does.
 - **The example homebase is sent to the page once** (`example:files`, about 0.9 MB as base64) and held in memory.
+  *(Phase 0 only: from Phase 1 the homebase is a folder on disk, and the example is copied into the app's
+  Documents folder; `example:files` and the in-memory homebase are gone.)*
   The CSP's `connect-src 'none'` rules out fetching it from `quire://app/`. Media still loads from
   `quire://app/vault/`, which the shell serves from the bundled example in Phase 0, so files added in memory
   (an AGLC4 Word export, say) cannot be opened as media until Phase 1.
@@ -196,3 +198,14 @@ host gets no-op versions in the same commit, per PLAN §0 rule 2.
 XCTests mirroring `packages/app/test/vault-files.test.ts`: escapes (`..`, encoded, absolute, NUL, symlinks
 out), hidden files, atomic writes (no temporary file left; parent folders made), rename and copy, refusing the
 root, Range answers, conflict detection, a bookmark round trip.
+
+**What the folder picker work settled (Phase 1):**
+
+- **`vault.path` is where the folder is, in words** ("iCloud Drive/Law/Torts", "On My iPad/Docketeer/Docketeer
+  example"), because the start screen and the switcher show it. It is also the key of the folder's bookmark, so
+  the page still never sees a real path.
+- **A new Generic homebase's panels come from the page.** `genericPanels()` lives in the renderer, so the iOS
+  bridge sends it as JSON with `app:chooseVault`; native checks it is JSON, under 1 MB, and writes
+  `.quire/panels.json` only if the folder has none (as `applyHomebaseLayout()` on desktop).
+- **The app's Documents folder shows in Files** (`UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`),
+  so the example homebase can be seen and backed up there. This was a Phase 4 item, brought forward.

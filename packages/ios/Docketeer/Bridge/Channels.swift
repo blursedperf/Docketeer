@@ -23,15 +23,28 @@ final class Channels {
 	let clipboard: TextClipboard
 	let formFactor: String
 	let appVersion: String
+	let homebases: Homebases
 	/** Called with the token of app:quit-ready: the page has saved. */
 	var onQuitReady: ((String) -> Void)?
+	/** Shows the folder picker; answers with the folder, or nil if it was cancelled (main thread). */
+	var chooseFolder: ((@escaping (URL?) -> Void) -> Void)?
+	/** Reloads the page, after another homebase opened (main thread). */
+	var reload: (() -> Void)?
+
+	/** Channels answered later, on the main thread (they show something first). */
+	static let later: Set<String> = ["app:chooseVault"]
+	/** Channels that change which homebase is open, or touch UIKit: answered on the main thread. */
+	static let mainThread: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready", "app:recent", "app:openVault", "app:forgetVault", "app:openExample"]
+	/** The most a new homebase's panels file may hold. */
+	static let maxPanelsJSON = 1_000_000
 
 	static let configKey = "config"
 	static let dictionaryLanguages: Set<String> = ["en-AU", "en-GB", "en-US"]
 	static let pdfKinds: Set<String> = ["standard_fonts", "cmaps"]
 
-	init(root: URL, defaults: UserDefaults, clipboard: TextClipboard, formFactor: String, appVersion: String) {
+	init(root: URL, defaults: UserDefaults, clipboard: TextClipboard, formFactor: String, appVersion: String, homebases: Homebases) {
 		self.root = root
+		self.homebases = homebases
 		self.defaults = defaults
 		self.clipboard = clipboard
 		self.formFactor = formFactor
@@ -41,10 +54,24 @@ final class Channels {
 	func answer(_ channel: String, _ args: [Any]) throws -> Any {
 		switch channel {
 		case "host:info":
-			let name = "Docketeer example"
-			return ["platform": "ios", "appVersion": appVersion, "formFactor": formFactor, "vault": ["path": name, "name": name]]
-		case "example:files":
-			return try exampleFiles()
+			let vault: Any = homebases.current.map { ["path": $0.location, "name": $0.name] } ?? NSNull()
+			return ["platform": "ios", "appVersion": appVersion, "formFactor": formFactor, "vault": vault]
+		case "app:recent":
+			return homebases.recent()
+		case "app:openVault":
+			let location = try arg(args, 0, String.self)
+			guard homebases.open(location: location) else { return false }
+			afterOpening()
+			return true
+		case "app:forgetVault":
+			homebases.forget(location: try arg(args, 0, String.self))
+			return NSNull()
+		case "app:openExample":
+			let location = try homebases.openExample()
+			afterOpening()
+			return location
+		case let c where c.hasPrefix("fs:"):
+			return try fsAnswer(c, args)
 		case "app:getConfig":
 			return config()
 		case "app:setConfig":
@@ -83,6 +110,93 @@ final class Channels {
 		}
 	}
 
+	/**
+	 * Answer a channel that shows something first (Channels.later), on the main thread. app:chooseVault: the folder
+	 * picker; the folder becomes the open homebase, a new Generic one gets the panels the page sent (written only
+	 * if it has none), and the page reloads. Answers false if the picker was cancelled.
+	 */
+	func answerLater(_ channel: String, _ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
+		guard channel == "app:chooseVault" else { reply(.failure(BridgeError("Unknown channel: \(channel)"))); return }
+		let create = args.first as? Bool ?? false
+		let panels = args.count > 2 ? args[2] as? String : nil
+		if let panels, panels.utf8.count > Self.maxPanelsJSON || (try? JSONSerialization.jsonObject(with: Data(panels.utf8))) == nil {
+			reply(.failure(BridgeError("The panels for the new homebase are not valid")))
+			return
+		}
+		guard let chooseFolder else { reply(.failure(BridgeError("The folder picker is not available"))); return }
+		chooseFolder { [weak self] url in
+			guard let self, let url else { reply(.success(false)); return }
+			do {
+				try self.homebases.add(folder: url)
+				if create, let panels, let fs = self.homebases.fs, !(try fs.exists(".quire/panels.json")) {
+					try fs.write(".quire/panels.json", Data(panels.utf8))
+				}
+				reply(.success(true))
+				self.afterOpening()
+			} catch {
+				reply(.failure(error))
+			}
+		}
+	}
+
+	/** Another homebase is open: reload the page so it starts again with it (as desktop reloads the window). */
+	private func afterOpening() {
+		guard let reload else { return }
+		DispatchQueue.main.async(execute: reload)
+	}
+
+	/** The fs:* channels, on the open homebase (the desktop's IPC; bytes as base64). */
+	private func fsAnswer(_ channel: String, _ args: [Any]) throws -> Any {
+		guard let fs = homebases.fs else { throw BridgeError("No homebase is open") }
+		let path: Any? = args.first
+		let second: Any? = args.count > 1 ? args[1] : nil
+		func text(_ v: Any?) throws -> Data {
+			guard let s = v as? String else { throw BridgeError("Argument 2 has the wrong type") }
+			return Data(s.utf8)
+		}
+		switch channel {
+		case "fs:tree":
+			return try fs.tree(path).map { e -> [String: Any] in var j = e.stat.json; j["path"] = e.path; return j }
+		case "fs:stat":
+			return try fs.stat(path)?.json ?? NSNull()
+		case "fs:exists":
+			return try fs.exists(path)
+		case "fs:read":
+			return try fs.read(path)
+		case "fs:readBinary":
+			return try fs.readBinary(path).base64EncodedString()
+		case "fs:write":
+			return try fs.write(path, try text(second)).json
+		case "fs:writeBinary":
+			guard let b64 = second as? String, let data = Data(base64Encoded: b64) else { throw BridgeError("Argument 2 has the wrong type") }
+			return try fs.write(path, data).json
+		case "fs:append":
+			return try fs.append(path, try text(second)).json
+		case "fs:mkdir":
+			try fs.mkdir(path)
+			return NSNull()
+		case "fs:list":
+			let l = try fs.list(path)
+			return ["files": l.files, "folders": l.folders]
+		case "fs:remove":
+			try fs.remove(path)
+			return NSNull()
+		case "fs:rmdir":
+			try fs.rmdir(path, recursive: second as? Bool ?? false)
+			return NSNull()
+		case "fs:rename":
+			try fs.rename(path, second)
+			return NSNull()
+		case "fs:copy":
+			try fs.copy(path, second)
+			return NSNull()
+		case "fs:trash":
+			return try fs.trash(path)
+		default:
+			throw BridgeError("Unknown channel: \(channel)")
+		}
+	}
+
 	private func arg<T>(_ args: [Any], _ i: Int, _: T.Type) throws -> T {
 		guard i < args.count, let v = args[i] as? T else { throw BridgeError("Argument \(i + 1) has the wrong type") }
 		return v
@@ -92,21 +206,6 @@ final class Channels {
 		guard let data = defaults.data(forKey: Self.configKey),
 			let c = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
 		return c
-	}
-
-	/** Every file of the bundled example homebase, hidden ones included, with paths relative to it. */
-	private func exampleFiles() throws -> [[String: String]] {
-		let base = root.appendingPathComponent("example-homebase", isDirectory: true).resolvingSymlinksInPath()
-		guard let walk = FileManager.default.enumerator(at: base, includingPropertiesForKeys: [.isRegularFileKey]) else { throw BridgeError("The example homebase is missing") }
-		var out: [[String: String]] = []
-		let prefix = base.path.hasSuffix("/") ? base.path : base.path + "/"
-		for case let url as URL in walk {
-			guard (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true else { continue }
-			let full = url.resolvingSymlinksInPath().path
-			guard full.hasPrefix(prefix), let data = try? Data(contentsOf: url) else { continue }
-			out.append(["path": String(full.dropFirst(prefix.count)), "base64": data.base64EncodedString()])
-		}
-		return out.sorted { $0["path"]! < $1["path"]! }
 	}
 
 	/** The built-in plugins: each folder in plugins/ with a manifest that has an id and a main.js. */

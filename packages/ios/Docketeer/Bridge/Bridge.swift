@@ -10,7 +10,6 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
 	static let name = "quire"
 	let channels: Channels
 	private let queue = DispatchQueue(label: "quire.bridge", qos: .userInitiated, attributes: .concurrent)
-	private static let mainThreadChannels: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready"]
 
 	init(channels: Channels) {
 		self.channels = channels
@@ -27,12 +26,22 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
 			return
 		}
 		let args = body["args"] as? [Any] ?? []
-		let run = { [channels] in
+		let send = { (result: Result<Any, Error>) in
 			let reply: (Any?, String?)
-			do { reply = (try channels.answer(channel, args), nil) } catch let e as BridgeError { reply = (nil, e.message) } catch { reply = (nil, error.localizedDescription) }
+			switch result {
+			case .success(let value): reply = (value, nil)
+			case .failure(let e as BridgeError): reply = (nil, e.message)
+			case .failure(let e as HomebaseError): reply = (nil, e.code.map { "\($0): \(e.message)" } ?? e.message)
+			case .failure(let e): reply = (nil, e.localizedDescription)
+			}
 			DispatchQueue.main.async { replyHandler(reply.0, reply.1) }
 		}
-		if Self.mainThreadChannels.contains(channel) { run() } else { queue.async(execute: run) }
+		if Channels.later.contains(channel) {
+			channels.answerLater(channel, args, send)
+			return
+		}
+		let run = { [channels] in send(Result { try channels.answer(channel, args) }) }
+		if Channels.mainThread.contains(channel) { run() } else { queue.async(execute: run) }
 	}
 }
 

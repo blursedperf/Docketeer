@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createHost, fromBase64, NativeEvents, nativeFs, toBase64, type HostInfo } from '../web/host';
-import { MemoryFs } from '../web/memory-fs';
+import { genericPanels } from '../../app/src/renderer/docket/panels-model';
 
-const info: HostInfo = { platform: 'ios', appVersion: '0.20.0', formFactor: 'tablet', vault: { path: 'example', name: 'Docketeer example' } };
+const info: HostInfo = { platform: 'ios', appVersion: '0.20.0', formFactor: 'tablet', vault: { path: 'iCloud Drive/Law', name: 'Law' } };
 
 /** A fake native side: records each call and answers from `answers`. */
 function fakeNative(answers: Record<string, unknown> = {}) {
@@ -61,7 +61,7 @@ describe('createHost', () => {
 			'app:getConfig': { recent: [] }, 'app:setConfig': undefined, 'spell:dictionary': { aff: 'A', dic: 'D' },
 			'app:notices': 'MIT', 'plugins:list': [], 'clipboard:readText': 'copied', 'clipboard:writeText': undefined, 'pdf:asset': 'AQI=',
 		});
-		const host = createHost(native, info, new NativeEvents(), new MemoryFs());
+		const host = createHost(native, info, new NativeEvents());
 		expect(host.platform).toBe('ios');
 		expect(host.vault).toEqual(info.vault);
 		expect(host.app.isSmoke).toBe(false);
@@ -77,17 +77,37 @@ describe('createHost', () => {
 		expect(calls).toContainEqual(['app:setConfig', [{ last: 'x' }]]);
 	});
 
-	it('lists the open homebase as the only recent one, and does not open others yet', async () => {
-		const host = createHost(fakeNative().native, info, new NativeEvents(), new MemoryFs());
-		expect(await host.app.recentVaults()).toEqual([{ path: 'example', name: 'Docketeer example', time: 0, current: true }]);
-		expect(await host.app.openVault('/elsewhere')).toBe(false);
-		expect(await host.app.chooseVault(true, 'generic')).toBe(false);
+	it('asks native for recent homebases, and to open, forget and choose them', async () => {
+		const recent = [{ path: 'iCloud Drive/Law', name: 'Law', time: 1, current: true }];
+		const { native, calls } = fakeNative({
+			'app:recent': recent, 'app:openVault': true, 'app:forgetVault': undefined, 'app:openExample': 'On My iPad/Docketeer/Docketeer example', 'app:chooseVault': true,
+		});
+		const host = createHost(native, info, new NativeEvents());
+		expect(await host.app.recentVaults()).toEqual(recent);
+		expect(await host.app.openVault('iCloud Drive/Law')).toBe(true);
+		await host.app.forgetVault!('iCloud Drive/Old');
+		expect(await host.app.openExample!()).toBe('On My iPad/Docketeer/Docketeer example');
+		await host.app.chooseVault(false);
+		await host.app.chooseVault(true, 'legal');
+		await host.app.chooseVault(true, 'generic');
+		expect(calls.slice(1)).toEqual([
+			['app:openVault', ['iCloud Drive/Law']], ['app:forgetVault', ['iCloud Drive/Old']], ['app:openExample', []],
+			['app:chooseVault', [false, 'legal', null]], ['app:chooseVault', [true, 'legal', null]],
+			['app:chooseVault', [true, 'generic', JSON.stringify(genericPanels(), null, '\t')]],
+		]);
 		expect(await host.app.fonts!()).toEqual([]);
+	});
+
+	it('reads and writes the homebase through native', async () => {
+		const { native, calls } = fakeNative({ 'fs:tree': [{ path: 'a.md', type: 'file', size: 1, mtime: 1, ctime: 1 }] });
+		const host = createHost(native, info, new NativeEvents());
+		expect(await host.fs.tree('')).toHaveLength(1);
+		expect(calls).toEqual([['fs:tree', ['']]]);
 	});
 
 	it('passes native events to the renderer', () => {
 		const events = new NativeEvents();
-		const host = createHost(fakeNative().native, info, events, new MemoryFs());
+		const host = createHost(fakeNative().native, info, events);
 		const fsSeen: unknown[] = [];
 		let locked = 0;
 		host.onFsEvents((e) => fsSeen.push(e));
@@ -101,7 +121,7 @@ describe('createHost', () => {
 	it('before the app goes to the background, waits for the renderer to save, then tells native', async () => {
 		const { native, calls } = fakeNative({ 'app:quit-ready': undefined });
 		const events = new NativeEvents();
-		const host = createHost(native, info, events, new MemoryFs());
+		const host = createHost(native, info, events);
 		// No handler yet: native is told at once.
 		events.emit('app:before-quit', 't1');
 		let saved = false;

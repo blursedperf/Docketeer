@@ -47,12 +47,12 @@ struct AppFiles {
 	let root: URL
 	/** The Content-Security-Policy for index.html; without one, index.html is not served. */
 	let csp: String?
-	/** The homebase served under vault/: the bundled example in Phase 0. */
-	let vault: URL
+	/** The open homebase, served under vault/ (nil when none is open). */
+	let vault: () -> HomebaseFS?
 
-	init(root: URL, vault: URL? = nil) {
+	init(root: URL, vault: @escaping () -> HomebaseFS? = { nil }) {
 		self.root = root
-		self.vault = vault ?? root.appendingPathComponent("example-homebase", isDirectory: true)
+		self.vault = vault
 		let text = try? String(contentsOf: root.appendingPathComponent("renderer/csp.txt"), encoding: .utf8)
 		let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 		self.csp = trimmed.isEmpty ? nil : trimmed
@@ -75,7 +75,10 @@ struct AppFiles {
 		if parts[0] == "vault" {
 			let rest = Array(parts.dropFirst())
 			guard let last = rest.last, let type = Self.vaultTypes[(last as NSString).pathExtension.lowercased()] else { return .error(403) }
-			return serve(vault, rest, type: type)
+			guard let fs = vault() else { return .error(404) }
+			// The homebase's own checks: nothing outside it, by name or through a symlink.
+			guard let file = try? fs.resolve(rest.joined(separator: "/")) else { return .error(403) }
+			return serve(file: file, type: type)
 		}
 		return serve(root.appendingPathComponent("renderer"), parts)
 	}
@@ -107,6 +110,10 @@ struct AppFiles {
 	private func serve(_ dir: URL, _ parts: [String], type: String? = nil, extra: [String: String] = [:]) -> Answer {
 		let file = parts.reduce(dir) { $0.appendingPathComponent($1) }
 		guard Self.contains(dir, file) else { return .error(403) }
+		return serve(file: file, type: type, extra: extra)
+	}
+
+	private func serve(file: URL, type: String? = nil, extra: [String: String] = [:]) -> Answer {
 		var isDir: ObjCBool = false
 		guard FileManager.default.fileExists(atPath: file.path, isDirectory: &isDir), !isDir.boolValue else { return .error(404) }
 		var headers = [
