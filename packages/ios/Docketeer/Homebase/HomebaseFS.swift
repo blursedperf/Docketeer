@@ -41,6 +41,13 @@ final class HomebaseFS {
 	private let knownLock = NSLock()
 	/** How long reading a file waits for iCloud to download it. */
 	var downloadWait: TimeInterval = 60
+	/**
+	 * iCloud's versions by the token the page knows them by: the note, and iCloud's own identifier for the version
+	 * (`persistentIdentifier`). A version keeps its token for as long as it is listed. Its time cannot name it:
+	 * several versions can share one, and a version may have none.
+	 */
+	private var versionTokens: [String: (path: String, identifier: NSObject)] = [:]
+	private let versionLock = NSLock()
 
 	init(root: URL) throws {
 		let root = root.standardizedFileURL
@@ -434,11 +441,21 @@ final class HomebaseFS {
 			}
 			guard (try? url.resourceValues(forKeys: [.ubiquitousItemHasUnresolvedConflictsKey]))?.ubiquitousItemHasUnresolvedConflicts == true else { continue }
 			for v in NSFileVersion.unresolvedConflictVersionsOfItem(at: url) ?? [] {
-				let mtime = Int(((v.modificationDate ?? Date()).timeIntervalSince1970) * 1000 + 0.5)
-				out.append(Conflict(id: "icloud:\(mtime):\(e.path)", path: e.path, from: v.localizedNameOfSavingComputer ?? "another device", mtime: mtime))
+				let mtime = v.modificationDate.map { Int($0.timeIntervalSince1970 * 1000 + 0.5) } ?? e.stat.mtime
+				out.append(Conflict(id: "icloud:\(token(for: v, path: e.path)):\(e.path)", path: e.path, from: v.localizedNameOfSavingComputer ?? "another device", mtime: mtime))
 			}
 		}
 		return out
+	}
+
+	/** The token for an iCloud version of `path`: the one it already has, or a new one. */
+	private func token(for version: NSFileVersion, path: String) -> String {
+		let identifier = version.persistentIdentifier as! NSObject
+		versionLock.lock(); defer { versionLock.unlock() }
+		if let (token, _) = versionTokens.first(where: { $0.value.path == path && $0.value.identifier.isEqual(identifier) }) { return token }
+		let token = UUID().uuidString
+		versionTokens[token] = (path, identifier)
+		return token
 	}
 
 	/** The other version behind an id: a Syncthing file, or one of iCloud's versions of a note. */
@@ -456,12 +473,16 @@ final class HomebaseFS {
 		}
 		if id.hasPrefix("icloud:") {
 			let rest = id.dropFirst("icloud:".count)
-			guard let colon = rest.firstIndex(of: ":"), let mtime = Int(rest[..<colon]) else { throw HomebaseError("Not a version") }
-			let url = try resolve(String(rest[rest.index(after: colon)...]))
-			let match = (NSFileVersion.unresolvedConflictVersionsOfItem(at: url) ?? []).first {
-				Int((($0.modificationDate ?? Date()).timeIntervalSince1970) * 1000 + 0.5) == mtime
-			}
-			guard let match else { throw HomebaseError("That version is not there any more") }
+			guard let colon = rest.firstIndex(of: ":") else { throw HomebaseError("Not a version") }
+			let token = String(rest[..<colon]), path = String(rest[rest.index(after: colon)...])
+			let url = try resolve(path)
+			versionLock.lock()
+			let known = versionTokens[token]
+			versionLock.unlock()
+			guard let known, known.path == path else { throw HomebaseError("Not a version") }
+			// Still one of the note's unresolved versions (settled elsewhere, it is gone).
+			let match = (NSFileVersion.unresolvedConflictVersionsOfItem(at: url) ?? []).first { ($0.persistentIdentifier as! NSObject).isEqual(known.identifier) }
+			guard let match else { throw HomebaseError("That version is not there any more (another device may have settled it)") }
 			return .icloud(version: match, original: url)
 		}
 		throw HomebaseError("Not a version")
@@ -472,7 +493,7 @@ final class HomebaseFS {
 		let data: Data
 		switch try other(id) {
 		case .syncthing(let file, _): data = try reading(file) { try Data(contentsOf: $0) }
-		case .icloud(let version, _): data = try Data(contentsOf: version.url)
+		case .icloud(let version, _): data = try Self.contents(of: version)
 		}
 		guard let text = String(data: data, encoding: .utf8) else { throw HomebaseError("That version is not text") }
 		return text
@@ -501,7 +522,7 @@ final class HomebaseFS {
 		case .icloud(let version, let original):
 			if keep == "both" {
 				guard copyPath is String else { throw HomebaseError("Where should the other version go?") }
-				try write(copyPath, try Data(contentsOf: version.url))
+				try write(copyPath, try Self.contents(of: version))
 			}
 			if keep == "theirs" {
 				try writing(original) { u in _ = try version.replaceItem(at: u, options: []) }
@@ -509,6 +530,21 @@ final class HomebaseFS {
 			}
 			version.isResolved = true
 			try? version.remove()
+			forgetVersion(id)
 		}
+	}
+
+	/** An iCloud version's bytes; a clear error when iCloud has not brought them to this device. */
+	private static func contents(of version: NSFileVersion) throws -> Data {
+		do { return try Data(contentsOf: version.url) } catch {
+			if !version.hasLocalContents { throw HomebaseError("That version has not downloaded to this device yet. Keep Docketeer open on Wi-Fi for a minute and try again") }
+			throw error
+		}
+	}
+
+	private func forgetVersion(_ id: Any?) {
+		guard let id = id as? String, id.hasPrefix("icloud:"), let colon = id.dropFirst(7).firstIndex(of: ":") else { return }
+		versionLock.lock(); defer { versionLock.unlock() }
+		versionTokens[String(id.dropFirst(7)[..<colon])] = nil
 	}
 }

@@ -41,6 +41,8 @@
   version history, now the tab bar is put away. It no longer offers splitting panes.
 - **iPhone: Settings fill the screen**, with the pages as tabs along the top and each menu or field below its
   description, full width. The Subjects panel's keyboard keys are left out on a phone.
+- **iPhone and iPad: several versions of one note from other devices can each be settled.** Leaving more than one
+  unsettled made the older ones impossible to keep or discard.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

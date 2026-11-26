@@ -280,7 +280,7 @@ final class HomebaseFSTests: XCTestCase {
 	func testBadVersionsAreRefused() throws {
 		try "theirs".write(to: root.appendingPathComponent(syncthing), atomically: true, encoding: .utf8)
 		let id = try XCTUnwrap(try fs.conflicts().first?.id)
-		for bad: Any? in [nil, 3, "Welcome.md", "syncthing:Welcome.md", "syncthing:../Outside/x.sync-conflict-20261127-090500-ABCDEFG.md", "icloud:1:Welcome.md", "icloud:x:Welcome.md", "icloud:1:../Outside/secret.md"] {
+		for bad: Any? in [nil, 3, "Welcome.md", "syncthing:Welcome.md", "syncthing:../Outside/x.sync-conflict-20261127-090500-ABCDEFG.md", "icloud:1:Welcome.md", "icloud:x:Welcome.md", "icloud:1:../Outside/secret.md", "icloud:\(UUID().uuidString):Welcome.md", "icloud:"] {
 			XCTAssertThrowsError(try fs.readConflict(bad), "\(String(describing: bad))")
 			XCTAssertThrowsError(try fs.resolveConflict(bad, keep: "theirs", copyPath: nil), "\(String(describing: bad))")
 		}

@@ -247,8 +247,11 @@ root, Range answers, conflict detection, a bookmark round trip.
   panel while any are there. A row opens Compare (both texts side by side); its actions settle it directly.
 - **How they are found:** iCloud's unresolved `NSFileVersion`s, asked only for files whose "has unresolved
   conflicts" flag is set, and Syncthing's `.sync-conflict-` files beside their note. An id names the note and the
-  version (its time); native finds the version again from it, through the usual path checks, and refuses
-  anything else. Settings in `.quire/` are not listed (they stay last-write-wins).
+  version; native finds the version again from it, through the usual path checks, and refuses anything else.
+  *Changed after the owner's test:* the version was named by its saved time, which failed when several conflicts
+  on one note were left unsettled (older ones could not be settled). It is now a token native keeps for iCloud's
+  own `persistentIdentifier` of the version, stable while it is listed; a version whose contents are not on the
+  device says so. Settings in `.quire/` are not listed (they stay last-write-wins).
 - **Tested:** Syncthing completely in XCTests; for iCloud, refusing bad ids, since the simulator cannot make
   conflict versions. The first real iCloud conflict is part of the Phase 1 exit check.
 
