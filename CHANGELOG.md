@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.20.0
 
 - **Export to PDF**: a note on white A4 pages as it reads in reading view (its properties, headings, lists and tasks,
   tables, pictures, embedded notes and footnotes), numbered at the foot, saved beside the note as "Note.pdf"; if one
