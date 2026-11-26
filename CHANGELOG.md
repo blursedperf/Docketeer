@@ -7,6 +7,8 @@
   already in "Quire example" in your Documents keeps opening. Homebases are unchanged: their settings stay in
   `.quire/`, and locked notes, themes and plugins work as before. On Arch and Debian/Ubuntu the `docketeer`
   package replaces `quire`; on macOS, delete the old Quire.app.
+- **On a narrow window, such as an iPhone, the page no longer scrolls sideways**: the first-run hint wraps to fit
+  and its × can be tapped, and the status bar scrolls within itself.
 - **Editing a table cell no longer logs an error** after the table is redrawn in some browsers (it showed in WebKit,
   which the iPhone and iPad app uses): the cell keeps its place in the note as before.
 - **AGLC4 version history no longer warns that it could not save** when a note is closed and deleted at once:

@@ -373,6 +373,10 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 	background: var(--doom-modeline-bg);
 	border-top: var(--border-width) solid var(--doom-border-subtle);
 }
+/* A narrow window: the status bar scrolls within itself rather than making the page wider. */
+.is-compact .status-bar { overflow-x: auto; scrollbar-width: none; }
+.is-compact .status-bar::-webkit-scrollbar { display: none; }
+.is-compact .status-bar > * { flex-shrink: 0; }
 .status-bar::before { content: ""; width: 3px; background: var(--doom-modeline-bar); margin-right: var(--space-2); }
 .status-bar-badge {
 	align-self: center;
@@ -1018,6 +1022,9 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 	background: var(--doom-bg-alt); border: var(--border-width) solid var(--doom-blue); border-radius: var(--radius-s); box-shadow: var(--doom-shadow);
 }
 .docket-hint-close { margin-left: var(--space-2); }
+/* A narrow window (an iPhone): the hint wraps and stays on screen, its × in reach. */
+.is-compact .docket-hint { display: block; white-space: normal; width: max-content; max-width: calc(100vw - 2 * var(--space-3)); line-height: 1.6; }
+.is-compact .docket-hint-close { float: right; margin: 0 0 0 var(--space-2); }
 
 /* Units: a short explanation and its keys. */
 .docket-help { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); padding: var(--space-1) var(--space-3) var(--space-2); font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
