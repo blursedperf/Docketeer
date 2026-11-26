@@ -47,6 +47,7 @@ export class SettingsModal extends Modal {
 	private renderNav() {
 		this.navEl.empty();
 		const group = (title: string, tabs: SettingTab[]) => {
+			tabs = tabs.filter((t) => t.shown());
 			if (!tabs.length) return;
 			this.navEl.createDiv({ cls: 'vertical-tab-header-group-title', text: title });
 			for (const t of tabs) {
@@ -70,7 +71,7 @@ export class SettingsModal extends Modal {
 	listSettings(): { tabId: string; tabName: string; name: string; desc: string }[] {
 		if (this.isOpen) return [];
 		const out: { tabId: string; tabName: string; name: string; desc: string }[] = [];
-		for (const tab of [...this.coreTabs, ...this.pluginTabs]) {
+		for (const tab of [...this.coreTabs, ...this.pluginTabs].filter((t) => t.shown())) {
 			tab.containerEl.empty();
 			try { tab.display(); } catch { console.error(`Settings page ${tab.name} failed`); continue; }
 			for (const row of tab.containerEl.querySelectorAll<HTMLElement>('.setting-item:not(.setting-item-heading):not(.mod-buttons)')) {
@@ -98,7 +99,7 @@ export class SettingsModal extends Modal {
 		this.currentEl.setText(`Search: ${query.trim()}`);
 		const results = this.pageEl.createDiv({ cls: 'vertical-tab-content settings-search-results' });
 		let found = 0;
-		for (const tab of [...this.coreTabs, ...[...this.pluginTabs].sort((a, b) => a.name.localeCompare(b.name))]) {
+		for (const tab of [...this.coreTabs, ...[...this.pluginTabs].sort((a, b) => a.name.localeCompare(b.name))].filter((t) => t.shown())) {
 			tab.containerEl.empty();
 			try { tab.display(); } catch (e) { console.error(`Settings page ${tab.name} failed`, e); continue; }
 			const rows = [...tab.containerEl.querySelectorAll<HTMLElement>('.setting-item:not(.setting-item-heading):not(.mod-buttons)')].filter((row) => {
@@ -129,7 +130,7 @@ export class SettingsModal extends Modal {
 	}
 
 	openTabById(id: string): void {
-		const tab = [...this.coreTabs, ...this.pluginTabs].find((t) => t.id === id);
+		const tab = [...this.coreTabs, ...this.pluginTabs].find((t) => t.id === id && t.shown());
 		if (!this.isOpen) this.open();
 		if (tab) this.openTab(tab);
 	}
@@ -139,7 +140,7 @@ export class SettingsModal extends Modal {
 		this.searchEl.value = '';
 		this.searching = false;
 		this.renderNav();
-		this.openTab(this.current ?? this.coreTabs[0]!);
+		this.openTab(this.current?.shown() ? this.current : this.coreTabs[0]!);
 	}
 
 	override onClose(): void {

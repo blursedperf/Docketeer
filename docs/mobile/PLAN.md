@@ -367,11 +367,12 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
 - [x] PDF viewer: pdf.js loads its engine, CMaps, standard fonts and wasm from the bundle, and opens a
       PDF from the homebase. (The bundle and `pdf:asset` came in Phase 0; the WebKit smoke run opens one.) Added
       for the phone: two fingers zoom the PDF, since the page itself does not zoom (`maximum-scale=1`).
-- [ ] Hide these in compact mode: tiling commands, the hotkey editor, vim mode, custom-panel editing and AGLC4
+- [x] Hide these in compact mode: tiling commands, the hotkey editor, vim mode, custom-panel editing and AGLC4
       page preview.
-- [ ] Settings: hide desktop-only items, such as title bar colours and relaunch.
+- [x] Settings: hide desktop-only items, such as title bar colours and relaunch.
 - [x] Safe areas: `viewport-fit=cover` and `env(safe-area-inset-*)` in `app.css`.
-- [ ] On touch, density defaults to "spacious" when no density has been saved.
+- [x] On touch, density defaults to "spacious" when no density has been saved. (A touch screen keeps its own,
+      `touchDensity`, since a homebase's settings are shared with the Mac: decisions.md §11.)
 - [ ] Locking: lock when the app goes to the background (when locking is enabled). **Face ID / Touch ID
       unlock is design only:**
       - Write the design in `docs/docket/locking.md`: wrap the homebase key in the Keychain with

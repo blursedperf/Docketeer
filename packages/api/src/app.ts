@@ -127,7 +127,11 @@ export class Commands {
 	}
 
 	/** Whether the command can run now: its `when`, or its callbacks' own checks. */
+	/** Commands the layout leaves out (the compact layout: tiling, editing panels …): never available. */
+	hidden: ((cmd: Command) => boolean) | null = null;
+
 	isAvailable(cmd: Command, args: Record<string, unknown> = {}): boolean {
+		if (this.hidden?.(cmd)) return false;
 		const ctx = this.context(args);
 		try {
 			if (cmd.when) return cmd.when(ctx);
@@ -421,6 +425,8 @@ export interface AppConfig {
 	iconSet: string;
 	iconWeight: string;
 	density: 'compact' | 'comfortable' | 'spacious';
+	/** A touch screen's density (iPhone, iPad), kept apart from a computer's: spacious until one is chosen. */
+	touchDensity?: 'compact' | 'comfortable' | 'spacious';
 	/** Installed CSS theme (folder name in .quire/themes), or empty. */
 	cssTheme: string;
 	enabledSnippets: string[];
@@ -635,6 +641,15 @@ export class App extends Events {
 
 	applyConfig(): void {
 		this.customCss.apply();
+	}
+
+	/** The density this screen uses: a touch screen has its own (touchDensity), spacious unless chosen. */
+	densityKey(): 'density' | 'touchDensity' {
+		return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches ? 'touchDensity' : 'density';
+	}
+
+	density(): AppConfig['density'] {
+		return this.densityKey() === 'touchDensity' ? this.config.touchDensity ?? 'spacious' : this.config.density;
 	}
 
 	isDarkMode(): boolean { return document.body.hasClass('theme-dark'); }

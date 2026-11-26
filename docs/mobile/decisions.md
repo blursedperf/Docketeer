@@ -366,3 +366,17 @@ The plan had the Docket pull down from the top. On the iPhone its handle sat jus
 - **The toolbar takes the status bar's place** while a note is edited with the keyboard up, and the Docket button
   goes. Its buttons do not take focus (pointer and mouse down are cancelled), so the keyboard stays.
 - To try on the device: the keyboard's real height, the toolbar on it, and the Docket sheet with the keyboard up.
+
+## 11. A touch screen's density is its own (Phase 2)
+
+The plan said a touch screen defaults to "spacious" when no density has been saved. But app settings live in the
+homebase (`.quire/app.json`), shared with the Mac through iCloud, and every change writes the whole file, so a
+homebase used on a Mac always has a density saved, and the phone would never get its default. A touch screen
+(`pointer: coarse`) therefore reads and writes `touchDensity` instead, spacious until chosen; a computer keeps
+`density`. The Density setting edits whichever this screen uses (`app.densityKey()`).
+
+Left out of the compact layout as well as tiling (`COMPACT_HIDDEN` in `compact.ts`, through
+`app.commands.hidden`, which plugins' commands go through too): arranging and making Docket panels, and AGLC4's
+page preview. The Hotkeys page (`SettingTab.shown()`), Vim key bindings, the Docket's peek/pinned mode and, on a
+touch phone, hover preview are not shown while compact; the Window section and the developer-tools note are not
+shown on iPhone and iPad at all.

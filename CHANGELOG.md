@@ -29,6 +29,11 @@
   button where the system can share; `canShare(app)` and `shareFile(app, path)`; `host.app.shareFile?`.
 - **iPhone and iPad: pinch to zoom a PDF**: the pages follow your fingers, and are drawn sharp again at the new
   size when you let go.
+- **iPhone and iPad: roomier by default.** A touch screen has a Density of its own, Spacious until you choose
+  another in Settings → Appearance; a computer opening the same homebase keeps its own.
+- **On the iPhone, what needs a computer is put away**: splitting panes, arranging and making Docket panels,
+  AGLC4's page preview, the Hotkeys page, Vim key bindings, the Docket's peek/pinned mode and hover preview. The
+  title bar setting is gone from iPhone and iPad. For plugins: `app.commands.hidden`, `SettingTab.shown()`.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

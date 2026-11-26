@@ -600,6 +600,8 @@ export abstract class SettingTab {
 	}
 	abstract display(): void;
 	hide(): void { this.containerEl.empty(); }
+	/** False where the page does not apply (the hotkey editor on a phone): left out of the settings. */
+	shown(): boolean { return true; }
 }
 
 /** A plugin's page of the settings dialog. */

@@ -12,8 +12,15 @@ export function isCompact(): boolean {
 	return document.body.classList.contains('is-compact');
 }
 
-/** Commands that make or move between panes: not offered in the compact layout. */
-const TILING = /^app:(split-|focus-pane-|move-tab-|pane-|equalise-panes|zoom-pane|next-pane|previous-pane|rotate-split|close-pane|close-other-panes|merge-panes|layout-|save-layout|apply-layout)/;
+/**
+ * Not offered in the compact layout (docs/mobile/PLAN.md, Phase 2): making or moving between panes, arranging and
+ * editing the Docket's panels, and AGLC4's page preview, which needs a page's width beside the note.
+ */
+export const COMPACT_HIDDEN = new RegExp([
+	/^app:(split-|focus-pane-|move-tab-|pane-|equalise-panes|zoom-pane|next-pane|previous-pane|rotate-split|close-pane|close-other-panes|merge-panes|layout-|save-layout|apply-layout)/.source,
+	/^app:(arrange-panels|new-panel)$/.source,
+	/^aglc-citations:(page-preview|ribbon-open-aglc4-page-preview)$/.source,
+].join('|'));
 
 /** How far in from the left edge a swipe back starts (CSS pixels), and how far it must travel. */
 export const EDGE = 24;
@@ -35,13 +42,8 @@ export function registerCompact(app: App): void {
 	follow();
 	new MutationObserver(follow).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
-	// Tiling commands are not offered while compact (their own checks apply otherwise).
-	for (const c of Object.values(app.commands.commands)) {
-		if (!TILING.test(c.id)) continue;
-		const own = c.when;
-		const plain = { ...c, when: undefined };
-		c.when = (ctx) => !isCompact() && (own ? own(ctx) : app.commands.isAvailable(plain, ctx.args));
-	}
+	// Left out while compact, plugins' commands too (their own checks apply otherwise).
+	app.commands.hidden = (c) => isCompact() && COMPACT_HIDDEN.test(c.id);
 
 	// "Open tabs" in every view's header (shown only while compact).
 	const withButton = new WeakSet<ItemView>();

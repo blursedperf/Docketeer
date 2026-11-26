@@ -157,7 +157,8 @@ export class CustomCss extends Events {
 		font('--font-monospace', c.monospaceFont);
 		body.style.setProperty('--font-text-size', `${c.fontSize}px`);
 		body.toggleClass('is-readable-line-width', !!c.readableLineLength);
-		for (const d of ['compact', 'comfortable', 'spacious']) body.toggleClass(`density-${d}`, c.density === d);
+		const density = this.app.density();
+		for (const d of ['compact', 'comfortable', 'spacious']) body.toggleClass(`density-${d}`, density === d);
 
 		const before = getActiveIconPack();
 		setIconPack(String(c.iconSet || 'phosphor'), String(c.iconWeight || 'regular'));

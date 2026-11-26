@@ -1573,9 +1573,12 @@ export async function runSmoke(app: App): Promise<void> {
 		return ok || cssVar('--doom-bg');
 	});
 	await check('density changes spacing', async () => {
-		await app.setConfig('density', 'compact');
+		// The density this screen uses (a touch screen has its own); put back as it was.
+		const key = app.densityKey();
+		const was = app.config[key];
+		await app.setConfig(key, 'compact');
 		const compact = cssVar('--row-h');
-		await app.setConfig('density', 'comfortable');
+		await app.setConfig(key, was ?? (key === 'density' ? 'comfortable' : undefined));
 		return compact === '22px' || compact;
 	});
 
@@ -1663,6 +1666,36 @@ export async function runSmoke(app: App): Promise<void> {
 		if (!commands.isAvailable(commands.findCommand('app:split-right')!)) problems.push('Split right is not back');
 		commands.executeCommandById('app:close-other-panes');
 		await sleep(80);
+		return problems.length === 0 || problems.join('; ');
+	});
+
+	await check('compact layout: no tiling, panel editing, page preview or hotkey editor; touch screens keep a density of their own', async () => {
+		const problems: string[] = [];
+		const cmds = ['app:split-right', 'app:arrange-panels', 'app:new-panel', 'aglc-citations:page-preview'];
+		const available = (id: string) => { const c = app.commands.findCommand(id); return !!c && app.commands.isAvailable(c); };
+		const had = document.body.classList.contains('is-compact');
+		document.body.classList.remove('is-compact');
+		for (const id of cmds) if (!available(id)) problems.push(`${id} is not available on a wide window`);
+		document.body.classList.add('is-compact');
+		try {
+			for (const id of cmds) if (available(id)) problems.push(`${id} is offered while compact`);
+			if (!available('app:docket')) problems.push('the Docket is not offered while compact');
+			const tabs = (app.setting as unknown as { coreTabs: { id: string; shown(): boolean }[] }).coreTabs;
+			if (tabs.find((t) => t.id === 'hotkeys')?.shown() !== false) problems.push('the hotkey editor shows while compact');
+			if (tabs.filter((t) => t.shown()).length < 4) problems.push('other settings pages went too');
+			const editor = tabs.find((t) => t.id === 'editor') as unknown as { containerEl: HTMLElement; display(): void; hide(): void };
+			editor.containerEl.empty(); editor.display();
+			if (editor.containerEl.textContent?.includes('Vim key bindings')) problems.push('Vim key bindings offered while compact');
+			editor.hide();
+		} finally {
+			document.body.classList.toggle('is-compact', had);
+		}
+		if (!had && !available('app:split-right')) problems.push('splitting is not back on a wide window');
+		// Density: a touch screen's own, spacious until chosen; a computer's is the saved one.
+		const key = app.densityKey();
+		const want = key === 'touchDensity' ? app.config.touchDensity ?? 'spacious' : app.config.density;
+		if (!document.body.classList.contains(`density-${want}`)) problems.push(`density is not ${want} (${key})`);
+		if (Platform.isMobileApp !== (key === 'touchDensity')) problems.push(`${key} on ${Platform.isMobileApp ? 'a touch screen' : 'a computer'}`);
 		return problems.length === 0 || problems.join('; ');
 	});
 

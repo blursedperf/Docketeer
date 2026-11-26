@@ -10,7 +10,7 @@ import {
 	SuggestModal, TFile, TFolder, canShare, shareFile, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty, HoverPreview,
 } from '@quire/api';
 import { registerDocket } from './docket';
-import { registerCompact } from './compact';
+import { isCompact, registerCompact } from './compact';
 import { registerKeyboardToolbar } from './keyboard-toolbar';
 import { registerLongPress } from './long-press';
 import { registerTiling } from './tiling';
@@ -53,14 +53,14 @@ class EditorTab extends SettingTab {
 			.addToggle((t) => t.setValue(c.readableLineLength).onChange((v) => { void this.app.setConfig('readableLineLength', v); }));
 		new Setting(el).setName('Live preview').setDesc('Show Markdown formatted as you write: headings without #, bold without **, links as their text, bullets and task boxes. What the cursor is in (a bold word, a link, a list marker) shows its Markdown as written. Off: the Markdown is always shown as written (source mode).')
 			.addToggle((t) => t.setValue(c.livePreview).onChange((v) => { void this.app.setConfig('livePreview', v); }));
-		new Setting(el).setName('Hover preview').setDesc('Show a linked note (or the section a link points to) in a popup when the mouse rests on its link. Holding Ctrl (⌘ on a Mac) shows it at once.')
+		if (!(isCompact() && document.body.classList.contains('is-touch'))) new Setting(el).setName('Hover preview').setDesc('Show a linked note (or the section a link points to) in a popup when the mouse rests on its link. Holding Ctrl (⌘ on a Mac) shows it at once.')
 			.addDropdown((d) => d.addOptions({ hover: 'When the mouse rests on a link', mod: 'Only with Ctrl/⌘ held', off: 'Off' }).setValue(c.hoverPreview ?? 'hover')
 				.onChange((v) => { void this.app.setConfig('hoverPreview', v as 'hover' | 'mod' | 'off'); }));
 		new Setting(el).setName('Templates folder').setDesc('Notes in this folder are templates: offered in the / menu, by "Insert template…" and by "New note from template…". In a template, {{title}}, {{date}}, {{time}} (or {{date:D MMMM YYYY}}) are filled in, and {{cursor}} is where the cursor goes.')
 			.addText((t) => t.setPlaceholder('Templates').setValue(String(c.templatesFolder ?? '')).onChange((v) => { void this.app.setConfig('templatesFolder', v.trim()); }));
 		new Setting(el).setName('Note name as title').setDesc('Show each note\'s name as a title above its text. Editing it (then Enter, or moving away) renames the note; links to it follow. It is not part of the note\'s text.')
 			.addToggle((t) => t.setValue(c.inlineTitle !== false).onChange((v) => { void this.app.setConfig('inlineTitle', v); }));
-		new Setting(el).setName('Vim key bindings').setDesc('Edit with Vim keys: normal, insert and visual modes, motions, operators, :w to save and :q to close the tab. The modeline shows the mode.')
+		if (!isCompact()) new Setting(el).setName('Vim key bindings').setDesc('Edit with Vim keys: normal, insert and visual modes, motions, operators, :w to save and :q to close the tab. The modeline shows the mode.')
 			.addToggle((t) => t.setValue(c.vimMode).onChange((v) => { void this.app.setConfig('vimMode', v); }));
 		new Setting(el).setName('Auto-pair brackets').setDesc('Type the closing bracket or quote with the opening one.')
 			.addToggle((t) => t.setValue(c.autoPairBrackets).onChange((v) => { void this.app.setConfig('autoPairBrackets', v); }));
@@ -218,22 +218,16 @@ class AppearanceTab extends SettingTab {
 		font('Monospace font', 'Code, the file tree, tabs and the status bar.', 'monospaceFont', 'JetBrains Mono (default)', true, [['ui-monospace', 'The system\'s monospace font']]);
 		new Setting(el).setName('Text size').setDesc('Size of the text in notes, in pixels.')
 			.addSlider((s) => s.setLimits(10, 30, 1).setValue(c.fontSize).onChange((v) => set('fontSize', v)));
-		new Setting(el).setName('Density').setDesc('How much space the interface leaves around rows, tabs and controls.')
-			.addDropdown((d) => d.addOptions({ compact: 'Compact', comfortable: 'Comfortable', spacious: 'Spacious' }).setValue(c.density)
-				.onChange((v) => set('density', v as AppConfig['density'])));
+		const touch = app.densityKey() === 'touchDensity';
+		new Setting(el).setName('Density').setDesc(touch
+			? 'How much space the interface leaves around rows, tabs and controls, on touch screens (a computer keeps its own).'
+			: 'How much space the interface leaves around rows, tabs and controls.')
+			.addDropdown((d) => d.addOptions({ compact: 'Compact', comfortable: 'Comfortable', spacious: 'Spacious' }).setValue(app.density())
+				.onChange((v) => set(app.densityKey(), v as AppConfig['density'])));
 
-		new Setting(el).setName('Window').setHeading();
-		const frame = new Setting(el).setName('Title bar')
-			.setDesc('Hidden: the window buttons sit in Docketeer\'s top bar, which moves the window, as in Obsidian. System: the title bar your system draws. Applies when Docketeer restarts.')
-			.addDropdown((d) => d.addOptions({ hidden: 'Hidden', native: 'System' }).setValue(c.windowFrame ?? 'hidden')
-				.onChange((v) => { void app.setConfig('windowFrame', v as 'hidden' | 'native').then(() => this.display()); }));
-		if ((c.windowFrame !== 'native') !== !!app.host.app.frameless && !app.host.app.isSmoke && app.host.app.relaunch) {
-			frame.addButton((b) => b.setButtonText('Restart').setTooltip('Restart Docketeer to apply').onClick(() => { void app.host.app.relaunch?.(); }));
-		}
-		new Setting(el).setName('Docket').setHeading();
-		new Setting(el).setName('Mode')
-			.setDesc(`Peek: over the note, closing when you are done. Pinned: docked above the note. ${keyText(this.app, 'app:docket-toggle-mode') || 'A hotkey'} switches.`)
-			.addDropdown((d) => d.addOption('peek', 'Peek').addOption('pinned', 'Pinned').setValue(c.docketMode === 'pinned' ? 'pinned' : 'peek').onChange((v) => { void this.app.setConfig('docketMode', v as 'peek' | 'pinned'); }));
+		// The window's title bar: a computer's (iPhone and iPad have none).
+		if (!Platform.isMobileApp) this.windowSettings(el);
+		if (!isCompact()) this.docketSettings(el);
 		new Setting(el).setName('Icons').setHeading();
 		const packs = getIconPacks();
 		const pack = packs.find((p) => p.id === c.iconSet) ?? packs[0]!;
@@ -293,6 +287,28 @@ class AppearanceTab extends SettingTab {
 				this.display();
 				new Notice('Themes and snippets reloaded.');
 			}));
+	}
+
+	private windowSettings(el: HTMLElement): void {
+		const { app } = this;
+		const c = app.config;
+		new Setting(el).setName('Window').setHeading();
+		const frame = new Setting(el).setName('Title bar')
+			.setDesc('Hidden: the window buttons sit in Docketeer\'s top bar, which moves the window, as in Obsidian. System: the title bar your system draws. Applies when Docketeer restarts.')
+			.addDropdown((d) => d.addOptions({ hidden: 'Hidden', native: 'System' }).setValue(c.windowFrame ?? 'hidden')
+				.onChange((v) => { void app.setConfig('windowFrame', v as 'hidden' | 'native').then(() => this.display()); }));
+		if ((c.windowFrame !== 'native') !== !!app.host.app.frameless && !app.host.app.isSmoke && app.host.app.relaunch) {
+			frame.addButton((b) => b.setButtonText('Restart').setTooltip('Restart Docketeer to apply').onClick(() => { void app.host.app.relaunch?.(); }));
+		}
+	}
+
+	/** Peek or pinned (a phone's Docket is always a sheet from the bottom). */
+	private docketSettings(el: HTMLElement): void {
+		const c = this.app.config;
+		new Setting(el).setName('Docket').setHeading();
+		new Setting(el).setName('Mode')
+			.setDesc(`Peek: over the note, closing when you are done. Pinned: docked above the note. ${keyText(this.app, 'app:docket-toggle-mode') || 'A hotkey'} switches.`)
+			.addDropdown((d) => d.addOption('peek', 'Peek').addOption('pinned', 'Pinned').setValue(c.docketMode === 'pinned' ? 'pinned' : 'peek').onChange((v) => { void this.app.setConfig('docketMode', v as 'peek' | 'pinned'); }));
 	}
 }
 
@@ -355,6 +371,8 @@ class HotkeysTab extends SettingTab {
 	override id = 'hotkeys';
 	override name = 'Hotkeys';
 	private filter = '';
+	/** Not on a phone: hotkeys are for a keyboard (an iPad's has the page). */
+	override shown(): boolean { return !isCompact(); }
 
 	display(): void {
 		const el = this.containerEl;
@@ -481,7 +499,7 @@ class AboutTab extends SettingTab {
 		new Setting(el).setName('Version').setDesc(this.app.host.appVersion);
 		new Setting(el).setName('Homebase').setDesc(this.app.host.vault?.path ?? '');
 		new Setting(el).setName('Offline').setDesc('Docketeer makes no network requests. Every request from the app or a plugin is blocked by the app itself, and there are no updates, accounts, telemetry or crash reports.');
-		new Setting(el).setName('Developer tools').setDesc('F12 or Ctrl+Shift+I opens the developer tools, for plugin authors.');
+		if (!Platform.isMobileApp) new Setting(el).setName('Developer tools').setDesc('F12 or Ctrl+Shift+I opens the developer tools, for plugin authors.');
 		new Setting(el).setName('Licences').setDesc('Docketeer is MIT-licensed. It includes libraries, icons and spelling dictionaries under their own licences.')
 			.addButton((b) => b.setButtonText('Show licences').onClick(() => { void showNotices(this.app); }));
 	}
