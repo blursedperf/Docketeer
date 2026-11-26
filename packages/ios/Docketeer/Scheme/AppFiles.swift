@@ -11,11 +11,50 @@ struct AppFiles {
 		var status: Int
 		var file: URL?
 		var headers: [String: String]
+		/** The part of `file` to send (a byte range), or nil for all of it. Empty for a HEAD request. */
+		var bytes: Range<Int>?
+		/** A homebase file: read through NSFileCoordinator, in pieces. */
+		var fromHomebase = false
 
 		static func error(_ status: Int) -> Answer {
 			Answer(status: status, file: nil, headers: ["Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store"])
 		}
 	}
+
+	/** What a Range header asks for (parseRange in packages/app/src/main/vault-files.ts). */
+	enum ByteRange: Equatable {
+		/** No usable range: the whole file (no header, another unit, several ranges, or malformed). */
+		case whole
+		/** A range wholly outside the file (416). */
+		case unsatisfiable
+		/** The inclusive range to send, clamped to the file. */
+		case range(start: Int, end: Int)
+	}
+
+	private static let rangePattern = try! NSRegularExpression(pattern: #"^\s*bytes\s*=\s*(\d*)\s*-\s*(\d*)\s*$"#, options: .caseInsensitive)
+
+	static func parseRange(_ header: String?, size: Int) -> ByteRange {
+		guard let header, !header.isEmpty else { return .whole }
+		let ns = header as NSString
+		guard let m = rangePattern.firstMatch(in: header, range: NSRange(location: 0, length: ns.length)) else { return .whole }
+		let a = ns.substring(with: m.range(at: 1)), b = ns.substring(with: m.range(at: 2))
+		if a.isEmpty && b.isEmpty { return .whole }
+		// Numbers too long for an Int are past the end of any file.
+		let big = { (s: String) in Int(s) ?? Int.max }
+		if a.isEmpty {
+			// Suffix: the last N bytes.
+			let n = big(b)
+			if n == 0 || size == 0 { return .unsatisfiable }
+			return .range(start: max(0, size - n), end: size - 1)
+		}
+		let start = big(a)
+		if !b.isEmpty && big(b) < start { return .whole } // invalid: ignore it
+		if start >= size { return .unsatisfiable }
+		return .range(start: start, end: b.isEmpty ? size - 1 : min(big(b), size - 1))
+	}
+
+	/** Never a document that can run anything, should a homebase file be opened as a page (as desktop). */
+	static let vaultCSP = "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox"
 
 	/** Content types for the app's own files (the same table as desktop). */
 	static let mime: [String: String] = [
@@ -58,7 +97,8 @@ struct AppFiles {
 		self.csp = trimmed.isEmpty ? nil : trimmed
 	}
 
-	func answer(for url: URL) -> Answer {
+	/** The answer for a request: `range` is its Range header, `method` GET or HEAD (homebase files honour both). */
+	func answer(for url: URL, method: String = "GET", range: String? = nil) -> Answer {
 		guard url.scheme?.lowercased() == "quire", url.host?.lowercased() == "app" else { return .error(404) }
 		guard let parts = Self.parts(of: url) else { return .error(403) }
 
@@ -80,7 +120,7 @@ struct AppFiles {
 			guard let file = try? fs.resolve(rest.joined(separator: "/")) else { return .error(403) }
 			// Not downloaded yet: ask iCloud for it; the page shows it once it arrives.
 			if fs.isPending(file) { fs.startDownload(file); return .error(404) }
-			return serve(file: file, type: type)
+			return serveRanges(file: file, type: type, method: method, range: range)
 		}
 		return serve(root.appendingPathComponent("renderer"), parts)
 	}
@@ -113,6 +153,27 @@ struct AppFiles {
 		let file = parts.reduce(dir) { $0.appendingPathComponent($1) }
 		guard Self.contains(dir, file) else { return .error(403) }
 		return serve(file: file, type: type, extra: extra)
+	}
+
+	/** A homebase file: byte ranges honoured (media seeks with them), read in pieces. */
+	private func serveRanges(file: URL, type: String, method: String, range: String?) -> Answer {
+		guard let a = try? FileManager.default.attributesOfItem(atPath: file.path), (a[.type] as? FileAttributeType) == .typeRegular else { return .error(404) }
+		let size = (a[.size] as? NSNumber)?.intValue ?? 0
+		var headers = [
+			"Content-Type": type, "Accept-Ranges": "bytes", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store",
+			"Content-Security-Policy": Self.vaultCSP,
+		]
+		let r = Self.parseRange(range, size: size)
+		if r == .unsatisfiable {
+			headers["Content-Range"] = "bytes */\(size)"
+			return Answer(status: 416, file: nil, headers: headers)
+		}
+		let (start, end) = { if case .range(let s, let e) = r { return (s, e) } else { return (0, size - 1) } }()
+		let length = size == 0 ? 0 : end - start + 1
+		headers["Content-Length"] = String(length)
+		if r != .whole { headers["Content-Range"] = "bytes \(start)-\(end)/\(size)" }
+		let bytes = method.uppercased() == "HEAD" ? start..<start : start..<(start + length)
+		return Answer(status: r == .whole ? 200 : 206, file: file, headers: headers, bytes: bytes, fromHomebase: true)
 	}
 
 	private func serve(file: URL, type: String? = nil, extra: [String: String] = [:]) -> Answer {

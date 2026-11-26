@@ -72,6 +72,7 @@ const CSS_RULES = [
 const ALLOWED = [
 	['packages/api/src/app.ts', 'dynamic import()', 'loads a plugin\'s main.js from quire://app/plugins/ (local files only; the CSP allows scripts only from quire:)'],
 	['packages/ios/Docketeer/App/PageViewController.swift', 'URLRequest', 'iOS: the WebView opens the app\'s own page, quire://app/index.html (served from the bundle by QuireSchemeHandler)'],
+	['packages/ios/DocketeerTests/AppFilesTests.swift', 'URLRequest', 'iOS test: builds quire://app/ requests for a stand-in WebKit task, to test the scheme handler; nothing is sent'],
 	['packages/ios/DocketeerTests/AppFilesTests.swift', 'a web address', 'iOS test: checks that the scheme handler refuses an https: address'],
 	['packages/ios/web/boot.ts', 'dynamic import()', 'iOS: loads the app\'s own renderer from quire://app/renderer.js once window.quire is in place (the CSP allows scripts only from quire:)'],
 	['packages/app/src/renderer/smoke.ts', 'fetch()', 'smoke test: checks that a request from the page is refused'],

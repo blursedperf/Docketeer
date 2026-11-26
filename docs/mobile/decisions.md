@@ -251,3 +251,13 @@ root, Range answers, conflict detection, a bookmark round trip.
   anything else. Settings in `.quire/` are not listed (they stay last-write-wins).
 - **Tested:** Syncthing completely in XCTests; for iCloud, refusing bad ids, since the simulator cannot make
   conflict versions. The first real iCloud conflict is part of the Phase 1 exit check.
+
+**What streaming recordings settled (Phase 1):**
+
+- **`vault/` answers as desktop's `serveVaultFile()`**: 200 with `Accept-Ranges`, 206 with `Content-Range` for a
+  byte range, 416 for one wholly outside the file, and headers only for HEAD. `parseRange()` is ported with the
+  same cases as `vault-files.test.ts`.
+- **The sandboxing `Content-Security-Policy` desktop sends with homebase files is sent on iOS too.** Phase 0 left it
+  out; a picture or PDF can never run as a page.
+- **Files are sent in pieces of 512 KB** from a `FileHandle`, inside one coordinated read, and sending stops as
+  soon as WebKit cancels the request (it cancels often while seeking).

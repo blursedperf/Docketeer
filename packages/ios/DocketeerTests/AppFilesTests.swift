@@ -1,3 +1,4 @@
+import WebKit
 import XCTest
 @testable import Docketeer
 
@@ -106,6 +107,98 @@ final class AppFilesTests: XCTestCase {
 		XCTAssertEqual(AppFiles(root: root).answer(for: URL(string: "quire://app/vault/pics/cat.png")!).status, 404, "no homebase open")
 		try? "plist".write(to: root.appendingPathComponent("example-homebase/pics/.lecture.mp4.icloud"), atomically: true, encoding: .utf8)
 		XCTAssertEqual(answer("quire://app/vault/pics/lecture.mp4").status, 404, "not downloaded yet")
+	}
+
+	// MARK: Byte ranges (the cases of packages/app/test/vault-files.test.ts)
+
+	func testNoHeaderOrOneItDoesNotHandleMeansTheWholeFile() {
+		for h: String? in [nil, "", "items=0-5", "bytes=0-1,5-9", "bytes=-", "bytes=9-3"] {
+			XCTAssertEqual(AppFiles.parseRange(h, size: 1000), .whole, String(describing: h))
+		}
+	}
+
+	func testStartEndOpenEndedAndSuffixRanges() {
+		XCTAssertEqual(AppFiles.parseRange("bytes=0-99", size: 1000), .range(start: 0, end: 99))
+		XCTAssertEqual(AppFiles.parseRange("bytes=500-", size: 1000), .range(start: 500, end: 999))
+		XCTAssertEqual(AppFiles.parseRange("bytes=-100", size: 1000), .range(start: 900, end: 999))
+		XCTAssertEqual(AppFiles.parseRange("Bytes = 10 - 20", size: 1000), .range(start: 10, end: 20))
+	}
+
+	func testRangesRunningPastTheEndAreClamped() {
+		XCTAssertEqual(AppFiles.parseRange("bytes=990-5000", size: 1000), .range(start: 990, end: 999))
+		XCTAssertEqual(AppFiles.parseRange("bytes=-5000", size: 1000), .range(start: 0, end: 999))
+		XCTAssertEqual(AppFiles.parseRange("bytes=0-99999999999999999999999", size: 1000), .range(start: 0, end: 999))
+	}
+
+	func testARangeWhollyOutsideTheFileIsUnsatisfiable() {
+		XCTAssertEqual(AppFiles.parseRange("bytes=1000-", size: 1000), .unsatisfiable)
+		XCTAssertEqual(AppFiles.parseRange("bytes=-0", size: 1000), .unsatisfiable)
+		XCTAssertEqual(AppFiles.parseRange("bytes=0-", size: 0), .unsatisfiable)
+		XCTAssertEqual(AppFiles.parseRange("bytes=99999999999999999999999-", size: 1000), .unsatisfiable)
+	}
+
+	private func media() throws {
+		try Data((0..<256).map { UInt8($0) }).write(to: root.appendingPathComponent("example-homebase/pics/Week 3.mp4"))
+	}
+
+	private func homebaseAnswer(_ url: String, method: String = "GET", range: String? = nil) -> AppFiles.Answer {
+		let homebase = try? HomebaseFS(root: root.appendingPathComponent("example-homebase"))
+		return AppFiles(root: root, vault: { homebase }).answer(for: URL(string: url)!, method: method, range: range)
+	}
+
+	func testHomebaseMediaIsServedWholeOrByRange() throws {
+		try media()
+		let whole = homebaseAnswer("quire://app/vault/pics/Week%203.mp4")
+		XCTAssertEqual(whole.status, 200)
+		XCTAssertEqual(whole.headers["Content-Type"], "video/mp4")
+		XCTAssertEqual(whole.headers["Accept-Ranges"], "bytes")
+		XCTAssertEqual(whole.headers["Content-Length"], "256")
+		XCTAssertEqual(whole.bytes, 0..<256)
+		XCTAssertTrue(whole.fromHomebase)
+		XCTAssertTrue(whole.headers["Content-Security-Policy"]?.contains("sandbox") == true, "never a page that can run anything")
+
+		let part = homebaseAnswer("quire://app/vault/pics/Week%203.mp4", range: "bytes=16-31")
+		XCTAssertEqual(part.status, 206)
+		XCTAssertEqual(part.headers["Content-Range"], "bytes 16-31/256")
+		XCTAssertEqual(part.headers["Content-Length"], "16")
+		XCTAssertEqual(part.bytes, 16..<32)
+
+		let past = homebaseAnswer("quire://app/vault/pics/Week%203.mp4", range: "bytes=256-")
+		XCTAssertEqual(past.status, 416)
+		XCTAssertEqual(past.headers["Content-Range"], "bytes */256")
+		XCTAssertNil(past.file)
+
+		let head = homebaseAnswer("quire://app/vault/pics/Week%203.mp4", method: "HEAD")
+		XCTAssertEqual(head.status, 200)
+		XCTAssertEqual(head.headers["Content-Length"], "256")
+		XCTAssertEqual(head.bytes?.isEmpty, true, "headers only")
+	}
+
+	func testTheHandlerStreamsTheRangeInPieces() throws {
+		try media()
+		let homebase = try HomebaseFS(root: root.appendingPathComponent("example-homebase"))
+		let handler = QuireSchemeHandler(files: AppFiles(root: root, vault: { homebase }))
+		let saved = QuireSchemeHandler.chunk
+		QuireSchemeHandler.chunk = 10
+		defer { QuireSchemeHandler.chunk = saved }
+
+		var request = URLRequest(url: URL(string: "quire://app/vault/pics/Week%203.mp4")!)
+		request.setValue("bytes=16-79", forHTTPHeaderField: "Range")
+		let task = FakeTask(request)
+		handler.webView(WKWebView(), start: task)
+		XCTAssertTrue(task.wait())
+		XCTAssertEqual(task.response?.statusCode, 206)
+		XCTAssertEqual(task.pieces, 7, "64 bytes in pieces of 10")
+		XCTAssertEqual(task.body, Data((16..<80).map { UInt8($0) }))
+		XCTAssertTrue(task.finished)
+
+		// A stopped task is not answered any more.
+		let stopped = FakeTask(URLRequest(url: URL(string: "quire://app/vault/pics/Week%203.mp4")!))
+		let view = WKWebView()
+		handler.webView(view, start: stopped)
+		handler.webView(view, stop: stopped)
+		RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+		XCTAssertFalse(stopped.finished)
 	}
 
 	func testPartsAreDecodedOnce() {
@@ -343,5 +436,29 @@ final class HomebasesTests: XCTestCase {
 		XCTAssertEqual(say("/var/mobile/Containers/Data/Application/ABC/Documents/Docketeer example"), "On My iPad/Docketeer/Docketeer example")
 		XCTAssertEqual(say("/private/var/mobile/Containers/Shared/AppGroup/X/File Provider Storage/Notes"), "On My iPad/Notes")
 		XCTAssertEqual(say("/Volumes/USB/Uni/Law/Notes"), "Uni/Law/Notes")
+	}
+}
+
+/** A stand-in for WebKit's task: records what the handler sends. */
+final class FakeTask: NSObject, WKURLSchemeTask {
+	let request: URLRequest
+	var response: HTTPURLResponse?
+	var body = Data()
+	var pieces = 0
+	var finished = false
+	var error: Error?
+
+	init(_ request: URLRequest) { self.request = request }
+
+	func didReceive(_ response: URLResponse) { self.response = response as? HTTPURLResponse }
+	func didReceive(_ data: Data) { body.append(data); pieces += 1 }
+	func didFinish() { finished = true }
+	func didFailWithError(_ error: Error) { self.error = error }
+
+	/** Wait (running the main queue, where answers arrive) until it finished or failed. */
+	func wait(_ seconds: TimeInterval = 3) -> Bool {
+		let until = Date().addingTimeInterval(seconds)
+		while !finished && error == nil && Date() < until { RunLoop.main.run(until: Date().addingTimeInterval(0.02)) }
+		return finished
 	}
 }

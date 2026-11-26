@@ -295,8 +295,8 @@ that editing feels right, or decides what changes. Stop here and report.
       Also a file presenter and a 20-second rescan while open (decisions.md §5); to check on a device with iCloud.
 - [x] Conflicts: `fs.conflicts()`, the `conflict` write error, saving a conflict copy, and the Docket UI
       (§2.6). iCloud's own conflict versions are to be checked on a device (the simulator has no iCloud).
-- [ ] `quire://app/vault/<path>` with the `vaultType()` allow-list and HTTP Range (206) responses, ported from
-      `vault-files.ts`.
+- [x] `quire://app/vault/<path>` with the `vaultType()` allow-list and HTTP Range (206) responses, ported from
+      `vault-files.ts`. Seeking in a real recording is to be tried on a device.
 - [ ] `quire://app/plugins/<id>/<file>`: built-in plugins only. `plugins.list()` returns the built-ins, and
       the loader skips manifests with `isDesktopOnly: true` on iOS.
 - [ ] Assets:

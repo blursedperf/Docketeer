@@ -34,7 +34,8 @@ run. For a device, pick a signing team first. In Debug builds the page's console
 
 **`quire://app/`**, from `Resources/app/`: `index.html` (with `renderer/csp.txt` as its
 `Content-Security-Policy` header) and everything else under `renderer/`; `plugins/<id>/<file>` from `plugins/`;
-`vault/<path>` from the open homebase (pictures, PDFs, media and captions only).
+`vault/<path>` from the open homebase (pictures, PDFs, media and captions only), with byte ranges (206, 416) and
+HEAD, sent in pieces so a recording is never held in memory whole.
 
 **Messages** arrive as `{ channel, args }`; the reply is the answer, or an error for a channel it does not know.
 Bytes are base64 strings.
