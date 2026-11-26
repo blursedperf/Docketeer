@@ -96,6 +96,7 @@ describe('createHost', () => {
 		});
 		const host = createHost(native, info, new NativeEvents());
 		expect(host.platform).toBe('ios');
+		expect(host.formFactor).toBe('tablet');
 		expect(host.vault).toEqual(info.vault);
 		expect(host.app.isSmoke).toBe(false);
 		expect(await host.app.getConfig()).toEqual({ recent: [] });

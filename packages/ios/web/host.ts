@@ -119,6 +119,7 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 	return {
 		platform: info.platform,
 		appVersion: info.appVersion,
+		formFactor: info.formFactor,
 		vault: info.vault,
 		fs: nativeFs(native),
 		onFsEvents: (cb) => events.on('fs:events', (payload) => cb(payload as HostFsEvent[])),

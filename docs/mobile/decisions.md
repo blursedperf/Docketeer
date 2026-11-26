@@ -261,3 +261,8 @@ root, Range answers, conflict detection, a bookmark round trip.
   out; a picture or PDF can never run as a page.
 - **Files are sent in pieces of 512 KB** from a `FileHandle`, inside one coordinated read, and sending stops as
   soon as WebKit cancels the request (it cancels often while seeking).
+
+**The per-device pane layout (Phase 1)** is as PLAN §2.6 says: `layoutFiles()` in `workspace.ts` gives the file to
+save and the files to read in order (`workspace.ipad.json`, then `workspace.json`). `HostBridge.formFactor` came in
+with it; the `Platform` flags that follow from it are a separate task. Checked on the iPad simulator: the
+desktop's `workspace.json` is read once and left unchanged.
