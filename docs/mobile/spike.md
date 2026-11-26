@@ -23,14 +23,20 @@ Tried by the owner on an iPhone 15 Pro Max, from Xcode.
 - **Tabs take too much room.** The owner suggests putting open tabs behind a "show open tabs" button on the
   phone. Added to Phase 3 (compact layout).
 
-Not reported on yet: selection handles and the edit menu, autocorrect, dictation, undo (shake or three-finger
-swipe), `[[` suggestions by touch.
+Not reported on separately: selection handles and the edit menu, autocorrect, dictation, undo (shake or
+three-finger swipe), `[[` suggestions by touch. None came up as a problem.
 
-## iPad
+## iPad (2026-11-27)
 
-Not tried yet. To check: a Magic Keyboard, whether ⌘D reaches the page and opens the Docket, and whether ⌘2, ⌘\
-and the other defaults reach the app or are taken by iPadOS.
+Tried by the owner with a Logitech keyboard for iPad.
+
+- **Works as intended**: editing, and the shortcuts tried (⌘D for the Docket, ⌘2 for its panels, ⌘\ to
+  split) reach the page; iPadOS does not take them.
+- **The keyboard has no Escape key.** For now: Settings → General → Keyboard → Hardware Keyboard → Modifier
+  Keys, Caps Lock → Escape. Docketeer should not need Escape alone: Phase 2 adds ⌘. as Escape (a `UIKeyCommand`
+  forwarded to the page). The Docket key already closes the Docket.
 
 ## Verdict
 
-Pending the iPad. On the iPhone, editing is right as it is; the work is in the layout (Phase 3).
+Editing feels right on both. The owner confirmed the Phase 0 exit check on 2026-11-27. What is left is layout
+(the phone, Phase 3) and Escape on keyboards without one (Phase 2).

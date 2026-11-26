@@ -261,7 +261,7 @@ with a Magic Keyboard?
       `packages/ios/README.md`.
 - [x] Lockdown basics: the content rule list and the navigation delegate (§2.7).
 - [x] Run on the iPhone and iPad simulators. Fix the crashes.
-- [ ] Write `docs/mobile/spike.md` (started: simulators and the iPhone; the iPad is still to try). Cover:
+- [x] Write `docs/mobile/spike.md`. Cover:
       - typing, selection handles, autocorrect, dictation, IME composition, undo;
       - live preview on the cursor's line;
       - `[[` suggestions;
@@ -272,6 +272,8 @@ with a Magic Keyboard?
 
 **Exit check:** the app boots on both simulators. **The user tries it on a real iPhone and iPad** and confirms
 that editing feels right, or decides what changes. Stop here and report.
+
+*Passed on 2026-11-27: editing feels right on the owner's iPhone and iPad (`spike.md`).*
 
 ### Phase 1: Host and iCloud (3 to 4 weeks)
 
@@ -336,6 +338,8 @@ Stop and report.
         shows it in the ⌘-hold overlay and doesn't take the key itself.
       - Check that ⌘D and the other defaults aren't system-reserved. If one is, propose an alternative in
         `decisions.md` and ask the user.
+      - ⌘. as Escape (a `UIKeyCommand` that sends the page an Escape key): many iPad keyboards, such as the
+        owner's Logitech one, have no Escape key (`spike.md`).
 - [ ] Multitasking: Split View, Slide Over and Stage Manager resize cleanly. Below the compact width, switch to
       the compact layout (Phase 3 builds it; for now, make sure nothing breaks).
 - [ ] Docket drag-to-rearrange (`docket/drag.ts`, `drag-paths.ts`) works with touch and with the pointer.
