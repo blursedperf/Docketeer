@@ -376,6 +376,16 @@ final class ChannelsTests: XCTestCase {
 		XCTAssertThrowsError(try result?.get())
 	}
 
+	func testThePageSaysWhenToCoverTheWindowInTheBackground() throws {
+		let c = channels()
+		XCTAssertFalse(c.coverInBackground)
+		_ = try c.answer("app:coverInBackground", [true])
+		XCTAssertTrue(c.coverInBackground)
+		_ = try c.answer("app:coverInBackground", [false])
+		XCTAssertFalse(c.coverInBackground)
+		XCTAssertThrowsError(try c.answer("app:coverInBackground", ["yes"]))
+	}
+
 	func testSharingHandsOverACopyOfAHomebaseFileAndRefusesTheRest() throws {
 		let folder = root.appendingPathComponent("Picked/Share")
 		try FileManager.default.createDirectory(at: folder.appendingPathComponent(".quire"), withIntermediateDirectories: true)

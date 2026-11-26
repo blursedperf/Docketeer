@@ -34,6 +34,9 @@
 - **On the iPhone, what needs a computer is put away**: splitting panes, arranging and making Docket panels,
   AGLC4's page preview, the Hotkeys page, Vim key bindings, the Docket's peek/pinned mode and hover preview. The
   title bar setting is gone from iPhone and iPad. For plugins: `app.commands.hidden`, `SettingTab.shown()`.
+- **iPhone and iPad: leaving Docketeer locks it** (Settings → Security, "When you leave Docketeer or the screen
+  locks", on unless you turn it off), and while locked notes are open the app switcher shows a plain screen
+  instead of the note.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

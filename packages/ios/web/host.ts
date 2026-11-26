@@ -160,6 +160,7 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 			// Only the fonts the app ships (listed by the renderer on its own); iOS has no installed fonts to offer.
 			fonts: async () => [],
 			onSystemLock: (cb) => events.on('app:system-lock', () => cb()),
+			setCoverInBackground: (on) => { void call('app:coverInBackground', !!on).catch((e: unknown) => console.error(e)); },
 		},
 		clipboard: {
 			writeText: (text) => { void call('clipboard:writeText', text).catch((e: unknown) => console.error(e)); },

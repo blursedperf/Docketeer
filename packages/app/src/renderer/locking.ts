@@ -4,7 +4,7 @@
  * bar, the Security settings page, and auto-locking after idle time and when the computer sleeps or its
  * screen locks. The keys and the encryption are in @quire/api (lock/service.ts). See docs/docket/locking.md.
  */
-import { type App, Modal, Notice, Setting, SettingTab, TFile, TFolder, setIcon } from '@quire/api';
+import { type App, Modal, Notice, Setting, SettingTab, Platform, TFile, TFolder, setIcon } from '@quire/api';
 
 const MIN_PASSPHRASE = 10;
 
@@ -208,7 +208,7 @@ class SecurityTab extends SettingTab {
 				t.inputEl.insertAdjacentElement('afterend', createSpan({ cls: 'setting-unit', text: 'minutes' }));
 				t.setValue(String(this.app.config.lockIdleMinutes ?? 15)).onChange((v) => { const n = Math.max(0, Math.round(Number(v) || 0)); void this.app.setConfig('lockIdleMinutes', n); });
 			});
-		new Setting(el).setName('When the computer sleeps or its screen locks')
+		new Setting(el).setName(Platform.isMobileApp ? 'When you leave Docketeer or the screen locks' : 'When the computer sleeps or its screen locks')
 			.addToggle((t) => t.setValue(this.app.config.lockOnSleep !== false).onChange((v) => { void this.app.setConfig('lockOnSleep', v); }));
 		new Setting(el).setName('When Docketeer closes').setDesc('Always: the key is never written to disk, so Docketeer starts locked.');
 	}
@@ -291,10 +291,24 @@ export function registerLocking(app: App): void {
 	// Auto-lock: after idle time, and when the computer sleeps or its screen locks.
 	let last = Date.now();
 	const touch = () => { last = Date.now(); };
-	for (const ev of ['keydown', 'mousedown', 'wheel', 'pointermove'] as const) window.addEventListener(ev, touch, { capture: true, passive: true });
+	for (const ev of ['keydown', 'mousedown', 'wheel', 'pointermove', 'touchstart'] as const) window.addEventListener(ev, touch, { capture: true, passive: true });
 	window.setInterval(() => {
 		const minutes = Number(app.config.lockIdleMinutes ?? 15);
 		if (lock.isUnlocked && minutes > 0 && Date.now() - last > minutes * 60_000) void lock.lock().then(() => new Notice('Locked after being idle.'));
 	}, 15_000);
 	app.host.app.onSystemLock?.(() => { if (lock.isUnlocked && app.config.lockOnSleep !== false) void lock.lock(); });
+	// iPhone and iPad: the app switcher's picture of the window is taken as the app leaves, before the lock lands.
+	const cover = app.host.app.setCoverInBackground;
+	if (cover) {
+		let was: boolean | null = null;
+		const tell = () => {
+			const on = lock.isUnlocked && app.config.lockOnSleep !== false;
+			if (on !== was) cover.call(app.host.app, on);
+			was = on;
+		};
+		lock.on('unlocked', tell);
+		lock.on('locked', tell);
+		app.on('config-changed', tell);
+		tell();
+	}
 }

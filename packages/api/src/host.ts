@@ -152,6 +152,11 @@ export interface HostBridge {
 		notices(): Promise<string>;
 		/** The computer is going to sleep or its screen locked (for locking the homebase). */
 		onSystemLock?(cb: () => void): void;
+		/**
+		 * Whether to cover the window as the app goes to the background (iPhone, iPad), so the app switcher's picture
+		 * of it shows no unlocked note: on while locked notes are open and locking on leaving is on.
+		 */
+		setCoverInBackground?(on: boolean): void;
 		/** Smoke test only: as if the computer went to sleep. */
 		smokeSystemLock?(): void;
 		/** Called before the window closes; it waits for the promise (to save open notes). */

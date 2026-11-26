@@ -34,6 +34,8 @@ final class Channels {
 	var showInFiles: ((URL) -> Void)?
 	/** Prints a page (HTML) to PDF: page size, landscape; answers with the PDF (main thread, Printer.swift). */
 	var printPDF: ((String, String?, Bool, @escaping (Result<Data, Error>) -> Void) -> Void)?
+	/** Cover the window as the app goes to the background (app:coverInBackground: locked notes are open). */
+	var coverInBackground = false
 	/** Opens the share sheet for a file; calls back when it closes (main thread). */
 	var shareFile: ((URL, @escaping () -> Void) -> Void)?
 	#if DEBUG
@@ -46,7 +48,7 @@ final class Channels {
 	/** Channels answered later, on the main thread (they show something first). */
 	static let later: Set<String> = ["app:chooseVault", "app:printToPdf", "app:shareFile"]
 	/** Channels that change which homebase is open, or touch UIKit: answered on the main thread. */
-	static let mainThread: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready", "app:recent", "app:openVault", "app:forgetVault", "app:openExample", "app:showItemInFolder"]
+	static let mainThread: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready", "app:recent", "app:openVault", "app:forgetVault", "app:openExample", "app:showItemInFolder", "app:coverInBackground"]
 	/** The most a new homebase's panels file may hold. */
 	static let maxPanelsJSON = 1_000_000
 	/** The most a page printed to PDF may hold, as desktop. */
@@ -99,6 +101,9 @@ final class Channels {
 			let url = try fs.resolve(args.first)
 			let folder = HomebaseFS.isFolder(url.path) ? url : url.deletingLastPathComponent()
 			if let files = Self.filesURL(for: folder) { showInFiles?(files) }
+			return NSNull()
+		case "app:coverInBackground":
+			coverInBackground = try arg(args, 0, Bool.self)
 			return NSNull()
 		case "app:openExample":
 			let location = try homebases.openExample()

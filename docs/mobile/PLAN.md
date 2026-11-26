@@ -373,11 +373,14 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
 - [x] Safe areas: `viewport-fit=cover` and `env(safe-area-inset-*)` in `app.css`.
 - [x] On touch, density defaults to "spacious" when no density has been saved. (A touch screen keeps its own,
       `touchDensity`, since a homebase's settings are shared with the Mac: decisions.md §11.)
-- [ ] Locking: lock when the app goes to the background (when locking is enabled). **Face ID / Touch ID
+- [x] Locking: lock when the app goes to the background (when locking is enabled). **Face ID / Touch ID
       unlock is design only:**
       - Write the design in `docs/docket/locking.md`: wrap the homebase key in the Keychain with
         `.biometryCurrentSet`, and add a fallback to the passphrase.
       - Stop for the user's sign-off before implementing it.
+      Done: background locking came in Phase 0 (enteredBackground sends app:system-lock); added here a cover over
+      the window for the app switcher's picture while locked notes are open (`app:coverInBackground`). The Face
+      ID design is written in `docs/docket/locking.md` and **waits for the owner's sign-off**.
 - [ ] The simulator smoke run on an iPhone-sized window as well as the iPad-sized one.
 - [ ] Screenshots: iPhone viewports, portrait and with the keyboard up, with baselines in `test/visual/ios/`.
 

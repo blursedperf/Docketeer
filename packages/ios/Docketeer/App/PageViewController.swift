@@ -14,6 +14,8 @@ final class PageViewController: UIViewController {
 	private var saving: [String: UIBackgroundTaskIdentifier] = [:]
 	/** Answers the folder picker that is showing. */
 	private var picked: ((URL?) -> Void)?
+	/** Put over the page as the app leaves while locked notes are open (the app switcher's picture). */
+	private var cover: UIView?
 	/** Watches the open homebase for changes made outside Docketeer. */
 	private var watcher: HomebaseWatcher?
 
@@ -152,7 +154,26 @@ final class PageViewController: UIViewController {
 
 	/** Back in the foreground: look for changes made while the app was away. */
 	func enteredForeground() {
+		cover?.removeFromSuperview()
+		cover = nil
 		watcher?.rescanSoon()
+	}
+
+	/** A plain screen with the app's name over everything, before iOS takes its picture of the window. */
+	private func showCover() {
+		guard cover == nil else { return }
+		let c = UIView(frame: view.bounds)
+		c.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+		c.backgroundColor = .systemBackground
+		let label = UILabel()
+		label.text = "Docketeer"
+		label.font = .preferredFont(forTextStyle: .title2)
+		label.textColor = .secondaryLabel
+		label.translatesAutoresizingMaskIntoConstraints = false
+		c.addSubview(label)
+		NSLayoutConstraint.activate([label.centerXAnchor.constraint(equalTo: c.centerXAnchor), label.centerYAnchor.constraint(equalTo: c.centerYAnchor)])
+		view.addSubview(c)
+		cover = c
 	}
 
 	/** The system folder picker. Only the folder picked becomes reachable (through its security-scoped URL). */
@@ -188,6 +209,7 @@ final class PageViewController: UIViewController {
 
 	/** In the background, where iOS may end the app without warning: lock the homebase if locking is on, and save. */
 	func enteredBackground() {
+		if bridge?.channels.coverInBackground == true { showCover() }
 		webView?.emitQuireEvent("app:system-lock")
 		askToSave("app:background")
 	}
