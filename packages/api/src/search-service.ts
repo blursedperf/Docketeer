@@ -51,7 +51,7 @@ export class SearchService {
 	}
 
 	private async add(f: TFile): Promise<void> {
-		if (f.extension !== 'md' || this.app.isLocked(f)) { this.index.remove(f.path); return; }
+		if (f.extension !== 'md' || this.app.isLocked(f) || f.pending) { this.index.remove(f.path); return; }
 		try {
 			const text = await this.app.vault.cachedRead(f);
 			this.index.set(f.path, text, headingsOf(this.app.metadataCache.getFileCache(f)?.headings));

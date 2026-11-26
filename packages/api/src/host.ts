@@ -7,6 +7,8 @@ export interface HostStat {
 	size: number;
 	mtime: number;
 	ctime: number;
+	/** Not downloaded to this device yet (iCloud): its contents arrive later, with an fs event. Desktop leaves it out. */
+	pending?: true;
 }
 
 export interface HostEntry extends HostStat {

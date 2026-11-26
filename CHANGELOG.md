@@ -13,6 +13,10 @@
   The desktop app works as before. For plugins: a host can set `HostFs.guardsConflicts`; its writes may then
   reject with an error that `isConflict()` recognises, and `vault.saveConflictCopy(file, text)` keeps a version
   beside the note.
+- **Notes iCloud has not downloaded yet** (in the iPhone and iPad app) are listed by name and downloaded at once;
+  search and links take them in as they arrive. Opening one waits for it. Pictures, PDFs and recordings download
+  when you open them, so a homebase of recordings does not fill the device. For plugins: such a file has
+  `TFile.pending` set (and `HostStat.pending` from the host) until it arrives, which counts as a change.
 
 ## v0.20.0
 

@@ -231,6 +231,8 @@ export class MetadataCache extends Events {
 		const batch = 32;
 		for (let i = 0; i < files.length; i += batch) {
 			await Promise.all(files.slice(i, i + batch).map(async (f) => {
+				// Not downloaded yet: known by name only until it arrives (a modify event).
+				if (f.pending) { this.caches.set(f.path, parseMetadata('')); return; }
 				try { this.caches.set(f.path, parseMetadata(await vault.cachedRead(f))); } catch (e) {
 					// A locked note while locked: known by name only, nothing parsed.
 					if (e instanceof LockedError) this.caches.set(f.path, parseMetadata(''));
@@ -265,7 +267,7 @@ export class MetadataCache extends Events {
 	async update(file: TFile, text?: string): Promise<void> {
 		let data: string;
 		try {
-			data = text ?? await this.app.vault.cachedRead(file);
+			data = text ?? (file.pending ? '' : await this.app.vault.cachedRead(file));
 		} catch (e) {
 			if (!(e instanceof LockedError)) throw e;
 			data = ''; // locked: nothing of it is kept

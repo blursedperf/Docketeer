@@ -26,6 +26,8 @@ export abstract class TAbstractFile {
 
 export class TFile extends TAbstractFile {
 	stat: FileStats = { ctime: 0, mtime: 0, size: 0 };
+	/** Not downloaded to this device yet (iCloud): known by name; indexed when it arrives. */
+	pending?: boolean;
 
 	get extension(): string {
 		const dot = this.name.lastIndexOf('.');

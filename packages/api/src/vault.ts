@@ -291,7 +291,10 @@ export class Vault extends Events {
 		}
 		const f = e.type === 'folder' ? new TFolder(e.path) : new TFile(e.path);
 		f.vault = this;
-		if (f instanceof TFile) f.stat = { ctime: e.ctime, mtime: e.mtime, size: e.size };
+		if (f instanceof TFile) {
+			f.stat = { ctime: e.ctime, mtime: e.mtime, size: e.size };
+			if (e.pending) f.pending = true;
+		}
 		f.parent = parent as TFolder;
 		(parent as TFolder).children.push(f);
 		this.files.set(e.path, f);
@@ -350,7 +353,11 @@ export class Vault extends Events {
 				continue;
 			}
 			if (known instanceof TFile && ev.stat.type === 'file') {
-				if (this.written.get(path) === ev.stat.mtime || known.stat.mtime === ev.stat.mtime) continue;
+				// A file that finished downloading counts as changed even if its time did not.
+				const arrived = !!known.pending && !ev.stat.pending;
+				if (ev.stat.pending) known.pending = true;
+				else delete known.pending;
+				if (!arrived && (this.written.get(path) === ev.stat.mtime || known.stat.mtime === ev.stat.mtime)) continue;
 				known.stat = { ctime: ev.stat.ctime, mtime: ev.stat.mtime, size: ev.stat.size };
 				this.cache.delete(path);
 				this.trigger('modify', known);
