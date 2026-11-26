@@ -39,6 +39,17 @@ export function splitFrontMatter(text: string): { yaml: string | null; body: str
 	return { yaml: m[1] ?? '', body: text.slice(m[0].length), end: m[0].length };
 }
 
+/** The kind of value a property holds, which decides its field: a list, a checkbox, a number, a date or text. */
+export type PropertyType = 'list' | 'checkbox' | 'number' | 'date' | 'text';
+
+export function propertyType(v: unknown): PropertyType {
+	if (Array.isArray(v)) return 'list';
+	if (typeof v === 'boolean') return 'checkbox';
+	if (typeof v === 'number') return 'number';
+	if (v instanceof Date || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))) return 'date';
+	return 'text';
+}
+
 export function parseFrontMatter(text: string): FrontMatterCache | undefined {
 	const { yaml } = splitFrontMatter(text);
 	if (yaml === null) return undefined;
@@ -290,6 +301,44 @@ export class MetadataCache extends Events {
 		const base = unique ? file.name : file.path;
 		void sourcePath;
 		return omitMdExtension && file.extension === 'md' ? base.replace(/\.md$/, '') : base;
+	}
+
+	/**
+	 * The properties used in the homebase's notes: each name with how many notes use it and the kind of value
+	 * it usually holds, most used first. For suggesting names and choosing a new property's field.
+	 */
+	getPropertyKeys(): { key: string; count: number; type: PropertyType }[] {
+		const seen = new Map<string, { count: number; types: Map<PropertyType, number> }>();
+		for (const cache of this.caches.values()) {
+			for (const [k, v] of Object.entries(cache.frontmatter ?? {})) {
+				const e = seen.get(k) ?? { count: 0, types: new Map() };
+				e.count++;
+				const t = propertyType(v);
+				e.types.set(t, (e.types.get(t) ?? 0) + 1);
+				seen.set(k, e);
+			}
+		}
+		return [...seen].map(([key, e]) => ({ key, count: e.count, type: [...e.types].sort((a, b) => b[1] - a[1])[0]![0] }))
+			.sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+	}
+
+	/** The values used for the property `key` across the homebase (a list's items one by one), most used first. */
+	getPropertyValues(key: string): string[] {
+		const counts = new Map<string, number>();
+		const addValue = (v: unknown) => {
+			if (v === null || v === undefined || typeof v === 'object') return;
+			const s = String(v).trim();
+			if (s) counts.set(s, (counts.get(s) ?? 0) + 1);
+		};
+		for (const cache of this.caches.values()) {
+			const v = cache.frontmatter?.[key];
+			if (Array.isArray(v)) v.forEach(addValue); else addValue(v);
+		}
+		// Tags: also the ones written in notes' text (without their "#").
+		if (key === 'tags' || key === 'tag') {
+			for (const cache of this.caches.values()) for (const t of cache.tags ?? []) addValue(t.tag.replace(/^#/, ''));
+		}
+		return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([v]) => v);
 	}
 
 	/** Notes linking to `file`, with their link caches. */

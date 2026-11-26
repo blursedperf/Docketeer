@@ -515,10 +515,31 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 	background: var(--doom-base1); border-left: 2px solid var(--doom-magenta);
 }
 .metadata-property { display: contents; }
-/* In the editor (properties-editor.ts): the same table, which opens the YAML for editing when clicked. */
-.metadata-container.cm-properties { margin: 0 0 var(--space-2); cursor: var(--cursor); }
-.metadata-container.cm-properties:hover { border-left-color: var(--doom-blue); }
 .metadata-property-key { color: var(--doom-magenta-text); }
+/* In the editor (properties-editor.ts): the same table, edited in place. Fields look like the table's text until
+   hovered or focused; a row's remove button shows on hover. */
+.metadata-container.cm-properties { display: block; margin: 0 0 var(--space-2); }
+.metadata-container.cm-properties:focus-within { border-left-color: var(--doom-blue); }
+.cm-properties .metadata-properties { display: grid; grid-template-columns: minmax(7em, max-content) 1fr auto; gap: 2px var(--space-3); align-items: center; }
+.cm-properties .metadata-property-key input, .cm-properties .metadata-property-value input:not([type="checkbox"]) {
+	width: 100%; min-width: 0; height: auto; padding: 1px var(--space-1); border: 1px solid transparent; border-radius: var(--radius-s);
+	background: transparent; font: inherit; color: inherit; text-align: left;
+}
+.cm-properties .metadata-property-key input { color: var(--doom-magenta-text); }
+.cm-properties input:hover { border-color: var(--doom-border-subtle); }
+.cm-properties input:focus { border-color: var(--doom-blue); background: var(--doom-bg); outline: none; }
+.cm-properties input.is-invalid { border-color: var(--doom-red); }
+.cm-properties .metadata-property-value input[type="date"] { width: auto; color-scheme: dark light; }
+.cm-properties .metadata-property-remove { opacity: 0; }
+.cm-properties .metadata-property:hover .metadata-property-remove, .cm-properties .metadata-property-remove:focus-visible { opacity: 1; }
+.metadata-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.metadata-chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 var(--space-1) 0 var(--space-2); border-radius: var(--radius-s); background: rgba(var(--doom-blue-rgb), 0.14); color: var(--doom-blue-text); }
+.metadata-chip-remove { padding: 0 2px; border: none; background: none; color: inherit; opacity: 0.6; cursor: var(--cursor); }
+.metadata-chip-remove:hover { opacity: 1; }
+.cm-properties .metadata-chips input.metadata-chip-input { flex: 1; width: auto; min-width: 5em; }
+.cm-properties .metadata-add { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-1); }
+.metadata-add-button { padding: 1px var(--space-1); border: none; background: none; color: var(--text-muted); font: inherit; cursor: var(--cursor); }
+.metadata-add-button:hover, .metadata-add-button:focus-visible { color: var(--doom-blue-text); }
 
 /* ---------------------------------------------------------------------------- popups
    Palette, switcher, editor suggestions and menus share one row: --row-h tall, accent edge

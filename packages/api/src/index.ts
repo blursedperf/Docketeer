@@ -51,6 +51,8 @@ export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppCon
 export { SettingsModal } from './settings-modal';
 export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
+export { addProperty, editFrontmatter } from './properties-editor';
+export { InputSuggest } from './input-suggest';
 export { Spellchecker, SPELL_LANGUAGES, spellRefresh } from './spellcheck';
 export { LEGAL_WORDS } from './legal-words';
 export { VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, mediaKind, isMedia, parseTimestamp, formatTimestamp, timeFromSubpath, timestampLink, SPEEDS, nextSpeed, captionsFor, createPlayer, MediaPlayers, MediaView } from './media';

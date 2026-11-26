@@ -7,7 +7,7 @@ import type { EditorView } from '@codemirror/view';
 import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, type CommandContext, fontStack, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty,
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
@@ -701,6 +701,11 @@ export function registerCore(app: App): { reveal(): void } {
 	editorCmd('editor:toggle-bold', 'Toggle bold', 'b', '**');
 	editorCmd('editor:toggle-italics', 'Toggle italics', 'i', '*');
 	editorCmd('editor:insert-wikilink', 'Insert internal link', 'k', '[[', ']]');
+	add({
+		id: 'editor:add-property', name: 'Add a property', icon: 'list-plus', section: 'Edit', aliases: ['Add file property', 'Properties'],
+		hotkeys: [{ modifiers: ['Mod'], key: ';' }],
+		editorCallback: (editor: { cm: EditorView }) => addProperty(editor.cm),
+	});
 	// Tables: rows and columns from the keyboard, in a table being edited (Tab and Shift+Tab move between cells).
 	const tableCmd = (id: string, name: string, op: TableOp, hotkeys?: Hotkey[]) => add({
 		id, name, section: 'Tables', icon: 'table', hotkeys,

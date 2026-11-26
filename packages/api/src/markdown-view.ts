@@ -265,6 +265,10 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 	private livePreviewOptions(): LivePreviewOptions {
 		return {
 			onOpenLink: (l, n) => this.followLink(l, n),
+			properties: {
+				keys: () => this.app.metadataCache.getPropertyKeys(),
+				values: (key) => this.app.metadataCache.getPropertyValues(key),
+			},
 			// The same test the editor's embeds use: a picture or recording that is in the homebase.
 			embedShows: (target) => {
 				const bare = target.replace(/[#^].*$/, '');

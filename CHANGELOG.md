@@ -23,6 +23,12 @@
 - **A fuller right-click menu in the editor**: on a link, Open link (or Create note), Open in new tab, Open to the right,
   Rename, Copy link; on a selection, Bold, Italics, Highlight, Strikethrough, Inline code and Make a link; Insert link
   with nothing selected; and Undo and Redo. Menus no longer end in a separator.
+- **Properties are edited in place** (live preview): each property is a row with its name and a field for its value,
+  chosen by the value: chips for a list, a checkbox, a number, a date picker, or text. Names and values are suggested
+  from the homebase's other notes as you type (tags include the ones written in notes), ↑↓ and Enter choose one, and
+  a new property gets the kind of field its name has elsewhere. "+ Add property" (or **Mod+;**, *Add a property*,
+  which also starts a note's first property) adds a row; × removes one; editing a name renames it. Changes go straight
+  into the YAML with its comments and order kept, and "Edit as YAML" shows it as written.
 
 ## v0.17.3
 

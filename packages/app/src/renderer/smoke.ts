@@ -404,6 +404,85 @@ export async function runSmoke(app: App): Promise<void> {
 		await vault.delete(wav);
 		return problems.length === 0 || problems.join('; ');
 	});
+	await check('properties are edited in place, with names and values suggested from other notes', async () => {
+		const problems: string[] = [];
+		const other = await vault.create('Props other.md', '---\nstatus: draft\ncourse: Torts\ntopics: [duty, breach]\n---\n\nBody\n');
+		const note = await vault.create('Props edit.md', '---\ntitle: Old\ntopics: [duty]\n---\n\nBody\n');
+		await until(() => !!app.metadataCache.getFileCache(other)?.frontmatter?.status, 2000);
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		view.editor.setCursor({ line: view.editor.lineCount() - 1, ch: 0 });
+		await sleep(100);
+		const yaml = () => cm.state.doc.toString().split('\n---')[0]!.replace(/^---\n/, '');
+		const row = (key: string) => view.contentEl.querySelector<HTMLElement>(`.cm-properties .metadata-property[data-key="${key}"]`);
+		const typeInto = async (input: HTMLInputElement, text: string) => {
+			input.focus();
+			input.value = text;
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			await sleep(40);
+		};
+		const press = async (el: HTMLElement, key: string) => { el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })); await sleep(80); };
+		const suggestions = () => [...document.querySelectorAll('.mod-input-suggest .suggestion-item')].map((e) => e.textContent);
+		// A value changed in its field.
+		const title = row('title')?.querySelector<HTMLInputElement>('.metadata-property-value input');
+		if (!title) problems.push('no title field');
+		else {
+			await typeInto(title, 'New title');
+			await press(title, 'Enter');
+			if (!yaml().includes('title: New title')) problems.push(`title: ${yaml()}`);
+		}
+		// A list: a chip added from the other note's values (suggested), one removed with its ×.
+		const chipInput = row('topics')?.querySelector<HTMLInputElement>('.metadata-chip-input');
+		if (!chipInput) problems.push('no chip input');
+		else {
+			await typeInto(chipInput, 'bre');
+			if (!suggestions().includes('breach')) problems.push(`topic suggestions: ${suggestions().join(',')}`);
+			await press(chipInput, 'ArrowDown');
+			await press(chipInput, 'Enter');
+			if (!/topics:\s*\[duty, breach\]|topics:\n\s+- duty\n\s+- breach/.test(yaml())) problems.push(`topics: ${JSON.stringify(yaml())}`);
+			await sleep(80);
+			row('topics')?.querySelector<HTMLElement>('.metadata-chip-remove')?.click();
+			await sleep(80);
+			if (yaml().includes('duty')) problems.push(`chip not removed: ${JSON.stringify(yaml())}`);
+		}
+		// A new property by keyboard (Mod+; command): its name suggested from other notes.
+		app.commands.executeCommandById('editor:add-property');
+		await sleep(80);
+		const name = view.contentEl.querySelector<HTMLInputElement>('.metadata-property.is-new input');
+		if (!name || document.activeElement !== name) problems.push('no focused name field for a new property');
+		else {
+			await typeInto(name, 'stat');
+			if (suggestions()[0] !== 'status') problems.push(`name suggestions: ${suggestions().join(',')}`);
+			await press(name, 'ArrowDown');
+			await press(name, 'Enter');
+			await sleep(80);
+			if (!/\nstatus:\s*$/m.test(`${yaml()}\n`)) problems.push(`new property: ${JSON.stringify(yaml())}`);
+			const valueInput = row('status')?.querySelector<HTMLInputElement>('.metadata-property-value input');
+			if (document.activeElement !== valueInput) problems.push('the new value field is not focused');
+		}
+		// Renamed in place.
+		const key = row('title')?.querySelector<HTMLInputElement>('.metadata-property-key input');
+		if (key) { await typeInto(key, 'heading'); await press(key, 'Enter'); }
+		if (!yaml().startsWith('heading: New title')) problems.push(`rename: ${JSON.stringify(yaml())}`);
+		// Removed.
+		row('heading')?.querySelector<HTMLElement>('.metadata-property-remove')?.click();
+		await sleep(80);
+		if (yaml().includes('heading')) problems.push(`remove: ${JSON.stringify(yaml())}`);
+		// A note without properties gets a block for its first one.
+		view.editor.setValue('Just text\n');
+		view.editor.setCursor({ line: 1, ch: 0 });
+		app.commands.executeCommandById('editor:add-property');
+		await sleep(150);
+		const first = view.contentEl.querySelector<HTMLInputElement>('.metadata-property.is-new input');
+		if (!cm.state.doc.toString().startsWith('---\n---\n') || !first) problems.push(`first property: ${JSON.stringify(cm.state.doc.toString())} field=${!!first}`);
+		document.querySelectorAll('.mod-input-suggest').forEach((e) => e.remove());
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await vault.delete(note);
+		await vault.delete(other);
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('editor like reading view: properties as a table, the header says where the note is, heading rules, list styles', async () => {
 		const problems: string[] = [];
 		await vault.createFolder('Props smoke');
@@ -420,14 +499,17 @@ export async function runSmoke(app: App): Promise<void> {
 		// V1: a table, no YAML.
 		if (!table()) problems.push('no properties table');
 		else {
-			const keys = Array.from(table()!.querySelectorAll('.metadata-property-key')).map((e) => e.textContent).join(',');
-			const values = Array.from(table()!.querySelectorAll('.metadata-property-value')).map((e) => e.textContent).join('|');
+			const keys = Array.from(table()!.querySelectorAll<HTMLInputElement>('.metadata-property-key input')).map((e) => e.value).join(',');
+			const values = Array.from(table()!.querySelectorAll<HTMLElement>('.metadata-property-value')).map((e) => {
+				const chips = [...e.querySelectorAll('.metadata-chip')].map((c) => c.firstChild?.textContent ?? '');
+				return chips.length ? chips.join(', ') : e.querySelector('input')?.value ?? '';
+			}).join('|');
 			if (keys !== 'tags,court' || values !== 'torts, exam|HCA') problems.push(`table ${keys} = ${values}`);
 		}
 		if (shown().includes('tags:') || shown().includes('---')) problems.push('YAML shows beside the table');
-		table()?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+		table()?.querySelector<HTMLElement>('.metadata-yaml-button')?.click();
 		await sleep(100);
-		if (table() || !shown().includes('tags: [torts, exam]')) problems.push('clicking the table did not open the YAML');
+		if (table() || !shown().includes('tags: [torts, exam]')) problems.push('"Edit as YAML" did not open the YAML');
 		if (cm.state.doc.lineAt(cm.state.selection.main.head).number !== 2) problems.push('the cursor is not on the first property');
 		view.editor.setCursor({ line: view.editor.lineCount() - 1, ch: 0 });
 		await sleep(100);

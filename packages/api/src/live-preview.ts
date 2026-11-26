@@ -15,7 +15,7 @@ import type { EditorState, Extension } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 import { isImage } from './attachments';
 import { isMedia } from './media';
-import { propertiesPreview } from './properties-editor';
+import { type PropertySource, propertiesPreview } from './properties-editor';
 import { tablePreview } from './tables-editor';
 
 export interface LivePreviewOptions {
@@ -27,6 +27,8 @@ export interface LivePreviewOptions {
 	 * Without it, pictures and recordings are assumed to show.
 	 */
 	embedShows?(target: string): boolean;
+	/** Property names and values used in the homebase, suggested while editing a note's properties. */
+	properties?: PropertySource;
 }
 
 const hide = Decoration.replace({});
@@ -320,5 +322,5 @@ export function livePreview(opts: LivePreviewOptions): Extension {
 		},
 	});
 
-	return [plugin, clicks, propertiesPreview(), tablePreview(), EditorView.editorAttributes.of({ class: 'is-live-preview' })];
+	return [plugin, clicks, propertiesPreview(opts.properties), tablePreview(), EditorView.editorAttributes.of({ class: 'is-live-preview' })];
 }
