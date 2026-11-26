@@ -1,10 +1,11 @@
 /**
  * Slash commands: "/" at the start of a line or after a space opens a menu of things to insert (headings,
  * lists, a task, a table, a code block, a quote, a divider, a link, an embed, a footnote, the date, and law
- * scaffolds). Typing filters it ("/tab" → Table); Enter inserts. It never opens inside a word ("and/or"),
+ * scaffolds); arithmetic after it ("/12*3.5") offers its answer (calc.ts). Typing filters it ("/tab" → Table); Enter inserts. It never opens inside a word ("and/or"),
  * in code, or in the properties.
  */
 import { syntaxTree } from '@codemirror/language';
+import { evaluate, formatNumber, looksLikeMath, prettyExpression } from './calc';
 import { type App, type Editor, type EditorPosition, EditorSuggest, type EditorSuggestContext, type EditorSuggestTriggerInfo, fuzzyScore, setIcon } from '@quire/api';
 
 /** Where the cursor goes in a template, and (optionally) where a selection from there ends. */
@@ -83,6 +84,18 @@ export const SLASH_ITEMS: SlashItem[] = [
 	{ id: 'irac', name: 'IRAC answer', icon: 'list-checks', aliases: ['problem question', 'issue rule', 'answer'], hint: 'Issue … Conclusion', kind: 'block', text: () => `## Issue\n\n${CURSOR}\n\n## Rule\n\n## Application\n\n## Conclusion\n` },
 ];
 
+/** The calculator's items for `query`: the answer, and the working with the answer. None unless it is arithmetic. */
+export function calculatorItems(query: string): SlashItem[] {
+	if (!looksLikeMath(query)) return [];
+	const value = evaluate(query)!;
+	const answer = formatNumber(value);
+	const working = `${prettyExpression(query)} = ${answer}`;
+	return [
+		{ id: 'calc:answer', name: `= ${answer}`, icon: 'calculator', hint: 'insert the answer', kind: 'inline', text: () => answer },
+		{ id: 'calc:working', name: working, icon: 'calculator', hint: 'insert the working', kind: 'inline', text: () => working },
+	];
+}
+
 /** Put `text` in place of `from`..`to`; the cursor goes to CURSOR (or the end), selecting to SELECT_END if there is one. */
 export function insertTemplate(editor: Editor, text: string, from: EditorPosition, to: EditorPosition): void {
 	const at = text.indexOf(CURSOR);
@@ -132,9 +145,11 @@ export class SlashSuggest extends EditorSuggest<SlashItem> {
 
 	onTrigger(cursor: EditorPosition, editor: Editor): EditorSuggestTriggerInfo | null {
 		const before = editor.getLine(cursor.line).slice(0, cursor.ch);
-		const m = /(^|\s)\/([\p{L}\p{N} ]{0,24})$/u.exec(before);
+		// Words, or arithmetic for the calculator ("/12*3.5+4").
+		const m = /(^|\s)\/([\p{L}\p{N} ]{0,24}|[\p{L}\p{N} .,+\-*/^%()×÷]{0,60})$/u.exec(before);
 		if (!m) return null;
 		const query = m[2] ?? '';
+		if (/[^\p{L}\p{N} ]/u.test(query) && !/\d/.test(query)) return null;
 		// A space right after the slash is prose ("this / that"), not a command.
 		if (query.startsWith(' ')) return null;
 		// Inside inline code still being typed (an odd number of backticks before): code, not a command.
@@ -146,7 +161,7 @@ export class SlashSuggest extends EditorSuggest<SlashItem> {
 
 	getSuggestions(ctx: EditorSuggestContext): SlashItem[] {
 		const available = this.items().filter((i) => !i.when || i.when(this.app));
-		return rankSlashItems(ctx.query, available);
+		return [...calculatorItems(ctx.query), ...rankSlashItems(ctx.query, available)];
 	}
 
 	renderSuggestion(item: SlashItem, el: HTMLElement): void {

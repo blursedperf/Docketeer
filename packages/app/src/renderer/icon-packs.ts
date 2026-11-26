@@ -47,7 +47,7 @@ export const LUCIDE_TO_PHOSPHOR: Record<string, string> = {
 	underline: 'text-underline', undo: 'arrow-counter-clockwise', 'undo-2': 'arrow-u-up-left', upload: 'upload-simple', user: 'user',
 	users: 'users', wand: 'magic-wand', 'wand-2': 'magic-wand', x: 'x', 'x-circle': 'x-circle', zap: 'lightning',
 	'zoom-in': 'magnifying-glass-plus', 'zoom-out': 'magnifying-glass-minus',
-	'text-select': 'selection-all', 'arrow-left-right': 'arrows-left-right', 'x-square': 'x-square', combine: 'arrows-merge', 'list-plus': 'list-plus', 'case-sensitive': 'text-aa', 'arrow-down-wide-narrow': 'sort-descending', 'link-2-off': 'link-break',
+	'text-select': 'selection-all', calculator: 'calculator', 'arrow-left-right': 'arrows-left-right', 'x-square': 'x-square', combine: 'arrows-merge', 'list-plus': 'list-plus', 'case-sensitive': 'text-aa', 'arrow-down-wide-narrow': 'sort-descending', 'link-2-off': 'link-break',
 };
 
 export function registerBundledIconPacks(): void {

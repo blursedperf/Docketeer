@@ -1073,6 +1073,40 @@ export async function runSmoke(app: App): Promise<void> {
 		return problems.length === 0 || problems.join('; ');
 	});
 
+	await check('/ calculator: arithmetic after the slash offers its answer, then its working', async () => {
+		const problems: string[] = [];
+		const note = await vault.create('Calc smoke.md', '');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		cm.focus();
+		const items = () => [...document.querySelectorAll<HTMLElement>('.suggestion-container .suggestion-item .suggestion-content')].map((e) => e.textContent ?? '');
+		const type = async (text: string) => { const at = cm.state.selection.main.head; cm.dispatch({ changes: { from: at, insert: text }, selection: { anchor: at + text.length }, userEvent: 'input.type' }); await sleep(80); };
+		const key = async (k: string) => { cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); await sleep(60); };
+		await type('Total: /12*3.5+4');
+		if (!(await until(() => items()[0] === '= 46', 2000))) problems.push(`menu: ${items().join('|')}`);
+		else {
+			if (items()[1] !== '12 × 3.5 + 4 = 46') problems.push(`working: ${items()[1]}`);
+			await key('Enter');
+			if (view.editor.getValue() !== 'Total: 46') problems.push(`answer: ${JSON.stringify(view.editor.getValue())}`);
+		}
+		view.editor.setValue('');
+		await type('/(1200-300)/3');
+		await until(() => items().length > 1, 2000);
+		await key('ArrowDown');
+		await key('Enter');
+		if (view.editor.getValue() !== '(1200 - 300) ÷ 3 = 300') problems.push(`working inserted: ${JSON.stringify(view.editor.getValue())}`);
+		view.editor.setValue('');
+		await type('/2026');
+		if (items().some((t) => t.startsWith('='))) problems.push('a plain number offered a calculation');
+		await key('Escape');
+		view.editor.setValue('');
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await vault.delete(note);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	await check('Enter before a link\'s "]]" finishes the link instead of breaking the line', async () => {
 		const problems: string[] = [];
 		const note = await vault.create('Link enter smoke.md', '');

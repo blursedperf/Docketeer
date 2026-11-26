@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **A calculator in the / menu**: type arithmetic after the slash (`/12*3.5+4`, `/(1200-300)/3`, `/15% of 80`,
+  `/2^10`, `/sqrt(2)`) and the menu offers the answer first (`= 46`, which inserts 46), then the working with its
+  answer (`12 × 3.5 + 4 = 46`). It knows + − × ÷ (and * / x), powers, brackets, percentages, thousands separators,
+  sqrt, abs, round, floor, ceil, ln, log, pi and e. Worked out by Quire's own parser: nothing typed is run as code.
 - **Right-click in the Docket**: a row or a search result has a menu of what → offers for it: a note's Open, Open to
   the right, Open below, rename, move, copy a link …; an authority's next place, cite or merge; a task's check off,
   due dates and priorities. The Docket stays open while the menu is.
