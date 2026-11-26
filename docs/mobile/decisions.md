@@ -31,3 +31,20 @@ already in Documents keeps being opened as the example.
 **Packages.** The Arch and Debian packages are now `docketeer`, and declare that they replace and conflict with
 `quire`, so installing one removes the other. On macOS the new app has a new bundle id, so the old Quire.app
 stays until it is deleted.
+
+## 2. The web side of the shell (Phase 0)
+
+- **One build, two hosts.** `packages/app/build.mjs` now exports `buildApp()`. The desktop build is unchanged
+  (its output was compared file by file). iOS builds with `target: 'safari17'`, without the Electron files and
+  the Electron licence, and with `boot.js` in `index.html` in place of `renderer.js`. The CSP is the same.
+- **The boot order is in `start.ts`, apart from `boot.ts`**, so it can be tested without a WebView. `boot.ts`
+  shows an error on the page if starting fails, as the renderer does.
+- **The example homebase is sent to the page once** (`example:files`, about 0.9 MB as base64) and held in memory.
+  The CSP's `connect-src 'none'` rules out fetching it from `quire://app/`. Media still loads from
+  `quire://app/vault/`, which the shell serves from the bundled example in Phase 0, so files added in memory
+  (an AGLC4 Word export, say) cannot be opened as media until Phase 1.
+- **Not in the host yet:** `formFactor` and the `Platform` flags (Phase 1 task), `openExample`, picking
+  and opening homebases, and `printToPdf`. Settings → Fonts lists only the shipped fonts.
+- **Checked off Linux:** the iOS build boots the real renderer in a throwaway Electron harness with a fake native
+  side, at tablet and phone sizes, with no console errors. That is Chromium, not WebKit: the simulators in
+  Phase 0 are the real test.

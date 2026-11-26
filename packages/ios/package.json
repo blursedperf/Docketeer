@@ -1,0 +1,12 @@
+{
+  "name": "@quire/ios",
+  "version": "0.20.0",
+  "private": true,
+  "type": "module",
+  "description": "Docketeer for iPhone and iPad: the web side of the native shell (docs/mobile/PLAN.md).",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run && node build.mjs",
+    "build:xcode": "node scripts/build-xcode.mjs"
+  }
+}

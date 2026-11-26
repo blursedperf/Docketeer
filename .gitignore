@@ -4,3 +4,4 @@ plugins/*/main.js
 *.map
 .DS_Store
 release/
+packages/ios/Docketeer/Resources/app/

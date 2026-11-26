@@ -2,7 +2,7 @@
 /*
  * Offline audit for Docketeer: fails if anything that ships could make a network request, run generated
  * code, or inject raw HTML. Same rules as the AGLC4 plugin's audit, applied to:
- *   - the app's source (packages/api/src, packages/app/src),
+ *   - the app's source (packages/api/src, packages/app/src, packages/ios/web),
  *   - the built app (packages/app/dist: main, preload, renderer bundle, shims, CSS),
  *   - every plugin, through its own audit (plugins/<name>/scripts/offline-audit.mjs) or these rules.
  *
@@ -58,6 +58,7 @@ const CSS_RULES = [
 /** Deliberate uses: [file (relative), label, reason]. */
 const ALLOWED = [
 	['packages/api/src/app.ts', 'dynamic import()', 'loads a plugin\'s main.js from quire://app/plugins/ (local files only; the CSP allows scripts only from quire:)'],
+	['packages/ios/web/boot.ts', 'dynamic import()', 'iOS: loads the app\'s own renderer from quire://app/renderer.js once window.quire is in place (the CSP allows scripts only from quire:)'],
 	['packages/app/src/renderer/smoke.ts', 'fetch()', 'smoke test: checks that a request from the page is refused'],
 	['packages/app/src/main/main.ts', 'fetch()', 'smoke test: checks that a request from the main process is refused'],
 	['packages/app/dist/main.cjs', 'fetch()', 'built from main.ts (see above)'],
@@ -124,7 +125,7 @@ function check(path, text, rules) {
 }
 
 // Our source.
-const source = [...walk(join(ROOT, 'packages/api/src'), ['.ts']), ...walk(join(ROOT, 'packages/app/src'), ['.ts'])];
+const source = [...walk(join(ROOT, 'packages/api/src'), ['.ts']), ...walk(join(ROOT, 'packages/app/src'), ['.ts']), ...walk(join(ROOT, 'packages/ios/web'), ['.ts'])];
 for (const f of source) check(f, stripComments(readFileSync(f, 'utf8')), [...CODE_RULES, ...SOURCE_ONLY_RULES]);
 for (const f of walk(join(ROOT, 'packages/app/src'), ['.css'])) check(f, readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''), CSS_RULES);
 

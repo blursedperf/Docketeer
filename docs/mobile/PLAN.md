@@ -247,9 +247,9 @@ the previous exit check has passed. Phases 0, 2 and 3 need a person to try the a
 The question this phase answers: does CodeMirror 6 live preview feel right on an iPhone keyboard and an iPad
 with a Magic Keyboard?
 
-- [ ] Create the `packages/ios` workspace (§2.2). Add it to root `workspaces`. Make sure root `npm test` is
+- [x] Create the `packages/ios` workspace (§2.2). Add it to root `workspaces`. Make sure root `npm test` is
       still green on Linux.
-- [ ] `packages/ios/build.mjs`: run the existing renderer build with an iOS target. This means
+- [x] `packages/ios/build.mjs`: run the existing renderer build with an iOS target. This means
       `target: 'safari17'` instead of `chrome130`, the iOS `index.html` with `/boot.js` (§2.3), and output
       to `Docketeer/Resources/app/`. Refactor `packages/app/build.mjs` into a reusable function rather than
       copying it.
@@ -257,7 +257,8 @@ with a Magic Keyboard?
       `quire://app/*` with the CSP header on `index.html`. Start the page at `quire://app/index.html`.
 - [ ] `web/boot.ts` and `web/host.ts`, with an **in-memory `HostFs`** seeded from the bundled example
       homebase. Add enough of `app.*` to open it (`recentVaults`, `getConfig`/`setConfig` in
-      `UserDefaults`, `dictionary`, `notices`).
+      `UserDefaults`, `dictionary`, `notices`). *The web side is done; the channels the Swift shell must answer
+      are listed in `packages/ios/README.md`.*
 - [ ] Lockdown basics: the content rule list and the navigation delegate (§2.7).
 - [ ] Run on the iPhone and iPad simulators. Fix the crashes.
 - [ ] Write `docs/mobile/spike.md`. Cover:
