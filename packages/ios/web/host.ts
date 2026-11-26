@@ -18,6 +18,8 @@ export interface HostInfo {
 	appVersion: string;
 	formFactor: 'phone' | 'tablet';
 	vault: { path: string; name: string } | null;
+	/** A smoke run (Debug builds, from XCTest): the page runs its checks and reports to native. */
+	isSmoke?: boolean;
 }
 
 interface WebkitHandler { postMessage(message: unknown): Promise<unknown> }
@@ -131,7 +133,10 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 		onFsEvents: (cb) => events.on('fs:events', (payload) => cb(payload as HostFsEvent[])),
 		plugins: { list: () => call<HostPluginInfo[]>('plugins:list') },
 		app: {
-			isSmoke: false,
+			isSmoke: !!info.isSmoke,
+			smokeReport: (report) => { void call('smoke:report', report).catch((e: unknown) => console.error(e)); },
+			// As if the device locked: native sends app:system-lock back, as it does on entering the background.
+			smokeSystemLock: () => { if (info.isSmoke) void call('smoke:system-lock').catch((e: unknown) => console.error(e)); },
 			isShots: false,
 			isBench: false,
 			frameless: false,

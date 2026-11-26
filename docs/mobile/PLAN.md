@@ -324,7 +324,7 @@ that editing feels right, or decides what changes. Stop here and report.
       - any Swift package or CocoaPod not on an allow-list (which starts empty);
       - a `server.url` in a Capacitor config, if Capacitor was chosen.
       Add fixtures that prove each rule fires.
-- [ ] Split `smoke.ts` into renderer checks and host checks. Add an iOS host-check set, and run it in the
+- [x] Split `smoke.ts` into renderer checks and host checks. Add an iOS host-check set, and run it in the
       simulator from `xcodebuild test`. The run must report blocked requests = 0 and console errors = 0.
 
 **Exit check:** XCTests and the simulator smoke run pass. The user edits a note on the laptop and on the iPad

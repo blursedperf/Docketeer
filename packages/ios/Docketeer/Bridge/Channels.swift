@@ -32,6 +32,12 @@ final class Channels {
 	var reload: (() -> Void)?
 	/** Opens the Files app at a folder (main thread). */
 	var showInFiles: ((URL) -> Void)?
+	#if DEBUG
+	/** A smoke run: host:info says so, and smoke:* channels answer. */
+	var smoke: SmokeRun?
+	/** Sends app:system-lock to the page (smoke:system-lock, as if the device locked). */
+	var systemLock: (() -> Void)?
+	#endif
 
 	/** Channels answered later, on the main thread (they show something first). */
 	static let later: Set<String> = ["app:chooseVault"]
@@ -57,7 +63,20 @@ final class Channels {
 		switch channel {
 		case "host:info":
 			let vault: Any = homebases.current.map { ["path": $0.location, "name": $0.name] } ?? NSNull()
-			return ["platform": "ios", "appVersion": appVersion, "formFactor": formFactor, "vault": vault]
+			var info: [String: Any] = ["platform": "ios", "appVersion": appVersion, "formFactor": formFactor, "vault": vault]
+			#if DEBUG
+			if smoke != nil { info["isSmoke"] = true }
+			#endif
+			return info
+		#if DEBUG
+		case "smoke:report" where smoke != nil:
+			let report: Any = args.first ?? NSNull()
+			DispatchQueue.main.async { [smoke] in smoke?.pageReported(report) }
+			return NSNull()
+		case "smoke:system-lock" where smoke != nil:
+			DispatchQueue.main.async { [systemLock] in systemLock?() }
+			return NSNull()
+		#endif
 		case "app:recent":
 			return homebases.recent()
 		case "app:openVault":

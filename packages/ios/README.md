@@ -23,7 +23,8 @@ npm run build                 # from the repository root: the plugins and the de
 npm run build -w @quire/ios   # the iOS page, into packages/ios/Docketeer/Resources/app/
 npm test -w @quire/ios        # unit tests for web/, then the iOS build
 npm run build:xcode -w @quire/ios   # macOS: the page, then the app for the simulator (Docketeer/build/)
-npm run test:xcode -w @quire/ios    # macOS: the XCTests on a simulator (DOCKETEER_SIMULATOR, default "iPhone 17")
+npm run test:xcode -w @quire/ios    # macOS: the XCTests on a simulator (DOCKETEER_SIMULATOR, default "iPhone 17"),
+                                    # the page's smoke checks in WebKit among them (about 70 s)
 ```
 
 To try it, open `Docketeer/Docketeer.xcodeproj` in Xcode after `npm run build -w @quire/ios`, pick a simulator and

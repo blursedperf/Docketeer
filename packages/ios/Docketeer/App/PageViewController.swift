@@ -19,6 +19,22 @@ final class PageViewController: UIViewController {
 
 	static let startURL = URL(string: "quire://app/index.html")!
 
+	#if DEBUG
+	/** A smoke run (XCTest), or nil for the app itself. */
+	private let smoke: SmokeRun?
+
+	init(smoke: SmokeRun? = nil) {
+		self.smoke = smoke
+		super.init(nibName: nil, bundle: nil)
+	}
+	#else
+	init() {
+		super.init(nibName: nil, bundle: nil)
+	}
+	#endif
+
+	required init?(coder: NSCoder) { fatalError("Made in code") }
+
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		view.backgroundColor = .systemBackground
@@ -38,23 +54,37 @@ final class PageViewController: UIViewController {
 
 	private func load(root: URL, rules: WKContentRuleList) {
 		let pad = traitCollection.userInterfaceIdiom == .pad
+		var defaults = UserDefaults.standard
+		var documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+		#if DEBUG
+		// A smoke run keeps to its own settings and folder: never the person's homebases or settings.
+		if let smoke { defaults = smoke.defaults; documents = smoke.folder }
+		#endif
 		let homebases = Homebases(
-			defaults: .standard,
-			documents: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0],
+			defaults: defaults,
+			documents: documents,
 			exampleSource: root.appendingPathComponent("example-homebase", isDirectory: true),
 			deviceStorage: pad ? "On My iPad" : "On My iPhone"
 		)
 		homebases.onOpen = { [weak self] fs in self?.watch(fs) }
+		#if DEBUG
+		if let smoke { _ = try? homebases.add(folder: smoke.homebase) } else { homebases.reopenLast() }
+		#else
 		homebases.reopenLast()
+		#endif
 		#if DEBUG
 		// Simulator runs: `-openExample` opens the example homebase without tapping (Debug builds only).
-		if ProcessInfo.processInfo.arguments.contains("-openExample") { _ = try? homebases.openExample() }
+		if smoke == nil, ProcessInfo.processInfo.arguments.contains("-openExample") { _ = try? homebases.openExample() }
+		#endif
+		var formFactor = pad ? "tablet" : "phone"
+		#if DEBUG
+		if let smoke { formFactor = smoke.formFactor }
 		#endif
 		let channels = Channels(
 			root: root,
-			defaults: .standard,
+			defaults: defaults,
 			clipboard: Pasteboard(),
-			formFactor: pad ? "tablet" : "phone",
+			formFactor: formFactor,
 			appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0",
 			homebases: homebases
 		)
@@ -73,7 +103,14 @@ final class PageViewController: UIViewController {
 		config.userContentController.add(rules)
 		config.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: Bridge.name)
 		#if DEBUG
-		ConsoleRelay.install(in: config.userContentController)
+		if let smoke {
+			channels.smoke = smoke
+			channels.systemLock = { [weak self] in self?.webView?.emitQuireEvent("app:system-lock") }
+			smoke.refusedNavigations = { [lockdown] in lockdown.refused.count }
+			ConsoleRelay.install(in: config.userContentController, levels: ["error", "warn", "log", "info"]) { smoke.console($0, $1) }
+		} else {
+			ConsoleRelay.install(in: config.userContentController)
+		}
 		#endif
 
 		let webView = WKWebView(frame: .zero, configuration: config)

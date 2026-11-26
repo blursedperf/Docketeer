@@ -10,16 +10,25 @@ import WebKit
 final class ConsoleRelay: NSObject, WKScriptMessageHandler {
 	static let name = "quireConsole"
 
-	static func install(in controller: WKUserContentController) {
+	/** Also given every message relayed (a smoke run: errors, and leaks of note text into any log). */
+	private let sink: ((String, String) -> Void)?
+
+	init(sink: ((String, String) -> Void)? = nil) {
+		self.sink = sink
+	}
+
+	/** Relay `levels` of the page's console (errors and warnings; a smoke run also log and info). */
+	static func install(in controller: WKUserContentController, levels: [String] = ["error", "warn"], sink: ((String, String) -> Void)? = nil) {
+		let list = levels.map { "'\($0)'" }.joined(separator: ", ")
 		let script = """
 		(() => {
 			const post = (level, args) => {
 				try {
-					const text = args.map((a) => a instanceof Error ? (a.stack || a.message) : typeof a === 'string' ? a : (() => { try { return JSON.stringify(a); } catch { return String(a); } })()).join(' ');
+					const text = args.map((a) => a instanceof Error ? `${a.name}: ${a.message}\\n${a.stack ?? ''}` : typeof a === 'string' ? a : (() => { try { return JSON.stringify(a); } catch { return String(a); } })()).join(' ');
 					window.webkit.messageHandlers.\(name).postMessage({ level, text });
 				} catch {}
 			};
-			for (const level of ['error', 'warn']) {
+			for (const level of [\(list)]) {
 				const orig = console[level].bind(console);
 				console[level] = (...args) => { post(level, args); orig(...args); };
 			}
@@ -28,12 +37,14 @@ final class ConsoleRelay: NSObject, WKScriptMessageHandler {
 		})();
 		"""
 		controller.addUserScript(WKUserScript(source: script, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
-		controller.add(ConsoleRelay(), contentWorld: .page, name: name)
+		controller.add(ConsoleRelay(sink: sink), contentWorld: .page, name: name)
 	}
 
 	func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
 		guard let body = message.body as? [String: Any] else { return }
-		NSLog("[page] %@: %@", body["level"] as? String ?? "?", body["text"] as? String ?? "")
+		let level = body["level"] as? String ?? "?", text = body["text"] as? String ?? ""
+		sink?(level, text)
+		if level != "log" && level != "info" { NSLog("[page] %@: %@", level, text) }
 	}
 }
 #endif

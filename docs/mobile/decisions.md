@@ -300,3 +300,22 @@ would then run without AGLC4 or Tasks until it was restarted.
 - **`app:before-quit`** is sent only when the scene disconnects, which iOS seldom announces; the background save
   has already happened by then.
 - `app:system-lock` still goes with entering the background (locking, when it is turned on). Desktop is unchanged.
+
+## 7. The smoke checks run in the simulator (Phase 1)
+
+- **The same checks, on the iOS host.** `SmokeTests` (XCTest) opens a `PageViewController` in smoke mode in an
+  iPad-sized window (1194 × 834, told it is a tablet) on a throwaway copy of the desktop smoke test's homebase
+  ("Docketeer demo") with throwaway settings (`SmokeRun`), so a run never touches the person's homebases, recent
+  list or settings. It requires every check to pass, no console errors, no refused navigations, and no note text
+  in any log.
+- **The split is by what a check needs.** A check that tests a host feature returns `{ skip: reason }` when the host
+  lacks it, and is reported as skipped (never a failure). On iOS three are skipped: Export to PDF (no
+  `printToPdf` yet), the installed-fonts list (iOS offers only the shipped fonts), and desktop's
+  typing-wins rule (iOS guards conflicts). Desktop skips none. The layout check now compares the device flags with
+  the host's form factor.
+- **What the first runs found and fixed:** table cells dispatched a selection change inside an editor update when
+  refocused after a redraw (WebKit runs `focusin` at once: an error on every table edit); AGLC4's history warned
+  when a note was deleted while its version was taken (also on desktop); the smoke test deleted a note before its
+  tab had closed; it compared saved settings as JSON text, which depends on key order (native keeps settings in an
+  unordered map); and a scroll check allowed 1px of rounding, where WebKit needs 2.
+- **Console errors in the relay** now carry the error's name and message: WebKit's `stack` has neither.

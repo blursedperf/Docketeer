@@ -99,6 +99,8 @@ describe('createHost', () => {
 		expect(host.formFactor).toBe('tablet');
 		expect(host.vault).toEqual(info.vault);
 		expect(host.app.isSmoke).toBe(false);
+		host.app.smokeSystemLock!();
+		expect(calls.map((c) => c[0])).not.toContain('smoke:system-lock');
 		expect(await host.app.getConfig()).toEqual({ recent: [] });
 		await host.app.setConfig({ last: 'x' });
 		expect(await host.app.dictionary('en-AU')).toEqual({ aff: 'A', dic: 'D' });
