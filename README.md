@@ -4,16 +4,18 @@ A Markdown notes app in the spirit of Obsidian that runs **entirely offline**: a
 plain `.md` files (a **homebase**), and the app cannot reach the network — every request is blocked by the app itself,
 whatever a plugin tries. Plugins add commands, views, CodeMirror 6 editor extensions, settings and more.
 
+You can create a generic homebase or an Australian law student friendly homebase at the moment.
+
 Two plugins ship built in: **AGLC4 Citations** (`plugins/aglc4`), a port of
 [obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0, and **Task Docket** (`plugins/task-docket`),
 a port of [obsidian-task-docket](https://github.com/blursedperf/obsidian-task-docket) 1.1.0 that shows every task in
 the homebase in a Tasks panel in the Docket.
 
-Everything is reached from the keyboard through **the Docket**, a tray that drops from the top of the window
+I love Obsidian but I'm always using my laptop and the side bar solution takes up too much realestate and I wanted a keyboard first solution that would allowing me to barely have to take my hands of the keyboard while creating and placing notes, editing, searching etc. Everything is reached from the keyboard through **the Docket**, a tray that drops from the top of the window
 (**Super+D**: ⌘D on macOS, Ctrl+P on Windows): search across notes, commands, and panels for authorities, the outline, units
 (subjects and topics), citations, the homebase and the layout. Panels can be hidden, reordered, and built from
 commands, file trees, note lists and sections ([docs/docket/panels.md](docs/docket/panels.md)). Notes tile into panes from the keyboard. See
-[docs/docket/shortcuts.md](docs/docket/shortcuts.md) and [docs/docket/walkthrough.md](docs/docket/walkthrough.md).
+[docs/docket/shortcuts.md](docs/docket/shortcuts.md) and [docs/docket/walkthrough.md](docs/docket/walkthrough.md). At the moment you can start with a generic homebase
 
 To look around first, choose *Try the example homebase* on the welcome screen (or *Switch homebase* → *Open the
 example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Quire
