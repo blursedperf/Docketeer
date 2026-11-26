@@ -339,17 +339,20 @@ export class WorkspaceLeaf extends Events {
 				const copy = ws.createLeafInTabs(tabs, tabs.children.indexOf(this) + 1);
 				void copy.setViewState({ ...this.getViewState(), active: true }).then(() => ws.setActiveLeaf(copy, { focus: true }));
 			}));
-			menu.addSeparator();
-			menu.addItem((i) => i.setTitle('Split right').setIcon('separator-vertical').onClick(run('app:split-right', () => ws.duplicateLeaf(this, 'vertical'))));
-			menu.addItem((i) => i.setTitle('Split down').setIcon('separator-horizontal').onClick(run('app:split-down', () => ws.duplicateLeaf(this, 'horizontal'))));
-			menu.addItem((i) => i.setTitle('Split left').setIcon('separator-vertical').onClick(run('app:split-left', () => ws.duplicateLeaf(this, 'vertical', true))));
-			menu.addItem((i) => i.setTitle('Split up').setIcon('separator-horizontal').onClick(run('app:split-up', () => ws.duplicateLeaf(this, 'horizontal', true))));
-			if (count > 1 || ws.rootTabs().length > 1) {
-				for (const [dir, name] of [['right', 'right'], ['down', 'below'], ['left', 'left'], ['up', 'above']] as const) {
-					menu.addItem((i) => i.setTitle(`Move to the pane ${name}`).setIcon('move').onClick(() => { ws.moveLeafToPane(this, dir); }));
+			// Panes and tab stacks: not where one pane shows at a time (a phone), as the commands are not offered there.
+			if (!this.workspace.singlePane) {
+				menu.addSeparator();
+				menu.addItem((i) => i.setTitle('Split right').setIcon('separator-vertical').onClick(run('app:split-right', () => ws.duplicateLeaf(this, 'vertical'))));
+				menu.addItem((i) => i.setTitle('Split down').setIcon('separator-horizontal').onClick(run('app:split-down', () => ws.duplicateLeaf(this, 'horizontal'))));
+				menu.addItem((i) => i.setTitle('Split left').setIcon('separator-vertical').onClick(run('app:split-left', () => ws.duplicateLeaf(this, 'vertical', true))));
+				menu.addItem((i) => i.setTitle('Split up').setIcon('separator-horizontal').onClick(run('app:split-up', () => ws.duplicateLeaf(this, 'horizontal', true))));
+				if (count > 1 || ws.rootTabs().length > 1) {
+					for (const [dir, name] of [['right', 'right'], ['down', 'below'], ['left', 'left'], ['up', 'above']] as const) {
+						menu.addItem((i) => i.setTitle(`Move to the pane ${name}`).setIcon('move').onClick(() => { ws.moveLeafToPane(this, dir); }));
+					}
 				}
+				menu.addItem((i) => i.setTitle(tabs?.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => tabs?.setStacked(!tabs.stacked)));
 			}
-			menu.addItem((i) => i.setTitle(tabs?.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => tabs?.setStacked(!tabs.stacked)));
 			menu.addSeparator();
 			this.view.onPaneMenu(menu, 'tab-header');
 			menu.showAtMouseEvent(e);

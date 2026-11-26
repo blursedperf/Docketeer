@@ -26,6 +26,8 @@ const ALLOW = [
 	['.app-container', 'padding', 'iPhone and iPad: clear of the home indicator and rounded corners, sized by the system (env)'],
 	['.is-compact .compact-docket-button', 'padding', 'clear of the home indicator, sized by the system (env)'],
 	['.is-compact .docket.is-peek', 'padding', 'clear of the home indicator unless the keyboard covers it (env)'],
+	['.is-compact .modal.mod-settings', 'padding', 'clear of the Dynamic Island, sized by the system (env)'],
+	['.is-compact .vertical-tab-content-container', 'padding', 'clear of the home indicator, sized by the system (env)'],
 ];
 
 const css = readFileSync(FILE, 'utf8').replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));

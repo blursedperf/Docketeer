@@ -114,6 +114,19 @@ final class PageViewController: UIViewController {
 		if let smoke {
 			channels.smoke = smoke
 			channels.systemLock = { [weak self] in self?.webView?.emitQuireEvent("app:system-lock") }
+			// The page's own pixels at twice its size in points, for comparing (the screen's scale may differ).
+			channels.capture = { [weak self] done in
+				guard let webView = self?.webView else { done(nil); return }
+				let config = WKSnapshotConfiguration()
+				config.afterScreenUpdates = true
+				webView.takeSnapshot(with: config) { image, _ in
+					guard let image else { done(nil); return }
+					let format = UIGraphicsImageRendererFormat()
+					format.scale = 2
+					let png = UIGraphicsImageRenderer(size: image.size, format: format).pngData { _ in image.draw(in: CGRect(origin: .zero, size: image.size)) }
+					done(png)
+				}
+			}
 			smoke.refusedNavigations = { [lockdown] in lockdown.refused.count }
 			ConsoleRelay.install(in: config.userContentController, levels: ["error", "warn", "log", "info"]) { smoke.console($0, $1) }
 		} else {

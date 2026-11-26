@@ -37,6 +37,10 @@
 - **iPhone and iPad: leaving Docketeer locks it** (Settings → Security, "When you leave Docketeer or the screen
   locks", on unless you turn it off), and while locked notes are open the app switcher shows a plain screen
   instead of the note.
+- **iPhone: the note's title opens its tab's menu** (hold it, or right-click): close, Share…, the exports and
+  version history, now the tab bar is put away. It no longer offers splitting panes.
+- **iPhone: Settings fill the screen**, with the pages as tabs along the top and each menu or field below its
+  description, full width. The Subjects panel's keyboard keys are left out on a phone.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

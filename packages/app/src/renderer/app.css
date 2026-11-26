@@ -705,6 +705,24 @@ input.settings-search { margin: var(--space-2) var(--space-2) 0; }
 .vertical-tab-nav-item:hover { background: var(--doom-base2); color: var(--text-normal); }
 .vertical-tab-nav-item.is-active { background: rgba(var(--doom-blue-rgb), 0.16); color: var(--doom-blue-text); border-left-color: var(--doom-blue); }
 .vertical-tab-content-container { flex: 1; overflow-y: auto; scrollbar-gutter: stable; padding: var(--space-2) var(--space-8) var(--space-8); }
+/* A narrow window (an iPhone): settings fill the screen; the pages are a row of tabs along the top, under the
+   search, and each setting's control goes below its words when it needs the width (a menu, a field). */
+.is-compact .modal.mod-settings {
+	width: 100vw; height: var(--visible-height, 100vh); border: none; border-radius: 0;
+	padding: env(safe-area-inset-top, 0px) 0 0;
+}
+.is-compact .vertical-tabs-container { flex-direction: column; }
+.is-compact .vertical-tab-sidebar { width: auto; border-right: none; border-bottom: var(--border-width) solid var(--doom-hairline); }
+.is-compact .vertical-tab-header { display: flex; flex: none; gap: var(--space-1); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.is-compact .vertical-tab-header::-webkit-scrollbar { display: none; }
+.is-compact .vertical-tab-header-group-title { display: none; }
+.is-compact .vertical-tab-nav-item { flex-shrink: 0; height: 44px; white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; border-radius: 0; }
+.is-compact .vertical-tab-nav-item.is-active { border-bottom-color: var(--doom-blue); }
+.is-compact .vertical-tab-content-container { padding: var(--space-2) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom, 0px)); scrollbar-gutter: auto; }
+.is-compact .vertical-tab-content .setting-item:not(.setting-item-heading) { flex-wrap: wrap; row-gap: var(--space-2); }
+.is-compact .vertical-tab-content .setting-item:not(.setting-item-heading) .setting-item-info { flex: 1 1 60%; }
+.is-compact .vertical-tab-content .setting-item:not(.setting-item-heading) .setting-item-control { width: auto; }
+.is-compact .vertical-tab-content .setting-item:not(.setting-item-heading):has(select, textarea, input[type="text"], input[type="search"], input:not([type]), input[type="range"]) .setting-item-control { flex-basis: 100%; justify-content: stretch; }
 
 .setting-item { display: flex; align-items: center; gap: var(--space-4); padding: var(--setting-pad) 0; border-top: var(--border-width) solid var(--doom-hairline); }
 .setting-item:first-child, .setting-item-heading + .setting-item { border-top: none; }
@@ -1052,6 +1070,8 @@ body.is-resizing-docket { cursor: row-resize; user-select: none; }
 /* Units: a short explanation and its keys. */
 .docket-help { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); padding: var(--space-1) var(--space-3) var(--space-2); font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); }
 .docket-help-key { white-space: nowrap; }
+/* Keys mean nothing on a phone without a keyboard. */
+.is-touch.is-compact .docket-help-key { display: none; }
 .docket-folder .docket-option-title { font-weight: var(--font-medium); }
 
 /* Locking. */

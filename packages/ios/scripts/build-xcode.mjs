@@ -1,6 +1,7 @@
 /**
  * Builds the iOS app for the simulator (macOS with Xcode only): the page first (build.mjs), then the Xcode project.
- * `--test` also runs the XCTests on a simulator (DOCKETEER_SIMULATOR names it; default "iPhone 17").
+ * `--test` also runs the XCTests on a simulator (DOCKETEER_SIMULATOR names it; default "iPhone 17"). `--shots`
+ * runs only the iPhone screenshots, into Docketeer/build/shots/ (compare them: npm run shots:ios).
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -17,15 +18,17 @@ if (!existsSync(project)) {
 	console.error(`There is no Xcode project at ${project}.`);
 	process.exit(1);
 }
-const run = (cmd, args) => {
-	const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: here });
+const run = (cmd, args, env = process.env) => {
+	const r = spawnSync(cmd, args, { stdio: 'inherit', cwd: here, env });
 	if (r.status !== 0) process.exit(r.status ?? 1);
 };
 run(process.execPath, ['build.mjs']);
-const test = process.argv.includes('--test');
+const shots = process.argv.includes('--shots');
+const test = shots || process.argv.includes('--test');
 const destination = test ? `platform=iOS Simulator,name=${process.env.DOCKETEER_SIMULATOR ?? 'iPhone 17'}` : 'generic/platform=iOS Simulator';
 run('xcodebuild', [
 	test ? 'test' : 'build', '-project', project, '-scheme', 'Docketeer', '-configuration', 'Debug',
 	'-destination', destination, '-derivedDataPath', join(here, 'Docketeer', 'build'), 'CODE_SIGNING_ALLOWED=NO', '-quiet',
-]);
+	...(shots ? ['-only-testing:DocketeerTests/SmokeTests/testPhoneScreenshots'] : []),
+], shots ? { ...process.env, TEST_RUNNER_DOCKETEER_SHOTS: join(here, 'Docketeer', 'build', 'shots') } : process.env);
 console.log(test ? 'The XCTests passed.' : `Built ${join(here, 'Docketeer', 'build', 'Build', 'Products', 'Debug-iphonesimulator', 'Docketeer.app')}`);

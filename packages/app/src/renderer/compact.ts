@@ -55,6 +55,17 @@ export function registerCompact(app: App): void {
 		b.addClass('mod-open-tabs');
 	});
 	addButtons();
+
+	// The tab bar is hidden: the title in the view's header opens the tab's menu (rename, Share…, export, close).
+	workspace.containerEl.addEventListener('contextmenu', (e) => {
+		const title = e.target instanceof Element ? e.target.closest('.view-header-title') : null;
+		if (!isCompact() || !title) return;
+		let leaf: WorkspaceLeaf | null = null;
+		workspace.iterateRootLeaves((l) => { if (!leaf && l.view.containerEl.contains(title)) leaf = l; });
+		if (!leaf) return;
+		e.preventDefault();
+		(leaf as WorkspaceLeaf).tabHeaderEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY }));
+	});
 	workspace.on('layout-change', addButtons);
 	workspace.on('active-leaf-change', addButtons);
 

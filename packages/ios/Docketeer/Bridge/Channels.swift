@@ -43,10 +43,12 @@ final class Channels {
 	var smoke: SmokeRun?
 	/** Sends app:system-lock to the page (smoke:system-lock, as if the device locked). */
 	var systemLock: (() -> Void)?
+	/** A picture of the page as it is now, as a PNG (smoke:capture, screenshot runs only). */
+	var capture: ((@escaping (Data?) -> Void) -> Void)?
 	#endif
 
 	/** Channels answered later, on the main thread (they show something first). */
-	static let later: Set<String> = ["app:chooseVault", "app:printToPdf", "app:shareFile"]
+	static let later: Set<String> = ["app:chooseVault", "app:printToPdf", "app:shareFile", "smoke:capture"]
 	/** Channels that change which homebase is open, or touch UIKit: answered on the main thread. */
 	static let mainThread: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready", "app:recent", "app:openVault", "app:forgetVault", "app:openExample", "app:showItemInFolder", "app:coverInBackground"]
 	/** The most a new homebase's panels file may hold. */
@@ -74,6 +76,7 @@ final class Channels {
 			var info: [String: Any] = ["platform": "ios", "appVersion": appVersion, "formFactor": formFactor, "vault": vault]
 			#if DEBUG
 			if smoke != nil { info["isSmoke"] = true }
+			if smoke?.shotsFolder != nil { info["isShots"] = true }
 			#endif
 			return info
 		#if DEBUG
@@ -159,6 +162,9 @@ final class Channels {
 		case "app:printToPdf": printLater(args, reply)
 		case "app:shareFile": shareLater(args, reply)
 		case "app:chooseVault": chooseLater(args, reply)
+		#if DEBUG
+		case "smoke:capture": captureLater(args, reply)
+		#endif
 		default: reply(.failure(BridgeError("Unknown channel: \(channel)")))
 		}
 	}
@@ -198,6 +204,19 @@ final class Channels {
 			reply(.failure(error))
 		}
 	}
+
+	#if DEBUG
+	/** smoke:capture(name): the page as `name`.png in the run's screenshot folder; answers with its path. */
+	private func captureLater(_ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
+		guard let folder = smoke?.shotsFolder, let capture else { reply(.failure(BridgeError("Not a screenshot run"))); return }
+		guard let name = args.first as? String, name.range(of: "^[a-z0-9-]+$", options: .regularExpression) != nil else { reply(.failure(BridgeError("Not a screenshot name"))); return }
+		capture { png in
+			guard let png else { reply(.failure(BridgeError("The capture failed"))); return }
+			let file = folder.appendingPathComponent("\(name).png")
+			do { try png.write(to: file); reply(.success(file.path)) } catch { reply(.failure(error)) }
+		}
+	}
+	#endif
 
 	private func chooseLater(_ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
 		let create = args.first as? Bool ?? false

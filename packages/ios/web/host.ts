@@ -20,6 +20,7 @@ export interface HostInfo {
 	vault: { path: string; name: string } | null;
 	/** A smoke run (Debug builds, from XCTest): the page runs its checks and reports to native. */
 	isSmoke?: boolean;
+	isShots?: boolean;
 }
 
 interface WebkitHandler { postMessage(message: unknown): Promise<unknown> }
@@ -137,7 +138,9 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 			smokeReport: (report) => { void call('smoke:report', report).catch((e: unknown) => console.error(e)); },
 			// As if the device locked: native sends app:system-lock back, as it does on entering the background.
 			smokeSystemLock: () => { if (info.isSmoke) void call('smoke:system-lock').catch((e: unknown) => console.error(e)); },
-			isShots: false,
+			isShots: !!info.isShots,
+			// Screenshot runs: a picture of the page, written by native (smoke:capture).
+			capture: info.isShots ? (name) => call<string>('smoke:capture', name) : undefined,
 			isBench: false,
 			frameless: false,
 			getConfig: () => call('app:getConfig'),

@@ -165,7 +165,9 @@ export function unitsPanel(app: App, docket: Docket): DocketPanel {
 
 			const store = unitsStore(app);
 			const help = el.createDiv({ cls: 'docket-help' });
-			help.createSpan({ text: `${UNIT_LABELS.plural1} and ${UNIT_LABELS.level2.toLowerCase()}s are folders you mark: → on a folder here or in Homebase › Files.` });
+			// On a touch screen a folder's menu is a hold away (its keys, below, are for a keyboard).
+			const how = document.body.classList.contains('is-touch') ? 'hold' : '→ on';
+			help.createSpan({ text: `${UNIT_LABELS.plural1} and ${UNIT_LABELS.level2.toLowerCase()}s are folders you mark: ${how} a folder here or in Homebase › Files.` });
 			const del = Platform.isMacOS ? '⌘⌫' : 'Del';
 			for (const [k, t] of [['Enter', 'open'], ['N', 'new note here'], ['T', `new ${UNIT_LABELS.level2.toLowerCase()} here`], ['F2', 'rename'], [del, 'delete'], ['→', 'more']] as const) {
 				const s = help.createSpan({ cls: 'docket-help-key' });

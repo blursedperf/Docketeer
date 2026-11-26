@@ -26,6 +26,26 @@ interface Check { name: string; ok: boolean; detail?: string; skipped?: string }
  */
 type CheckResult = boolean | string | { skip: string };
 
+/**
+ * Checks of what a narrow window (one pane at a time: the compact layout, an iPhone) leaves out on purpose, by the
+ * start of their names, and why. The rest of the suite runs on a narrow window as on a wide one.
+ */
+const WIDE_ONLY: [string, string][] = [
+	['hotkeys:', 'the hotkey editor is not on a phone'],
+	['AGLC4: insert footnote opens the footnote pane', 'a phone writes footnotes in the note itself'],
+	['AGLC4: page preview', 'the page preview needs a page\'s width beside the note'],
+	['header bands line up across columns', 'one column at a time'],
+	['custom panels:', 'panels are arranged and made on a wider window'],
+	['drag and drop:', 'panels are arranged on a wider window'],
+	['list fixes:', 'it closes a split'],
+	['Back and Forward in a pane', 'stacked tabs need several panes'],
+	['layout: open panes listed', 'one pane at a time'],
+	['journey (keyboard only)', 'it works side by side'],
+	['tiling', 'one pane at a time'],
+	['settings controls share one column', 'on a phone a control goes below its words, full width'],
+	['tab menus:', 'the tab bar is hidden, and its pane items with it'],
+];
+
 const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
 /** The same JSON value, whatever the order of object keys (a host may store settings in an unordered map). */
@@ -81,6 +101,9 @@ export async function runSmoke(app: App): Promise<void> {
 	const notices: string[] = [];
 	(globalThis as { __quireNotices?: string[] }).__quireNotices = notices;
 	const check = async (name: string, fn: () => Promise<CheckResult> | CheckResult) => {
+		// On a narrow window (an iPhone) what needs a wide one is not offered: those checks say so and are skipped.
+		const wide = document.body.classList.contains('is-compact') ? WIDE_ONLY.find(([prefix]) => name.startsWith(prefix)) : undefined;
+		if (wide) { checks.push({ name, ok: true, skipped: `needs a wide window: ${wide[1]}` }); return; }
 		try {
 			const r = await fn();
 			if (typeof r === 'object') { checks.push({ name, ok: true, skipped: r.skip }); return; }
@@ -272,7 +295,8 @@ export async function runSmoke(app: App): Promise<void> {
 		else {
 			await until(() => Math.round(el.currentTime) === 30, 2000);
 			if (Math.round(el.currentTime) !== 30) problems.push(`tab seek: at ${el.currentTime}`);
-			if (leaf.parent === media.parent) problems.push('the recording replaced the note instead of opening beside it');
+			// Beside the note; on a narrow window (one pane at a time) a tab of its own in the same pane.
+			if (leaf.parent === media.parent && !workspace.singlePane) problems.push('the recording replaced the note instead of opening beside it');
 			if (!leaf.containerEl.isConnected || (leaf.view as MarkdownView).file !== note) problems.push('the note is no longer open');
 			el.pause();
 			media.detach();
@@ -304,7 +328,8 @@ export async function runSmoke(app: App): Promise<void> {
 		if (doc.pageCount !== 3) problems.push(`${doc.pageCount} pages`);
 		if (doc.page !== 2) problems.push(`opened at page ${doc.page}`);
 		if (doc.label(2) !== '12') problems.push(`page 2 is labelled ${doc.label(2)}`);
-		if (leaf.parent === noteLeaf.parent || (noteLeaf.view as MarkdownView).file !== note) problems.push('the PDF did not open beside the note');
+		// Beside the note; on a narrow window (one pane at a time) a tab of its own, the note still open in another.
+		if ((leaf.parent === noteLeaf.parent && !workspace.singlePane) || leaf === noteLeaf || (noteLeaf.view as MarkdownView).file !== note) problems.push('the PDF did not open beside the note');
 		const textLayer = () => view.contentEl.querySelector<HTMLElement>('.pdf-page[data-page="2"] .textLayer');
 		if (!(await until(() => (textLayer()?.textContent ?? '').includes('duty of care'), 8000))) problems.push(`no text layer: ${textLayer()?.textContent}`);
 		// The page is drawn: some pixels of its canvas are dark (the text).
@@ -1608,7 +1633,9 @@ export async function runSmoke(app: App): Promise<void> {
 		// Two notes (earlier checks rename some): Welcome and any other.
 		const welcome = vault.getFileByPath('Welcome.md')!;
 		const second = vault.getMarkdownFiles().find((f) => f !== welcome && !f.path.includes('/'))!;
-		// Two panes, as a desktop layout might bring.
+		// Two panes, as a desktop layout might bring (on a phone too: the check starts as if the window were wide).
+		width(1200);
+		await sleep(150);
 		await workspace.getLeaf(false).openFile(welcome);
 		commands.executeCommandById('app:split-right');
 		await sleep(150);
@@ -1641,6 +1668,16 @@ export async function runSmoke(app: App): Promise<void> {
 			await sleep(150);
 			if (document.querySelector('.modal.mod-open-tabs')) problems.push('Open tabs did not close');
 			if (shown('.workspace-split.mod-root .workspace-tabs').length !== 1) problems.push('after choosing a tab, not one pane showing');
+			// The title in the header opens the tab's menu (the tab bar is hidden).
+			const title = shown('.workspace-tabs.mod-active .view-header-title')[0];
+			if (title) {
+				const tr = title.getBoundingClientRect();
+				title.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: tr.left + 5, clientY: tr.top + 5 }));
+				const items = [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
+				if (!items.some((t) => /^Close/.test(t))) problems.push(`the header title's menu: ${items.join('|')}`);
+				window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+				document.querySelectorAll('.menu').forEach((m) => m.remove());
+			} else problems.push('no title in the header');
 			// Swipe in from the left edge: back.
 			await workspace.getLeaf(false).openFile(welcome);
 			await workspace.getLeaf(false).openFile(second);
@@ -1655,17 +1692,19 @@ export async function runSmoke(app: App): Promise<void> {
 			touch('touchstart', 200); touch('touchmove', 320); touch('touchend', 320);
 			await sleep(200);
 			if (workspace.getActiveFile()?.path !== 'Welcome.md') problems.push('a swipe away from the edge went back');
+			// Wide again: the panes are all still there, and tiling is back.
+			width(1200);
+			await sleep(150);
+			if (workspace.singlePane) problems.push('still one pane at a time when wide');
+			if (workspace.rootTabs().length < panesBefore) problems.push('a pane was lost');
+			if (!commands.isAvailable(commands.findCommand('app:split-right')!)) problems.push('Split right is not back');
+			commands.executeCommandById('app:close-other-panes');
+			await sleep(80);
 		} finally {
 			if (real) Object.defineProperty(window, 'innerWidth', real); else delete (window as { innerWidth?: number }).innerWidth;
 			window.dispatchEvent(new Event('resize'));
 			await sleep(150);
 		}
-		// Wide again: the panes are all still there, and tiling is back.
-		if (workspace.singlePane) problems.push('still one pane at a time when wide');
-		if (workspace.rootTabs().length < panesBefore) problems.push('a pane was lost');
-		if (!commands.isAvailable(commands.findCommand('app:split-right')!)) problems.push('Split right is not back');
-		commands.executeCommandById('app:close-other-panes');
-		await sleep(80);
 		return problems.length === 0 || problems.join('; ');
 	});
 
@@ -1742,13 +1781,16 @@ export async function runSmoke(app: App): Promise<void> {
 			const opened = isOpen();
 			button?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); button?.click(); await sleep(200);
 			if (!opened || isOpen()) problems.push(`the button does not open and close it (opened=${opened}, then open=${isOpen()})`);
+			ui?.close(true);
+			width(1200);
+			await sleep(150);
+			if (document.querySelector<HTMLElement>('.compact-docket-button')?.offsetParent) problems.push('the bottom button shows on a wide window');
 		} finally {
 			ui?.close(true);
 			if (real) Object.defineProperty(window, 'innerWidth', real); else delete (window as { innerWidth?: number }).innerWidth;
 			window.dispatchEvent(new Event('resize'));
 			await sleep(150);
 		}
-		if (document.querySelector<HTMLElement>('.compact-docket-button')?.offsetParent) problems.push('the bottom button shows on a wide window');
 		return problems.length === 0 || problems.join('; ');
 	});
 
@@ -1921,6 +1963,7 @@ export async function runSmoke(app: App): Promise<void> {
  * for design review. Files go to QUIRE_SMOKE_OUT.
  */
 export async function runShots(app: App): Promise<void> {
+	if (Platform.isPhone) { await runPhoneShots(app); return; }
 	const shot = async (name: string) => { await sleep(350); await app.host.app.capture?.(name); };
 	const { workspace, commands } = app;
 	// The dictionary loads in the background; wait for it, so spelling marks are in every screenshot.
@@ -2556,15 +2599,15 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('search: settings and used notes rank in', async () => {
 		pressDocketKey();
-		await type('vim');
+		await type('spelling');
 		await sleep(50);
-		await type('vim');
+		await type('spelling');
 		const settings = [...document.querySelectorAll('.docket-group[aria-label="Settings"] .docket-option-title')].map((e) => e.textContent);
 		press('Escape'); press('Escape');
 		const welcome = vault.getFileByPath('Welcome.md')!;
 		for (let i = 0; i < 5; i++) app.search.usage.record('note', welcome.path);
 		const used = app.search.usage.score('note', welcome.path) > 0;
-		return (settings.some((t) => /vim/i.test(t ?? '')) && used) || `settings=${settings.join('|')} used=${used}`;
+		return (settings.some((t) => /spell/i.test(t ?? '')) && used) || `settings=${settings.join('|')} used=${used}`;
 	});
 
 	// ---- Phase 4: the panels ------------------------------------------------------------------------
@@ -4394,4 +4437,64 @@ async function titleChecks(app: App, check: CheckFn): Promise<void> {
 		const ok = shows && notInText && renamed && linkFollowed && inText && showsNew && escaped && badRefused && takenRefused && upInto && downOut && reading && off;
 		return ok || `shows=${shows} notInText=${notInText} renamed=${renamed} links=${linkFollowed} inText=${inText} showsNew=${showsNew} esc=${escaped} bad=${badRefused} taken=${takenRefused} up=${upInto} down=${downOut} reading=${reading} off=${off}`;
 	});
+}
+
+/**
+ * The iPhone's screens (docs/mobile/PLAN.md, Phase 2), in an iPhone-sized window: portrait, the Docket's sheet,
+ * writing with the keyboard up (its room left empty: a snapshot of the page does not show the system keyboard),
+ * Open tabs, a long-press menu and settings. References in test/visual/ios/ (npm run shots:ios -w @quire/ios).
+ */
+async function runPhoneShots(app: App): Promise<void> {
+	const shot = async (name: string) => { await sleep(400); await app.host.app.capture?.(name); };
+	const { workspace, commands } = app;
+	const docket = (app as unknown as { docketUI: { open(o?: { panel?: string; query?: string }): void; close(hide?: boolean): void; dismissHint(): void } }).docketUI;
+	await until(() => app.spellchecker.ready, 15000);
+	await app.setConfig('theme', 'dark');
+	commands.executeCommandById('aglc-citations:create-example-essay');
+	await until(() => workspace.getActiveFile()?.basename === 'AGLC4 example essay', 8000);
+	await sleep(800);
+	document.querySelectorAll('.notice').forEach((n) => n.detach());
+	docket.dismissHint();
+	(document.activeElement as HTMLElement | null)?.blur();
+	await shot('01-phone-note');
+	docket.open();
+	await sleep(250);
+	(document.activeElement as HTMLElement | null)?.blur();
+	await shot('02-phone-docket');
+	docket.open({ panel: 'core:units' });
+	await sleep(250);
+	(document.activeElement as HTMLElement | null)?.blur();
+	await shot('03-phone-docket-subjects');
+	docket.close(true);
+	// Writing: the keyboard's room at the foot, the toolbar on it.
+	const view = workspace.getActiveViewOfType(MarkdownView);
+	if (view) {
+		view.editor.cm.focus();
+		view.editor.setCursor({ line: 8, ch: 0 });
+		applyKeyboard(document.body, 336, window.innerHeight - 336);
+		await sleep(200);
+		await shot('04-phone-keyboard');
+		(document.activeElement as HTMLElement | null)?.blur();
+		applyKeyboard(document.body, 0, window.innerHeight);
+	}
+	await sleep(150);
+	document.querySelector<HTMLElement>('.workspace-tabs.mod-active .view-action.mod-open-tabs')?.click();
+	await shot('05-phone-open-tabs');
+	topModal()?.close();
+	// A long-press menu on the tab's header: a sheet along the bottom.
+	const header = workspace.activeLeaf?.view.containerEl.querySelector<HTMLElement>('.view-header-title');
+	if (header) {
+		const r = header.getBoundingClientRect();
+		const press = new LongPress(window, 30);
+		press.start(header, r.left + 20, r.top + 10);
+		await sleep(400);
+		await shot('06-phone-menu');
+		press.letGo();
+		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+		document.querySelectorAll('.menu').forEach((m) => m.remove());
+	}
+	app.setting.openTabById('appearance');
+	await shot('07-phone-settings');
+	app.setting.close();
+	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }

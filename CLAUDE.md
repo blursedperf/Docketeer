@@ -84,6 +84,11 @@ State on 2026-11-27:
   homebases from the folder picker, iCloud (change watching, the conflict guard, downloads, conflict versions),
   streaming media, and the page's smoke checks in WebKit (`npm run test:xcode -w @quire/ios`, about 70 s).
   Phase 1's exit check (syncing with the Mac both ways, a forced conflict) is waiting for the owner, on the iPhone.
+- **Phase 2's tasks are done** (the compact layout, the Docket from the bottom, the keyboard toolbar, long-press
+  menus, Share… and Export to PDF, pinch zoom, touch density, background locking, an iPhone-sized smoke run and
+  iPhone screenshots: `npm run shots:ios -w @quire/ios`, baselines in `test/visual/ios/`). Its exit check is the
+  owner using it daily on the iPhone for a week. **Face ID unlock is designed in `docs/docket/locking.md` and
+  waits for the owner's sign-off: do not build it before then.**
 - `master` is at the 0.21.0 release; `ios-scaffold` has the work since. Fast-forward `master` when the owner asks.
 - Debug builds take `-openExample` (opens the example homebase); temporary `console.warn` lines reach the system
   log through the console relay, which is how layout was measured on the simulators.

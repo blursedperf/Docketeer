@@ -24,7 +24,11 @@ npm run build -w @quire/ios   # the iOS page, into packages/ios/Docketeer/Resour
 npm test -w @quire/ios        # unit tests for web/, then the iOS build
 npm run build:xcode -w @quire/ios   # macOS: the page, then the app for the simulator (Docketeer/build/)
 npm run test:xcode -w @quire/ios    # macOS: the XCTests on a simulator (DOCKETEER_SIMULATOR, default "iPhone 17"),
-                                    # the page's smoke checks in WebKit among them (about 70 s)
+                                    # the page's smoke checks in WebKit among them, in an iPad-sized window and
+                                    # an iPhone-sized one (about 3 min)
+npm run shots:ios -w @quire/ios     # macOS: the iPhone's screenshots, compared with test/visual/ios/
+                                    # (after a change on purpose: node ../../scripts/shots-diff.mjs
+                                    #  Docketeer/build/shots --platform ios --update)
 ```
 
 To try it, open `Docketeer/Docketeer.xcodeproj` in Xcode after `npm run build -w @quire/ios`, pick a simulator and

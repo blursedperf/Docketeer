@@ -17,6 +17,8 @@ final class SmokeRun {
 	private let suite: String
 	/** The form factor the page is told (the layout follows the window, which XCTest sizes). */
 	let formFactor: String
+	/** A screenshot run: the page takes the iPhone's screenshots (runShots) and they are written here. */
+	var shotsFolder: URL?
 
 	/** Console errors and uncaught errors from the page. */
 	private(set) var consoleErrors: [String] = []

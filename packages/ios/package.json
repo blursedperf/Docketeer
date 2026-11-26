@@ -8,6 +8,7 @@
     "build": "node build.mjs",
     "test": "vitest run && node build.mjs",
     "build:xcode": "node scripts/build-xcode.mjs",
-		"test:xcode": "node scripts/build-xcode.mjs --test"
+    "test:xcode": "node scripts/build-xcode.mjs --test",
+    "shots:ios": "node scripts/build-xcode.mjs --shots && node ../../scripts/shots-diff.mjs Docketeer/build/shots --platform ios"
   }
 }

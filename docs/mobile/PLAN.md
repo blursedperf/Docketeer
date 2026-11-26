@@ -381,8 +381,11 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
       Done: background locking came in Phase 0 (enteredBackground sends app:system-lock); added here a cover over
       the window for the app switcher's picture while locked notes are open (`app:coverInBackground`). The Face
       ID design is written in `docs/docket/locking.md` and **waits for the owner's sign-off**.
-- [ ] The simulator smoke run on an iPhone-sized window as well as the iPad-sized one.
-- [ ] Screenshots: iPhone viewports, portrait and with the keyboard up, with baselines in `test/visual/ios/`.
+- [x] The simulator smoke run on an iPhone-sized window as well as the iPad-sized one. (Checks of what a phone
+      leaves out on purpose say they are skipped there: `WIDE_ONLY` in `smoke.ts`.)
+- [x] Screenshots: iPhone viewports, portrait and with the keyboard up, with baselines in `test/visual/ios/`.
+      (`npm run shots:ios -w @quire/ios`, on a Mac: CI has no simulator. They found the tab menu offering splits,
+      settings in two cramped columns, and the tab's menu out of reach with the tab bar hidden: all fixed.)
 
 **Exit check:** all suites are green. **The user uses it daily on their iPhone for a week.** Stop and report.
 
