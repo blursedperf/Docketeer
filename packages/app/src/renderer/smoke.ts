@@ -5,9 +5,10 @@
  */
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
-import { type App, type HostBridge, type HostFs, MarkdownView, Platform, defaultDocketKey, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
+import { type App, type HostBridge, type HostConflict, type HostFs, MarkdownView, Platform, defaultDocketKey, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
+import { conflictsStore } from './conflicts';
 import { genericPanels } from './docket/panels-model';
 import { openFileIn } from './docket/providers';
 
@@ -3912,6 +3913,47 @@ async function conflictChecks(app: App, check: CheckFn): Promise<void> {
 	} finally {
 		setHost(original);
 	}
+	await check('conflicts: a version from another device is announced, shown in Homebase, compared, and both kept', async () => {
+		const file = vault.getFileByPath('Conflict smoke.md') ?? await vault.create('Conflict smoke.md', 'Mine.\n');
+		const version: HostConflict = { id: 'icloud:1:Conflict smoke.md', path: file.path, from: 'Smoke MacBook', mtime: new Date(2026, 10, 27, 9, 5).getTime() };
+		let versions = [version];
+		const settled: unknown[][] = [];
+		const listing: HostBridge = { ...original, fs: {
+			...original.fs,
+			conflicts: async () => versions,
+			readConflict: async () => 'Theirs.\n',
+			resolveConflict: async (...args) => { settled.push(args); versions = []; },
+		} };
+		setHost(listing);
+		const store = conflictsStore(app);
+		const ui = (app as unknown as { docketUI?: { open(): number; close(hide?: boolean): void; showPanel(id: string): void } }).docketUI;
+		try {
+			await store.refresh();
+			const announced = [...document.querySelectorAll('.notice')].some((n) => /“Conflict smoke” has another version, from Smoke MacBook/.test(n.textContent ?? ''));
+			ui?.open();
+			ui?.showPanel('core:homebase');
+			await sleep(200);
+			const sectionShown = [...document.querySelectorAll('.docket-section-title')].some((t) => /Versions from other devices/.test(t.textContent ?? ''));
+			const rowEl = [...document.querySelectorAll<HTMLElement>('.docket-item')].find((r) => /Conflict smoke/.test(r.textContent ?? '') && /From Smoke MacBook · 27 Nov/.test(r.textContent ?? ''));
+			rowEl?.click();
+			await sleep(300);
+			const texts = [...document.querySelectorAll('.conflict-text')].map((t) => t.textContent);
+			const keepBoth = [...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((b) => b.textContent === 'Keep both');
+			keepBoth?.click();
+			await sleep(300);
+			const closed = !document.querySelector('.modal.mod-conflict');
+			const call = JSON.stringify(settled);
+			const gone = store.list.length === 0;
+			return (announced && sectionShown && !!rowEl && texts[0] === 'Mine.\n' && texts[1] === 'Theirs.\n' && closed && gone
+				&& call === JSON.stringify([['icloud:1:Conflict smoke.md', 'both', 'Conflict smoke (conflict 2026-11-27 09.05).md']]))
+				|| `announced=${announced} section=${sectionShown} row=${!!rowEl} texts=${JSON.stringify(texts)} closed=${closed} gone=${gone} call=${call}`;
+		} finally {
+			setHost(original);
+			await store.refresh();
+			ui?.close(true);
+			await cleanUp();
+		}
+	});
 	await check('conflicts: the desktop host does not guard; typing since the last save wins, as before', async () => {
 		const { file, v } = await open('Base.\n');
 		type(v, 'Mine.\n');

@@ -11,6 +11,7 @@ import { unitsStore } from '../../units-store';
 import { byName, unitTagActions } from './units';
 import { row, section } from './common';
 import { draggablePath, dropIntoFolder } from '../drag';
+import { CompareModal, conflictsStore, savedWhen } from '../../conflicts';
 
 export interface RedactOptions { comments: boolean; frontmatter: boolean; words: string[] }
 
@@ -207,6 +208,8 @@ export function homebasePanel(app: App, docket: Docket): DocketPanel {
 	const filesOpen = new Set<string>();
 	let followed: string | null = null;
 	const keyFor = (id: string) => { const c = app.commands.findCommand(id); const k = c ? app.commands.hotkeysFor(c)[0] : undefined; return k ? formatHotkey(k) : undefined; };
+	const conflicts = conflictsStore(app);
+	conflicts.on('change', () => { if (docket.isOpen) void docket.refreshPanel(); });
 	return {
 		id: 'core:homebase', title: 'Homebase', icon: 'house', order: 5, source: 'core',
 		render: (el) => {
@@ -215,6 +218,25 @@ export function homebasePanel(app: App, docket: Docket): DocketPanel {
 			const head = el.createDiv({ cls: 'docket-selected' });
 			head.createSpan({ cls: 'docket-selected-name', text: app.vault.getName() });
 			head.createSpan({ cls: 'docket-option-detail', text: `${notes} notes · ${folders} folders · search index ${app.search.isReady ? `ready (${app.search.index.size} notes, in memory only)` : 'building…'}` });
+
+			// Versions from other devices the sync service kept apart (a host that lists them: iOS): first, until settled.
+			if (conflicts.list.length) {
+				const versions = section(el, 'Versions from other devices', conflicts.list.length);
+				for (const c of conflicts.list) {
+					const name = app.vault.getFileByPath(c.path)?.basename ?? c.path;
+					const compare = () => { docket.close(); new CompareModal(app, conflicts, c).open(); };
+					const keep = (k: 'mine' | 'theirs' | 'both') => () => conflicts.resolve(c, k).catch((e: unknown) => new Notice(`Could not settle it: ${e instanceof Error ? e.message : String(e)}`));
+					row(versions, docket, name, compare, {
+						icon: 'merge', detail: `From ${c.from} · ${savedWhen(c.mtime)} · compare and choose`,
+						actions: () => [
+							{ title: 'Compare…', icon: 'columns-3', run: compare },
+							{ title: 'Keep this device\'s', icon: 'check', run: keep('mine') },
+							{ title: `Keep ${c.from}'s`, icon: 'arrow-left-right', run: keep('theirs') },
+							{ title: 'Keep both', icon: 'copy', run: keep('both') },
+						],
+					});
+				}
+			}
 
 			// Files: everything in the homebase, opened the way to the open note (once per note).
 			const current = app.workspace.getActiveFile();

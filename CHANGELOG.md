@@ -17,6 +17,11 @@
   search and links take them in as they arrive. Opening one waits for it. Pictures, PDFs and recordings download
   when you open them, so a homebase of recordings does not fill the device. For plugins: such a file has
   `TFile.pending` set (and `HostStat.pending` from the host) until it arrives, which counts as a change.
+- **Versions from other devices** (in the iPhone and iPad app): when iCloud or Syncthing keeps two versions of a
+  note, a notice says so and *Versions from other devices* at the top of Homebase in the Docket lists them. Compare
+  shows both side by side; keep this device's, the other one, or both (the other saved beside the note as a
+  conflict copy). Nothing is removed until you choose. For plugins: a host can list them with
+  `HostFs.conflicts()`, `readConflict()` and `resolveConflict()`.
 
 ## v0.20.0
 

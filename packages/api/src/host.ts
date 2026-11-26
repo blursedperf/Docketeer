@@ -41,6 +41,30 @@ export interface HostFs {
 	 * is 'conflict' (see isConflict). Desktop leaves it out.
 	 */
 	guardsConflicts?: boolean;
+	/**
+	 * Notes that have another version from another device, kept by the sync service (iCloud's conflict versions,
+	 * Syncthing's `.sync-conflict-` files) until you choose. Desktop leaves these out.
+	 */
+	conflicts?(): Promise<HostConflict[]>;
+	/** The text of the other version, to compare. */
+	readConflict?(id: string): Promise<string>;
+	/**
+	 * Settle a conflict: keep the version on this device ('mine'), the other one ('theirs'), or both ('both': the
+	 * other is saved at `copyPath`, a conflict copy beside the note). The version not kept is removed.
+	 */
+	resolveConflict?(id: string, keep: 'mine' | 'theirs' | 'both', copyPath?: string): Promise<void>;
+}
+
+/** Another version of a note, from another device (HostFs.conflicts). */
+export interface HostConflict {
+	/** Identifies this version for readConflict and resolveConflict. */
+	id: string;
+	/** The note it is a version of. */
+	path: string;
+	/** Where it came from, in words: the other device's name, or "Syncthing". */
+	from: string;
+	/** When it was saved, in milliseconds since 1970. */
+	mtime: number;
 }
 
 /** A write the host refused because the file changed on disk meanwhile (HostFs.guardsConflicts). */

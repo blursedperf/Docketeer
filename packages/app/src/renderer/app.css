@@ -814,6 +814,15 @@ input.cm-lp-task { margin: 0; vertical-align: -1px; accent-color: var(--doom-blu
 /* ------------------------------------------------------------------ spelling */
 .cm-misspelled { text-decoration: underline dotted var(--doom-red); text-decoration-thickness: 2px; text-underline-offset: 3px; text-decoration-skip-ink: none; }
 .modal.mod-notices { width: min(860px, 92vw); }
+/* Two versions of a note from different devices, side by side (conflicts.ts). */
+.modal.mod-conflict { width: min(1000px, 94vw); }
+.conflict-columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin: var(--space-3) 0; }
+.conflict-column h3 { margin: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--text-muted); }
+.conflict-text {
+	margin: 0; padding: var(--space-3); max-height: 55vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+	font-family: var(--font-monospace); font-size: var(--text-sm); background: var(--doom-base0); border: var(--border-width) solid var(--background-modifier-border); border-radius: var(--radius-s);
+}
+.is-compact .conflict-columns { grid-template-columns: 1fr; }
 pre.notices-text { margin: 0; max-height: 65vh; overflow: auto; white-space: pre-wrap; font-family: var(--font-monospace); font-size: var(--text-xs); color: var(--text-muted); user-select: text; }
 
 /* ------------------------------------------------------------------ embeds */
