@@ -1096,7 +1096,7 @@ body.is-dragging-tab .workspace-tab-header { cursor: grabbing; }
 .inline-title-wrap { padding: 0 0 var(--space-4); }
 textarea.inline-title {
 	display: block; width: 100%; height: auto; min-height: 0; padding: var(--space-1) 0; margin: 0; outline: none; cursor: text;
-	resize: none; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere;
+	resize: none; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; field-sizing: content;
 	font-family: var(--font-text); font-size: var(--h1-size, 1.9em); font-weight: var(--font-bold); line-height: 1.25;
 	color: var(--text-normal); background: transparent; border: none; border-bottom: var(--border-width) solid transparent; border-radius: 0; box-shadow: none;
 }

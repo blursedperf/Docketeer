@@ -32,16 +32,19 @@ export function titleElement(name: string, h: TitleHandlers): HTMLElement {
 	el.setAttribute('aria-label', 'Note name: edit to rename the note');
 	el.value = name;
 	wrap.appendChild(el);
-	// As tall as its text, at whatever width it is given.
-	const fit = () => { el.style.height = 'auto'; if (el.scrollHeight) el.style.height = `${el.scrollHeight}px`; };
-	// Again when its width changes (not its height, which fitting changes).
-	let width = 0;
-	new ResizeObserver(() => {
-		const w = el.clientWidth;
-		if (w === width) return;
-		width = w;
-		requestAnimationFrame(fit);
-	}).observe(el);
+	// As tall as its text, at whatever width it is given: by the browser where it can (field-sizing), otherwise
+	// measured, again whenever the width changes (not the height, which fitting changes).
+	const sized = typeof CSS !== 'undefined' && CSS.supports('field-sizing', 'content');
+	const fit = () => { if (sized) return; el.style.height = 'auto'; if (el.scrollHeight) el.style.height = `${el.scrollHeight}px`; };
+	if (!sized) {
+		let width = 0;
+		new ResizeObserver(() => {
+			const w = el.clientWidth;
+			if (w === width) return;
+			width = w;
+			requestAnimationFrame(fit);
+		}).observe(el);
+	}
 	el.addEventListener('input', () => {
 		if (/[\r\n]/.test(el.value)) { const at = el.selectionStart; el.value = el.value.replace(/[\r\n]+/g, ' '); el.setSelectionRange(at, at); }
 		fit();
