@@ -10,7 +10,7 @@ import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { conflictsStore } from './conflicts';
 import { applyKeyboard } from './layout-mode';
-import { HOLD, LongPress, holdOpensMenu } from './long-press';
+import { AFTER_LIFT, HOLD, LongPress, holdOpensMenu } from './long-press';
 import { genericPanels } from './docket/panels-model';
 import { openFileIn } from './docket/providers';
 
@@ -1827,11 +1827,11 @@ export async function runSmoke(app: App): Promise<void> {
 				const lift = new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [t] });
 				tab.dispatchEvent(lift);
 				if (!lift.defaultPrevented) problems.push('the lift after a menu opened went on to the page');
-				const item = document.querySelector<HTMLElement>('.menu .menu-item');
-				const before = menus();
-				const click = new MouseEvent('click', { bubbles: true, cancelable: true });
-				item?.dispatchEvent(click);
-				if (!click.defaultPrevented || menus() !== before) problems.push('the tap from the lift chose a menu item');
+				if (!menus()) problems.push('the menu went when the finger lifted');
+				if (!document.body.classList.contains('is-holding')) problems.push('text under the menu could be selected as the finger lifted');
+				await sleep(AFTER_LIFT + 100);
+				if (document.body.classList.contains('is-holding')) problems.push('the page stays unselectable after the hold');
+				if (!menus()) problems.push('the menu closed by itself');
 				await clear();
 				const t2 = new Touch({ identifier: 8, target: tab, clientX: r.left + 5, clientY: r.top + 5 });
 				tab.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [t2], targetTouches: [t2], changedTouches: [t2] }));
@@ -1839,6 +1839,23 @@ export async function runSmoke(app: App): Promise<void> {
 				tab.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [t2] }));
 				await sleep(HOLD + 50);
 				if (menus()) problems.push('a tap opened a menu');
+			}
+			// On a phone the menu is a sheet along the bottom, inside the window, whatever was held.
+			const had = [...document.body.classList];
+			document.body.classList.add('is-compact', 'is-touch');
+			try {
+				const far = new LongPress(window, 30);
+				far.start(tab, r.left + 5, r.top + 5);
+				await sleep(300); // (it rises into place)
+				const m = document.querySelector<HTMLElement>('.menu');
+				const mr = m?.getBoundingClientRect();
+				if (!m?.classList.contains('mod-sheet')) problems.push('no sheet on a phone');
+				else if (mr && (mr.left < 0 || mr.right > window.innerWidth + 1 || mr.bottom > window.innerHeight + 1 || mr.top < 0)) problems.push(`the sheet is out of the window (${window.innerWidth}×${window.innerHeight}, visible ${getComputedStyle(document.documentElement).getPropertyValue("--visible-height")}): ${JSON.stringify(mr)}`);
+				else if (mr && Math.abs(window.innerHeight - mr.bottom) > 40) problems.push(`the sheet is not at the bottom: ${Math.round(mr.bottom)} of ${window.innerHeight}`);
+				far.letGo();
+				await clear();
+			} finally {
+				document.body.className = had.join(' ');
 			}
 		} finally {
 			await clear();

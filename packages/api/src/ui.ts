@@ -356,11 +356,17 @@ export class Menu extends Component {
 		}
 		// No separator at the foot (one added before items that, as it turned out, nothing added).
 		if (last === 'separator' && this.dom.lastElementChild?.matches('.menu-separator')) this.dom.lastElementChild.remove();
+		// A phone (a narrow touch screen): a sheet along the bottom, every item in reach, wherever the finger was.
+		const body = document.body.classList;
+		const sheet = body.contains('is-compact') && body.contains('is-touch');
+		this.dom.toggleClass('mod-sheet', sheet);
 		document.body.appendChild(this.dom);
-		const r = this.dom.getBoundingClientRect();
-		const x = Math.min(pos.x, window.innerWidth - r.width - 4);
-		const y = Math.min(pos.y, window.innerHeight - r.height - 4);
-		this.dom.setCssStyles({ left: `${Math.max(4, x)}px`, top: `${Math.max(4, y)}px` });
+		if (!sheet) {
+			const r = this.dom.getBoundingClientRect();
+			const x = Math.min(pos.x, window.innerWidth - r.width - 4);
+			const y = Math.min(pos.y, window.innerHeight - r.height - 4);
+			this.dom.setCssStyles({ left: `${Math.max(4, x)}px`, top: `${Math.max(4, y)}px` });
+		}
 		window.setTimeout(() => {
 			document.addEventListener('mousedown', this._outside, true);
 			window.addEventListener('keydown', this._keys, true);

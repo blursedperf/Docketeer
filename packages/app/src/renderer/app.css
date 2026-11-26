@@ -629,9 +629,23 @@ input.prompt-input:focus { box-shadow: none; }
 .menu-item:hover { background: rgba(var(--doom-blue-rgb), 0.16); color: var(--doom-blue-text); border-left-color: var(--doom-blue); }
 .menu-item.is-disabled { opacity: 0.5; pointer-events: none; }
 /* On a touch screen (a long-press opens it: long-press.ts) rows are a finger tall, and a long menu scrolls. */
-.is-touch .menu { max-height: calc(var(--visible-height, 100vh) - var(--space-4)); overflow-y: auto; }
+.is-touch .menu { max-height: calc(var(--visible-height, 100vh) - var(--space-4)); overflow-y: auto; overscroll-behavior: contain; }
 .is-touch .menu-item { height: 44px; }
+/* A phone: the menu is a sheet along the bottom (Menu.showAtPosition), above the keyboard and the home indicator. */
+.menu.mod-sheet {
+	left: var(--space-2); right: var(--space-2); top: auto; min-width: 0;
+	bottom: calc(var(--keyboard-inset, 0px) + max(var(--space-2), env(safe-area-inset-bottom, 0px)));
+	max-height: calc(var(--visible-height, 100vh) * 0.7);
+	border-radius: var(--radius-l, 12px);
+}
+@media (prefers-reduced-motion: no-preference) {
+	.menu.mod-sheet { animation: docket-rise 140ms ease-out; }
+}
+/* While a finger is held for a menu (long-press.ts), nothing under it is selected or called out. */
+.is-holding, .is-holding * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
 .is-touch .menu, .is-touch .view-header, .is-touch .workspace-tab-header, .is-touch .docket { -webkit-touch-callout: none; }
+/* The app's own controls are not text to select on a touch screen (a hold opens their menus). */
+.is-touch :is(.workspace-tab-header, .view-header, .docket-option, .docket-item, .docket-tabs, .docket-head, .status-bar, .menu, .pdf-toolbar) { -webkit-user-select: none; user-select: none; }
 .menu-item.is-warning { color: var(--text-error); }
 .menu-item-icon { display: flex; width: var(--icon-md); color: var(--text-muted); }
 .menu-item:hover .menu-item-icon { color: var(--doom-blue-text); }

@@ -18,7 +18,9 @@
   *Redo* and *Open the slash menu*.
 - **iPhone and iPad: touch and hold for a menu**, the one a right-click opens on a computer: on a tab, a view's
   header, a Docket result or panel row, a PDF, and in a note on a link, a picture or a misspelt word. Elsewhere in
-  a note, holding still moves the cursor and selects words as usual. Menu rows are a finger tall on a touch screen.
+  a note, holding still moves the cursor and selects words as usual. On the iPhone a menu is a sheet along the
+  bottom of the screen, every item in reach and scrolling if it is long; rows are a finger tall on a touch screen.
+  Holding no longer selects the text under the menu, and lifting your finger no longer closes it.
 - **iPhone and iPad: Export to PDF**, from a note's menus or the Docket, as on a computer: A4 pages, numbered,
   with the note's pictures, and AGLC4's footnoted PDF too.
 - **iPhone and iPad: Share… after an export**: the notice that says a Word, HTML, PDF or Markdown export is done

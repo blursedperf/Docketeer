@@ -4,10 +4,13 @@
  * every right-click menu (tabs, view headers, the Docket's rows and panels, PDFs, the editor's links) opens as it
  * would. In a note's text a hold is the system's own (the cursor, selecting words): there it opens the menu only on
  * a link, an embed or a misspelt word. A trackpad's right-click on an iPad already sends `contextmenu`.
+ * While a finger is held where it would open a menu, nothing under it can be selected (body.is-holding), so the
+ * system does not select text under the menu; the mouse events WebKit makes of the lift are swallowed, so they
+ * neither close the menu nor choose an item in it.
  */
 
 /** How long a finger must stay still (ms), how far it may wander (CSS pixels). */
-export const HOLD = 450;
+export const HOLD = 400;
 export const WANDER = 10;
 
 /** In a note's text, what a hold opens a menu on: the rest of the text keeps the system's hold. */
@@ -24,9 +27,12 @@ export function holdOpensMenu(target: Element): boolean {
 /** Follows one finger: `start` on touch, `move` as it goes, `end` when it lifts. The menu opens after HOLD. */
 export class LongPress {
 	private timer: number | null = null;
+	private body: HTMLElement | null = null;
 	private at: { x: number; y: number; target: Element } | null = null;
 	/** True once this touch opened a menu (its move and lift are then not the page's). */
 	fired = false;
+	/** Called when a hold opened a menu. */
+	onOpen: (() => void) | null = null;
 
 	constructor(private win: Window = window, private hold = HOLD) {}
 
@@ -35,6 +41,8 @@ export class LongPress {
 		this.fired = false;
 		if (!holdOpensMenu(target)) return;
 		this.at = { x, y, target };
+		this.body = target.ownerDocument.body;
+		this.body.classList.add('is-holding');
 		this.timer = this.win.setTimeout(() => this.fire(), this.hold);
 	}
 
@@ -47,22 +55,38 @@ export class LongPress {
 		if (this.timer !== null) this.win.clearTimeout(this.timer);
 		this.timer = null;
 		this.at = null;
+		if (!this.fired) this.letGo();
+	}
+
+	/** The page under the finger can be selected again (once a menu's finger has lifted, too). */
+	letGo(): void {
+		this.body?.classList.remove('is-holding');
 	}
 
 	private fire(): void {
 		const at = this.at;
-		this.cancel();
-		if (!at || !at.target.isConnected) return;
+		this.timer = null;
+		this.at = null;
+		if (!at || !at.target.isConnected) { this.letGo(); return; }
 		const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, button: 2 });
 		at.target.dispatchEvent(e);
 		this.fired = e.defaultPrevented;
+		if (this.fired) this.onOpen?.();
+		else this.letGo();
 	}
 }
 
+/** How long after the finger lifts WebKit's mouse events from the hold may still come (ms). */
+export const AFTER_LIFT = 600;
+
 /** Long-press for menus on the whole page. Returns the follower (the smoke checks drive it). */
 export function registerLongPress(doc: Document = document): LongPress {
-	const press = new LongPress(doc.defaultView ?? window);
+	const win = doc.defaultView ?? window;
+	const press = new LongPress(win);
+	/** While a menu opened by a hold is up and the finger is down, and a moment after it lifts. */
+	let holding = false;
 	let swallowUntil = 0;
+	const swallowing = () => holding || Date.now() < swallowUntil;
 	doc.addEventListener('touchstart', (e) => {
 		const t = e.touches[0];
 		if (e.touches.length !== 1 || !t || !(e.target instanceof Element)) { press.cancel(); return; }
@@ -74,19 +98,35 @@ export function registerLongPress(doc: Document = document): LongPress {
 		if (press.fired) { e.preventDefault(); return; }
 		if (t) press.move(t.clientX, t.clientY);
 	}, { passive: false, capture: true });
+	press.onOpen = () => { holding = true; };
+	const after = () => {
+		press.fired = false;
+		holding = false;
+		swallowUntil = Date.now() + AFTER_LIFT;
+		win.setTimeout(() => press.letGo(), AFTER_LIFT);
+	};
 	const lift = (e: TouchEvent) => {
 		press.cancel();
 		if (!press.fired) return;
-		press.fired = false;
 		if (e.cancelable) e.preventDefault();
-		// A tap that WebKit still makes of the lift must not choose the item under the finger.
-		swallowUntil = Date.now() + 400;
+		after();
 	};
 	doc.addEventListener('touchend', lift, { passive: false, capture: true });
-	doc.addEventListener('touchcancel', () => { press.cancel(); press.fired = false; }, { capture: true });
-	doc.addEventListener('click', (e) => {
-		if (Date.now() < swallowUntil) { swallowUntil = 0; e.preventDefault(); e.stopPropagation(); }
-	}, { capture: true });
+	doc.addEventListener('touchcancel', () => { press.cancel(); if (press.fired) after(); }, { capture: true });
+	// The mouse events of the hold itself: on the window, before the menu's own listener on the document.
+	for (const type of ['mousedown', 'mouseup', 'click'] as const) {
+		win.addEventListener(type, (e) => {
+			if (!e.isTrusted || !swallowing()) return;
+			e.preventDefault();
+			e.stopImmediatePropagation();
+		}, { capture: true });
+	}
+	// Text the system selected under the menu anyway (a word under a link): let it go.
+	doc.addEventListener('selectionchange', () => {
+		if (!swallowing()) return;
+		const sel = doc.getSelection();
+		if (sel && !sel.isCollapsed && !(doc.activeElement instanceof HTMLInputElement || doc.activeElement instanceof HTMLTextAreaElement)) sel.collapseToStart();
+	});
 	// A real right-click (a trackpad on an iPad) during a hold: that menu is the one.
 	doc.addEventListener('contextmenu', (e) => { if (e.isTrusted) press.cancel(); }, { capture: true });
 	return press;
