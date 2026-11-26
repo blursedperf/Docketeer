@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.21.0
 
 - **Quire is now Docketeer**, because another app already uses the name Quire. It has a new icon. The first time
   Docketeer starts, it brings across Quire's recent homebases and app-wide settings, and an example homebase
