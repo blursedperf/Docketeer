@@ -56,7 +56,7 @@ const SWIFT_RULES = [
 	[/\bCF(Network|Stream|Socket|HTTP)\w*/, 'CFNetwork'],
 	[/WebSocket/, 'WebSocket'],
 	[/\bSFSafariViewController\b|import\s+SafariServices\b/, 'SFSafariViewController'],
-	[/\bopen(URL)?\s*\(|\.openURL\b/, 'opening a URL in another app'],
+	[/UIApplication\.shared\.open\b|\bopenURL\b|extensionContext\??\.open\b|\bUIApplication\.open\b/, 'opening a URL in another app'],
 	[/["']https?:|["']wss?:|["']ftp:/, 'a web address'],
 ];
 
