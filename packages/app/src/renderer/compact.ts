@@ -96,16 +96,7 @@ function dockAtTheBottom(app: App): void {
 	// The tap that opens it may focus its search field, which brings up the keyboard.
 	button.addEventListener('click', () => app.commands.executeCommandById('app:docket'));
 
-	// The keyboard covers the page rather than resizing it (WebKit): the sheet stands on it.
-	const vv = window.visualViewport;
-	const keyboard = () => {
-		const inset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-		document.documentElement.style.setProperty('--keyboard-inset', `${Math.round(inset)}px`);
-		document.documentElement.style.setProperty('--visible-height', `${Math.round(vv?.height ?? window.innerHeight)}px`);
-	};
-	keyboard();
-	vv?.addEventListener('resize', keyboard);
-	vv?.addEventListener('scroll', keyboard);
+	// The sheet stands on the keyboard (--keyboard-inset: layout-mode.ts).
 
 	// A grab bar on the Docket, whenever one is built (it is built after this, and again in tests).
 	const grab = () => {

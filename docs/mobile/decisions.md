@@ -352,3 +352,17 @@ The plan had the Docket pull down from the top. On the iPhone its handle sat jus
   because the web view added its own inset, which the page cannot see. The iOS page now declares
   `viewport-fit=cover`, the web view adds no inset (`contentInsetAdjustmentBehavior = .never`), and the page pads
   itself with `env(safe-area-inset-*)`, which is 0 on desktop.
+
+## 10. The toolbar above the keyboard (Phase 2)
+
+- **Each button runs a command**, as the plan says; the missing ones were added and are in the Docket anywhere:
+  `editor:toggle-task` (none → open → done → open), `editor:cycle-heading` (none → # → ## → ### → none),
+  `editor:undo`, `editor:redo`, `editor:slash-menu` (types a "/", which opens the slash menu). Footnote and cite
+  are AGLC4's commands, and their buttons are left out while AGLC4 is turned off.
+- **The keyboard is measured once, in `layout-mode.ts`** (moved from the Docket sheet): `--keyboard-inset`,
+  `--visible-height` and `body.has-keyboard`. On a touch screen the app shrinks to what the keyboard leaves visible,
+  so the editor keeps the cursor in view itself and iOS has no need to slide the page up (a slide it made anyway is
+  undone). Smoke checks report a keyboard through the same `applyKeyboard()`, since a test cannot bring one up.
+- **The toolbar takes the status bar's place** while a note is edited with the keyboard up, and the Docket button
+  goes. Its buttons do not take focus (pointer and mouse down are cancelled), so the keyboard stays.
+- To try on the device: the keyboard's real height, the toolbar on it, and the Docket sheet with the keyboard up.

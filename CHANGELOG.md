@@ -10,6 +10,12 @@
 - **On a narrow window the Docket opens from a button at the bottom**, in reach of your thumb and away from the
   iPhone's Dynamic Island, and rises as a sheet: above the keyboard while you type, its panel tabs scrolling within
   it. Swipe down on its top, or press Escape, to close it. The small handle at the top shows on wider windows.
+- **A row of buttons above the on-screen keyboard** while you write a note on the iPhone or iPad: a link, bold, a
+  task (tap again to tick it off), the heading level, a footnote and an AGLC4 citation, the slash menu, undo, and a
+  button to put the keyboard away. They take the place of the status bar, and the note keeps the keyboard. The app
+  fits the part of the screen the keyboard leaves, so the line you are writing stays in view.
+- **New commands**, in the Docket anywhere: *Make a task, or tick it off*, *Heading level: none, 1, 2, 3*, *Undo*,
+  *Redo* and *Open the slash menu*.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

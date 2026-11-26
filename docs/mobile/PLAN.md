@@ -348,7 +348,7 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
       - The search field gets focus and the keyboard opens; the sheet stays above the keyboard.
       - Panels become tabs in the order set in `panels-model.ts`, scrolling within the sheet.
       - Dismiss by swiping down on its top or pressing Escape.
-- [ ] Toolbar above the keyboard, positioned with `visualViewport`:
+- [x] Toolbar above the keyboard, positioned with `visualViewport`:
       - `[[` link, bold, task, heading, footnote, AGLC4 cite, slash menu (`slash.ts`), undo, and a button to
         hide the keyboard;
       - each button runs an existing command id.

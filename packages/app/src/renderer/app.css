@@ -1209,3 +1209,21 @@ body.is-frameless .welcome::before { content: ""; position: fixed; inset: 0 0 au
 	.is-compact .docket.is-open { animation: docket-rise 160ms ease-out; }
 }
 @keyframes docket-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* An on-screen keyboard (body.has-keyboard, layout-mode.ts): on a touch screen the app fits what the keyboard leaves
+   visible, and while a note is edited a row of formatting buttons stands on it in place of the status bar. */
+.is-touch.has-keyboard .app-container { height: var(--visible-height, 100vh); }
+.has-keyboard .app-container { padding-bottom: 0; }
+.keyboard-toolbar { display: none; }
+.has-keyboard.is-editing .keyboard-toolbar {
+	display: flex; flex-shrink: 0; gap: var(--space-1); padding: var(--space-1) var(--space-2); overflow-x: auto; scrollbar-width: none;
+	background: var(--doom-base0); border-top: var(--border-width) solid var(--doom-border-subtle);
+}
+.keyboard-toolbar::-webkit-scrollbar { display: none; }
+.keyboard-toolbar-button {
+	flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0;
+	font-family: var(--font-monospace); font-size: var(--text-lg); color: var(--text-normal); background: transparent; border: none; box-shadow: none; border-radius: var(--radius-s);
+}
+.keyboard-toolbar-button:active { background: var(--background-modifier-hover); }
+.keyboard-toolbar-button:last-child { margin-left: auto; }
+.has-keyboard.is-editing .status-bar, .has-keyboard .compact-docket-button { display: none; }

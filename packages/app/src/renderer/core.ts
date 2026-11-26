@@ -11,6 +11,7 @@ import {
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerCompact } from './compact';
+import { registerKeyboardToolbar } from './keyboard-toolbar';
 import { registerTiling } from './tiling';
 import { registerMedia } from './media';
 import { registerPdf } from './pdf/view';
@@ -22,6 +23,8 @@ import { unitsStore } from './units-store';
 import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
 import { LinkSuggest } from './link-suggest';
+import { cycleHeading, toggleTask } from './line-edits';
+import { redo, undo } from '@codemirror/commands';
 
 /** Pick a folder (for "Move file"). */
 class FolderPicker extends FuzzySuggestModal<TFolder> {
@@ -711,6 +714,35 @@ export function registerCore(app: App): { reveal(): void } {
 	editorCmd('editor:toggle-bold', 'Toggle bold', 'b', '**');
 	editorCmd('editor:toggle-italics', 'Toggle italics', 'i', '*');
 	editorCmd('editor:insert-wikilink', 'Insert internal link', 'k', '[[', ']]');
+	// The keyboard toolbar's buttons (keyboard-toolbar.ts), and the Docket's commands anywhere: no keys of their own.
+	const eachLine = (cm: EditorView, change: (line: string) => string) => {
+		const lines = new Set<number>();
+		for (const r of cm.state.selection.ranges) {
+			for (let n = cm.state.doc.lineAt(r.from).number; n <= cm.state.doc.lineAt(r.to).number; n++) lines.add(n);
+		}
+		cm.dispatch({
+			changes: [...lines].map((n) => { const l = cm.state.doc.line(n); return { from: l.from, to: l.to, insert: change(l.text) }; }),
+			userEvent: 'input',
+		});
+	};
+	const onLines = (id: string, name: string, icon: string, change: (line: string) => string, aliases: string[] = []) => add({
+		id, name, icon, section: 'Edit', aliases, editorCallback: (editor: { cm: EditorView }) => eachLine(editor.cm, change),
+	});
+	onLines('editor:toggle-task', 'Make a task, or tick it off', 'check-square', toggleTask, ['Toggle checkbox', 'Checklist', 'To do']);
+	onLines('editor:cycle-heading', 'Heading level: none, 1, 2, 3', 'heading', cycleHeading, ['Toggle heading', 'Title']);
+	add({ id: 'editor:undo', name: 'Undo', icon: 'undo-2', section: 'Edit', editorCallback: (editor: { cm: EditorView }) => { undo(editor.cm); } });
+	add({ id: 'editor:redo', name: 'Redo', icon: 'redo-2', section: 'Edit', editorCallback: (editor: { cm: EditorView }) => { redo(editor.cm); } });
+	add({
+		id: 'editor:slash-menu', name: 'Open the slash menu', icon: 'list', section: 'Edit', aliases: ['Insert', '/'],
+		// A "/" where the cursor is (after a space if a word comes before it): the slash menu opens on it.
+		editorCallback: (editor: { cm: EditorView }) => {
+			const cm = editor.cm;
+			const { from, to } = cm.state.selection.main;
+			const before = from > 0 ? cm.state.sliceDoc(from - 1, from) : '';
+			const insert = before && !/\s/.test(before) ? ' /' : '/';
+			cm.dispatch({ changes: { from, to, insert }, selection: { anchor: from + insert.length }, userEvent: 'input.type' });
+		},
+	});
 	registerTemplates(app, add);
 	registerExportPdf(app, add);
 	add({
@@ -761,6 +793,7 @@ export function registerCore(app: App): { reveal(): void } {
 	const docket = registerDocket(app);
 	// Last: it narrows the tiling commands registered above while the window is compact.
 	registerCompact(app);
+	registerKeyboardToolbar(app);
 	return {
 		reveal: () => { docket.start(); },
 	};

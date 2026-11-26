@@ -9,6 +9,7 @@ import { type App, type HostBridge, type HostConflict, type HostFs, MarkdownView
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { conflictsStore } from './conflicts';
+import { applyKeyboard } from './layout-mode';
 import { genericPanels } from './docket/panels-model';
 import { openFileIn } from './docket/providers';
 
@@ -1685,6 +1686,67 @@ export async function runSmoke(app: App): Promise<void> {
 			await sleep(150);
 		}
 		if (document.querySelector<HTMLElement>('.compact-docket-button')?.offsetParent) problems.push('the bottom button shows on a wide window');
+		return problems.length === 0 || problems.join('; ');
+	});
+
+	await check('keyboard toolbar: above the on-screen keyboard while a note is edited; each button does its edit and keeps the keyboard', async () => {
+		const problems: string[] = [];
+		const note = vault.getFileByPath('Toolbar smoke.md') ?? await vault.create('Toolbar smoke.md', 'Duty of care');
+		await workspace.getLeaf(false).openFile(note);
+		const v = workspace.getActiveViewOfType(MarkdownView)!;
+		if (v.getMode() !== 'source') await v.setMode('source');
+		v.editor.setValue('Duty of care');
+		const cm = v.editor.cm;
+		const bar = document.querySelector<HTMLElement>('.keyboard-toolbar');
+		const button = (label: string) => [...(bar?.querySelectorAll<HTMLElement>('.keyboard-toolbar-button') ?? [])].find((b) => b.getAttribute('aria-label')!.startsWith(label)) ?? null;
+		const press = (label: string) => {
+			const b = button(label);
+			if (!b) { problems.push(`no "${label}" button`); return; }
+			const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+			b.dispatchEvent(down);
+			if (!down.defaultPrevented) problems.push(`"${label}" would take the keyboard from the note`);
+			b.click();
+		};
+		try {
+			cm.focus();
+			cm.dispatch({ selection: { anchor: 0, head: 4 } });
+			await sleep(50);
+			if (bar?.offsetParent) problems.push('the toolbar shows with no keyboard');
+			applyKeyboard(document.body, 300, window.innerHeight - 300);
+			await sleep(50);
+			if (!bar?.offsetParent) problems.push('the toolbar does not show with the keyboard up');
+			if (document.querySelector<HTMLElement>('.status-bar')?.offsetParent) problems.push('the status bar shows under the toolbar');
+			for (const label of ['Footnote', 'Cite a kind of source']) if (!button(label)?.offsetParent) problems.push(`no ${label} button with AGLC4 on`);
+			press('Bold'); await sleep(30);
+			if (v.editor.getValue() !== '**Duty** of care') problems.push(`bold: ${JSON.stringify(v.editor.getValue())}`);
+			press('Make a task'); await sleep(30);
+			if (v.editor.getValue() !== '- [ ] **Duty** of care') problems.push(`task: ${JSON.stringify(v.editor.getValue())}`);
+			press('Make a task'); await sleep(30);
+			if (v.editor.getValue() !== '- [x] **Duty** of care') problems.push(`done: ${JSON.stringify(v.editor.getValue())}`);
+			v.editor.setValue('Negligence');
+			press('Heading level'); await sleep(30);
+			if (v.editor.getValue() !== '# Negligence') problems.push(`heading: ${JSON.stringify(v.editor.getValue())}`);
+			press('Undo'); await sleep(30);
+			if (v.editor.getValue() !== 'Negligence') problems.push(`undo: ${JSON.stringify(v.editor.getValue())}`);
+			cm.dispatch({ selection: { anchor: cm.state.doc.length } });
+			press('Slash menu'); await sleep(250);
+			if (!v.editor.getValue().endsWith(' /')) problems.push(`slash: ${JSON.stringify(v.editor.getValue())}`);
+			// (The popup is fixed, so it has no offsetParent: count its items.)
+			if (!(await until(() => document.querySelectorAll('.suggestion-container .suggestion-item').length > 0, 1000))) problems.push('the slash menu did not open');
+			document.querySelector('.suggestion-container') && cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+			await sleep(50);
+			if (!cm.contentDOM.contains(document.activeElement)) problems.push('a button took the keyboard from the note');
+			press('Put the keyboard away'); await sleep(50);
+			if (cm.contentDOM.contains(document.activeElement)) problems.push('the keyboard was not put away');
+			if (bar?.offsetParent) problems.push('the toolbar stays once the note is left');
+		} finally {
+			applyKeyboard(document.body, 0, window.innerHeight);
+			await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+			await sleep(80);
+			const f = vault.getFileByPath('Toolbar smoke.md');
+			if (f) await vault.delete(f);
+		}
+		if (document.body.classList.contains('has-keyboard')) problems.push('has-keyboard stays');
 		return problems.length === 0 || problems.join('; ');
 	});
 
