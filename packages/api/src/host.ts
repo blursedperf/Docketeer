@@ -154,6 +154,11 @@ export interface HostBridge {
 		smokeSystemLock?(): void;
 		/** Called before the window closes; it waits for the promise (to save open notes). */
 		onBeforeQuit(cb: () => Promise<void>): void;
+		/**
+		 * The app is leaving the screen but may well come back (iOS: inactive, or in the background, where it can be
+		 * ended without warning): save open notes and close nothing. The host waits for the promise. Desktop leaves it out.
+		 */
+		onBackground?(cb: () => Promise<void>): void;
 	};
 	clipboard: { writeText(text: string): void; readText(): Promise<string> };
 }

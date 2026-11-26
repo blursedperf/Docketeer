@@ -733,6 +733,8 @@ export class App extends Events {
 		void this.search.build();
 		// The dictionary loads in the background; editors are marked when it is ready.
 		if (this.config.spellcheck) void this.spellchecker.load(this.config.spellcheckLanguage).catch((e: unknown) => console.error('Spellcheck', e));
+		// Leaving the screen (iOS): save everything, keep everything running for when the app comes back.
+		this.host.app.onBackground?.(async () => { await this.workspace.saveAll(); });
 		this.host.app.onBeforeQuit(async () => {
 			this.workspace.trigger('quit');
 			await this.workspace.saveAll();

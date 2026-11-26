@@ -30,7 +30,8 @@
   `isIosApp`…) now come from the host; on iOS `isMacOS` stays true, so Mod is ⌘. The page has `body.is-compact`
   when the window is narrower than 700 pixels (an iPhone, an iPad in Slide Over, or a narrow desktop window;
   `layoutMode()`) and `body.is-touch` on a touch screen. Nothing looks different yet. A plugin whose manifest says
-  `isDesktopOnly: true` is not loaded on iPhone and iPad; its settings say why.
+  `isDesktopOnly: true` is not loaded on iPhone and iPad; its settings say why. A host can call
+  `app.onBackground()` when the app leaves the screen but may come back: open notes are saved and nothing closes.
 
 ## v0.20.0
 
