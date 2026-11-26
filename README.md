@@ -4,8 +4,10 @@ A Markdown notes app in the spirit of Obsidian that runs **entirely offline**: a
 plain `.md` files (a **homebase**), and the app cannot reach the network — every request is blocked by the app itself,
 whatever a plugin tries. Plugins add commands, views, CodeMirror 6 editor extensions, settings and more.
 
-The first plugin, **AGLC4 Citations** (`plugins/aglc4`), is a port of
-[obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0 and ships built in.
+Two plugins ship built in: **AGLC4 Citations** (`plugins/aglc4`), a port of
+[obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0, and **Task Docket** (`plugins/task-docket`),
+a port of [obsidian-task-docket](https://github.com/blursedperf/obsidian-task-docket) 1.1.0 that shows every task in
+the homebase in a Tasks panel in the Docket.
 
 Everything is reached from the keyboard through **the Docket**, a tray that drops from the top of the window
 (**Super+D**: ⌘D on macOS, Ctrl+P on Windows): search across notes, commands, and panels for authorities, the outline, units
@@ -61,6 +63,7 @@ choose where.
 | `packages/api` | `@quire/api`: the plugin API (vault, metadata, workspace, editor, UI) — the app's renderer runtime |
 | `packages/app` | Electron shell: `src/main` (main process, preload), `src/renderer` (core UI, theme, smoke test) |
 | `plugins/aglc4` | AGLC4 Citations |
+| `plugins/task-docket` | Task Docket: the Tasks panel |
 | `scripts/offline-audit.mjs` | fails the build if anything shipped could reach the network or run generated code |
 
 ## Themes

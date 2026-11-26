@@ -279,6 +279,18 @@ export class PluginManager {
 			enabled = Object.values(this.info).filter((p) => p.source === 'builtin').map((p) => p.manifest.id);
 			await adapter.write(this.configPath(), JSON.stringify(enabled, null, '\t'));
 		}
+		// A built-in plugin new in this version is turned on once, in homebases made before it (turned off
+		// later, it stays off). .quire/builtin-plugins.json lists the built-ins a homebase has been offered.
+		const seenPath = this.configPath().replace(/plugins\.json$/, 'builtin-plugins.json');
+		const builtins = Object.values(this.info).filter((p) => p.source === 'builtin').map((p) => p.manifest.id);
+		let seen: string[];
+		try { seen = (await adapter.exists(seenPath)) ? JSON.parse(await adapter.read(seenPath)) as string[] : ['aglc-citations']; } catch { seen = builtins; }
+		const fresh = builtins.filter((id) => !seen.includes(id) && !enabled.includes(id));
+		if (fresh.length) {
+			enabled = [...enabled, ...fresh];
+			await adapter.write(this.configPath(), JSON.stringify(enabled, null, '\t'));
+		}
+		if (builtins.some((id) => !seen.includes(id))) await adapter.write(seenPath, JSON.stringify([...new Set([...seen, ...builtins])], null, '\t'));
 		for (const id of enabled) {
 			if (this.manifests[id]) await this.enablePlugin(id);
 		}
@@ -382,10 +394,14 @@ export interface AppConfig {
 	/** Notes opened from the Docket go in a new tab (or the tab already showing them), not over the note in use. */
 	docketNewTab: boolean;
 	vimMode: boolean;
-	/** Show Markdown formatted while writing (raw on the lines being edited). */
+	/** Show Markdown formatted while writing (as written only where the cursor is). */
 	livePreview: boolean;
 	/** The note's name as an editable title above its text (editing it renames the file). */
 	inlineTitle: boolean;
+	/** Preview a linked note in a popup: on resting the mouse on its link, only with Ctrl/Cmd, or never. */
+	hoverPreview: 'hover' | 'mod' | 'off';
+	/** The folder whose notes are templates. */
+	templatesFolder: string;
 	textFont: string;
 	interfaceFont: string;
 	monospaceFont: string;
@@ -446,6 +462,8 @@ export const DEFAULT_CONFIG: AppConfig = {
 	vimMode: false,
 	livePreview: true,
 	inlineTitle: true,
+	hoverPreview: 'hover',
+	templatesFolder: 'Templates',
 	textFont: '',
 	interfaceFont: '',
 	monospaceFont: '',

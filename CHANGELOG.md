@@ -29,6 +29,24 @@
   a new property gets the kind of field its name has elsewhere. "+ Add property" (or **Mod+;**, *Add a property*,
   which also starts a note's first property) adds a row; × removes one; editing a name renames it. Changes go straight
   into the YAML with its comments and order kept, and "Edit as YAML" shows it as written.
+- **Hover preview**: resting the mouse on a link to a note, in the editor or in reading view, shows the note (or the
+  section or block the link points to) in a popup beside it. Holding Ctrl (⌘) shows it at once. The popup can be
+  scrolled and its links followed; it goes when the mouse leaves it, on Escape or on a click elsewhere. *Settings →
+  Editor → Hover preview*: on a pause, only with Ctrl/⌘, or off. Plugins hear of it through the "hover-link" event.
+- **Quick templates**: every note in the templates folder (*Settings → Editor → Templates folder*, "Templates" by
+  default) is a template, offered in the / menu and by *Insert template…*; *New note from template…* makes a note
+  from one, and *Save as template…* turns the selection (or the note) into one. `{{title}}`, `{{date}}`, `{{time}}`
+  (or a format: `{{date:D MMMM YYYY}}`) are filled in, `{{cursor}}` is where the cursor goes, and a template's
+  properties join the note's own.
+- **Task Docket, a second built-in plugin**: every checkbox task in the homebase in a **Tasks** panel in the Docket,
+  grouped by when it is due (overdue, today, tomorrow, the next 7 days, later) and sorted by urgency; or by
+  priority, note or tag. Enter opens a task in its note; → checks it off, makes it due today, tomorrow or in a
+  week, sets a date or a priority. Due dates and priorities are read in the Tasks plugin's emoji and Dataview's
+  fields; typing @ on a task line suggests them (@tomorrow, @fri 9am, @high). The status bar counts what is overdue
+  and due today. In homebases made before this version it is turned on once; *Settings → Plugins* turns it off.
+- For plugins: a Docket panel's `render` gets `ui` (rows, sections and action lists like the Docket's own),
+  `app.docket.showPanel(id)` and `refreshPanel(id)`; the metadata cache has `listItems` (tasks among them) and
+  `getPropertyKeys()` / `getPropertyValues(key)`; `InputSuggest` puts suggestions under any text field.
 
 ## v0.17.3
 

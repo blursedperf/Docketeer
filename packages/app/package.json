@@ -13,7 +13,7 @@
     "shots": "electron . --shots"
   },
   "productName": "Quire",
-  "description": "Offline Markdown notes, extensible with plugins. Ships with AGLC4 Citations.",
+  "description": "Offline Markdown notes, extensible with plugins. Ships with AGLC4 Citations and Task Docket.",
   "author": "blursedperf",
   "license": "MIT",
   "homepage": "https://github.com/blursedperf/quire",

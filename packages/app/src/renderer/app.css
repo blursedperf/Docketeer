@@ -520,12 +520,12 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
    hovered or focused; a row's remove button shows on hover. */
 .metadata-container.cm-properties { display: block; margin: 0 0 var(--space-2); }
 .metadata-container.cm-properties:focus-within { border-left-color: var(--doom-blue); }
-.cm-properties .metadata-properties { display: grid; grid-template-columns: minmax(7em, max-content) 1fr auto; gap: 2px var(--space-3); align-items: center; }
+.cm-properties .metadata-properties { display: grid; grid-template-columns: fit-content(40%) minmax(6em, 1fr) auto; gap: 2px var(--space-3); align-items: center; }
 .cm-properties .metadata-property-key input, .cm-properties .metadata-property-value input:not([type="checkbox"]) {
 	width: 100%; min-width: 0; height: auto; padding: 1px var(--space-1); border: 1px solid transparent; border-radius: var(--radius-s);
 	background: transparent; font: inherit; color: inherit; text-align: left;
 }
-.cm-properties .metadata-property-key input { color: var(--doom-magenta-text); }
+.cm-properties .metadata-property-key input { color: var(--doom-magenta-text); field-sizing: content; min-width: 4em; max-width: 100%; }
 .cm-properties input:hover { border-color: var(--doom-border-subtle); }
 .cm-properties input:focus { border-color: var(--doom-blue); background: var(--doom-bg); outline: none; }
 .cm-properties input.is-invalid { border-color: var(--doom-red); }
@@ -536,7 +536,7 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .metadata-chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 var(--space-1) 0 var(--space-2); border-radius: var(--radius-s); background: rgba(var(--doom-blue-rgb), 0.14); color: var(--doom-blue-text); }
 .metadata-chip-remove { padding: 0 2px; border: none; background: none; color: inherit; opacity: 0.6; cursor: var(--cursor); }
 .metadata-chip-remove:hover { opacity: 1; }
-.cm-properties .metadata-chips input.metadata-chip-input { flex: 1; width: auto; min-width: 5em; }
+.cm-properties .metadata-chips input.metadata-chip-input { flex: 1 1 2em; width: 2em; min-width: 2em; }
 .cm-properties .metadata-add { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-1); }
 .metadata-add-button { padding: 1px var(--space-1); border: none; background: none; color: var(--text-muted); font: inherit; cursor: var(--cursor); }
 .metadata-add-button:hover, .metadata-add-button:focus-visible { color: var(--doom-blue-text); }
@@ -849,6 +849,16 @@ pre.notices-text { margin: 0; max-height: 65vh; overflow: auto; white-space: pre
 /* A line holding only a picture or player embed collapses while not edited: the embed shows in its place. */
 .cm-line.cm-lp-embed-line { line-height: 0; }
 /* Audio and video: embedded in notes and in their own tab (media.ts). */
+/* Hover preview (hover-preview.ts): a linked note in a popup beside its link. */
+.hover-popover {
+	position: fixed; z-index: 95; width: min(460px, 90vw); max-height: min(380px, 60vh); overflow: auto;
+	padding: var(--space-3) var(--space-4); background: var(--doom-bg-alt); border: 1px solid var(--doom-border-subtle);
+	border-radius: var(--radius-m); box-shadow: var(--doom-shadow); font-family: var(--font-text); font-size: var(--text-sm); line-height: var(--line-height-normal);
+}
+.hover-popover .markdown-embed { margin: 0; padding: 0; border: none; }
+.hover-popover .markdown-embed-title { margin-bottom: var(--space-2); font-weight: var(--font-bold); }
+.hover-popover img { max-width: 100%; }
+.hover-popover-empty { color: var(--text-muted); }
 .cm-media-embed { padding: var(--space-2) 0; }
 /* A picture's or player's button that shows its embed text (embeds-editor.ts): on hover, or when reached by Tab. */
 .cm-image-embed, .cm-media-embed { position: relative; }

@@ -805,6 +805,117 @@ export async function runSmoke(app: App): Promise<void> {
 		return problems.length === 0 || problems.join('; ');
 	});
 
+	await check('hover preview: a linked section in a popup, at once with Ctrl, after a pause without', async () => {
+		const problems: string[] = [];
+		const target = await vault.create('Hover target.md', '# First\n\nAlpha text.\n\n# Second\n\nBeta text.\n');
+		const note = await vault.create('Hover smoke.md', 'See [[Hover target#Second]] here.\n\nEnd\n');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		view.editor.setCursor({ line: 2, ch: 0 });
+		await sleep(80);
+		const pop = () => document.querySelector<HTMLElement>('.hover-popover');
+		const link = view.contentEl.querySelector<HTMLElement>('.cm-lp-wikilink');
+		if (!link) problems.push('no link');
+		else {
+			link.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, ctrlKey: true }));
+			if (!(await until(() => !!pop()?.textContent?.includes('Beta'), 2000))) problems.push(`ctrl: ${pop()?.textContent ?? 'no popup'}`);
+			else if (pop()!.textContent!.includes('Alpha')) problems.push('the whole note, not the section');
+			window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+			await sleep(30);
+			if (pop()) problems.push('Escape left it');
+		}
+		await view.setMode('preview');
+		await sleep(100);
+		const a = view.contentEl.querySelector<HTMLElement>('.markdown-rendered a.internal-link');
+		if (!a) problems.push('no reading-view link');
+		else {
+			a.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+			await sleep(150);
+			if (pop()) problems.push('shown before the pause');
+			if (!(await until(() => !!pop(), 1500))) problems.push('not shown after the pause');
+			document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+			await sleep(30);
+			if (pop()) problems.push('a click elsewhere left it');
+		}
+		await view.setMode('source');
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await vault.delete(note);
+		await vault.delete(target);
+		return problems.length === 0 || problems.join('; ');
+	});
+
+	await check('templates: from the / menu (title, date, cursor, properties), saved from a selection, a new note from one', async () => {
+		const problems: string[] = [];
+		const template = await vault.create('Templates/Brief smoke.md', '---\ntype: brief\n---\n# {{title}}\n\nDate: {{date:YYYY}}\n\n## Facts\n\n{{cursor}}\n');
+		const note = await vault.create('Tmpl smoke.md', 'Intro\n\n');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		cm.focus();
+		view.editor.setCursor({ line: 2, ch: 0 });
+		const at = cm.state.selection.main.head;
+		cm.dispatch({ changes: { from: at, insert: '/Brief sm' }, selection: { anchor: at + 9 }, userEvent: 'input.type' });
+		const item = () => [...document.querySelectorAll<HTMLElement>('.suggestion-container .suggestion-item')].find((e) => e.textContent?.includes('Brief smoke'));
+		if (!(await until(() => !!item(), 2000))) problems.push('template not in the / menu');
+		else {
+			item()!.click();
+			await until(() => cm.state.doc.toString().includes('## Facts'), 2000);
+			const text = cm.state.doc.toString();
+			const year = String(new Date().getFullYear());
+			if (!text.startsWith('---\ntype: brief\n---\n')) problems.push(`properties: ${JSON.stringify(text.slice(0, 30))}`);
+			if (!text.includes('# Tmpl smoke') || !text.includes(`Date: ${year}`) || text.includes('{{')) problems.push(`filled: ${JSON.stringify(text)}`);
+			const line = cm.state.doc.lineAt(cm.state.selection.main.head);
+			if (line.number !== cm.state.doc.lines && cm.state.doc.line(line.number - 2).text !== '## Facts') problems.push(`cursor on ${JSON.stringify(line.text)} (line ${line.number})`);
+		}
+		// Save a selection as a template.
+		view.editor.setValue('Reusable bit');
+		view.editor.setSelection({ line: 0, ch: 0 }, { line: 0, ch: 12 });
+		app.commands.executeCommandById('templates:save');
+		await sleep(80);
+		const nameInput = document.querySelector<HTMLInputElement>('.modal input[type="text"], .modal input:not([type])');
+		if (!nameInput) problems.push('no name dialog');
+		else {
+			nameInput.value = 'Saved smoke';
+			nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+			nameInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+			if (!(await until(() => !!vault.getFileByPath('Templates/Saved smoke.md'), 2000))) problems.push('template not saved');
+			else if ((await vault.read(vault.getFileByPath('Templates/Saved smoke.md')!)) !== 'Reusable bit') problems.push('saved text');
+		}
+		// A new note from a template.
+		app.commands.executeCommandById('templates:new-note');
+		await sleep(80);
+		const picker = document.querySelector<HTMLInputElement>('.prompt-input');
+		if (!picker) problems.push('no template picker');
+		else {
+			picker.value = 'Brief smoke';
+			picker.dispatchEvent(new Event('input', { bubbles: true }));
+			await sleep(80);
+			picker.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+			await sleep(120);
+			const name = document.querySelector<HTMLInputElement>('.modal input[type="text"], .modal input:not([type])');
+			if (!name) problems.push('no name for the new note');
+			else {
+				name.value = 'From template smoke';
+				name.dispatchEvent(new Event('input', { bubbles: true }));
+				name.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+				const made = await until(() => workspace.getActiveFile()?.basename === 'From template smoke', 3000);
+				const f = workspace.getActiveFile();
+				const text = made && f ? await vault.read(f) : '';
+				if (!text.includes('# From template smoke') || !text.startsWith('---\ntype: brief')) problems.push(`new note: ${JSON.stringify(text)}`);
+				if (f && made) await vault.delete(f);
+			}
+		}
+		document.querySelectorAll('.modal-container').forEach((m) => m.remove());
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await vault.delete(note);
+		await vault.delete(template);
+		const saved = vault.getFileByPath('Templates/Saved smoke.md');
+		if (saved) await vault.delete(saved);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	// Vim mode and hotkeys (Phase 3).
 	await check('vim mode: modes in the modeline, :w saves, off again', async () => {
 		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
@@ -1565,6 +1676,29 @@ export async function runShots(app: App): Promise<void> {
 		leaf.detach();
 		await app.vault.delete(note);
 	}
+	// Properties edited in place, a hover preview, and the Tasks panel.
+	{
+		const tasks = await app.vault.create('Torts/Negligence/Shot tasks.md', '- [ ] Read *Donoghue v Stevenson* and brief the ratio 📅 2020-01-01 ⏫ #torts\n- [ ] Tutorial problem question 📅 2099-11-14 14:00\n- [ ] Moot submissions [due:: 2099-11-21] [priority:: highest]\n- [x] Summarise *Wagon Mound* ✅ 2026-11-12\n');
+		const note = await app.vault.create('Properties and links.md', '---\ncourse: Torts\ntopics: [duty, breach]\ndue: 2026-12-01\nreviewed: false\n---\n\nSee [[Welcome]] for how this homebase works.\n');
+		const leaf = workspace.getLeaf('tab');
+		await leaf.openFile(note);
+		const v = leaf.view as MarkdownView;
+		v.editor.setCursor({ line: v.editor.lineCount() - 1, ch: 0 });
+		await sleep(150);
+		await shot('42-properties');
+		const link = v.contentEl.querySelector<HTMLElement>('.cm-lp-wikilink');
+		link?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, ctrlKey: true }));
+		await until(() => !!document.querySelector('.hover-popover'), 2000);
+		await shot('43-hover-preview');
+		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+		app.commands.executeCommandById('task-docket:open');
+		await sleep(300);
+		await shot('44-docket-tasks');
+		docket.close(true);
+		leaf.detach();
+		await app.vault.delete(note);
+		await app.vault.delete(tasks);
+	}
 	app.setting.openTabById('security');
 	await shot('36-settings-security');
 	app.setting.close();
@@ -1630,6 +1764,38 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const expectFn = Platform.isMacOS ? '⌥⌘F' : Platform.isWin ? 'Win+Alt+F' : 'Super+Alt+F';
 		return (fnKeys[0] === expectFn && (Platform.isWin || docketKey === (Platform.isMacOS ? '⌘D' : 'Super+D')) && clashes.length === 0 && / \+ /.test(placeholder))
 			|| `footnote=${fnKeys.join(',')} docket=${docketKey} clashes=${clashes.join(',')} placeholder="${placeholder}"`;
+	});
+	await check('Task Docket: a Tasks panel in the Docket; tasks checked off and rescheduled from it', async () => {
+		const problems: string[] = [];
+		const plugin = app.plugins.getPlugin('task-docket') as unknown as { index: { all(): { text: string }[] } } | null;
+		if (!plugin) return `not loaded: ${app.plugins.loadError('task-docket')}`;
+		const file = await vault.create('Tasks smoke.md', '- [ ] Overdue smoke task 📅 2020-01-01\n- [ ] Later smoke task 📅 2099-01-01\n- [x] Done smoke task\n');
+		if (!(await until(() => plugin.index.all().some((t) => t.text.includes('Later smoke task')), 4000))) problems.push('not indexed');
+		app.commands.executeCommandById('task-docket:open');
+		await sleep(200);
+		const shown = () => [...document.querySelectorAll<HTMLElement>('.task-docket-panel .docket-option-title')].map((e) => e.textContent ?? '');
+		const t = shown();
+		if (!t.includes('Overdue smoke task') || !t.includes('Later smoke task') || t.includes('Done smoke task')) problems.push(`rows: ${t.join('|')}`);
+		const sections = [...document.querySelectorAll('.task-docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
+		if (sections[0] !== 'Overdue') problems.push(`sections: ${sections.join(',')}`);
+		// → on a row: its actions; "Check off" writes [x] into the note.
+		const rowOf = (title: string) => [...document.querySelectorAll<HTMLElement>('.task-docket-panel .docket-item')].find((e) => e.querySelector('.docket-option-title')?.textContent === title);
+		const action = (title: string) => [...document.querySelectorAll<HTMLElement>('.docket-option')].find((e) => e.querySelector('.docket-option-title')?.textContent === title);
+		rowOf('Later smoke task')?.dispatchEvent(new CustomEvent('docket-actions'));
+		await sleep(80);
+		action('Due today')?.click();
+		await until(async () => (await vault.read(file)).includes('Later smoke task 📅 ' + new Date().toISOString().slice(0, 4)), 2000);
+		app.commands.executeCommandById('task-docket:open');
+		await sleep(150);
+		rowOf('Overdue smoke task')?.dispatchEvent(new CustomEvent('docket-actions'));
+		await sleep(80);
+		action('Check off')?.click();
+		if (!(await until(async () => (await vault.read(file)).startsWith('- [x] Overdue smoke task'), 2000))) problems.push(`check off: ${JSON.stringify(await vault.read(file))}`);
+		const text = await vault.read(file);
+		if (!/Later smoke task 📅 \d{4}-\d{2}-\d{2}/.test(text) || text.includes('2099')) problems.push(`due today: ${JSON.stringify(text)}`);
+		ui()?.close(true);
+		await vault.delete(file);
+		return problems.length === 0 || problems.join('; ');
 	});
 	await check('docket: on from the start, with Super+D', async () => {
 		const before = !!document.querySelector('.docket') && commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 0;
@@ -1802,9 +1968,11 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const help = titles().includes('Create new note');
 		const remove = app.docket.addPanel({ id: 'test:panel', title: 'Test panel', render: (el) => { el.setText('hello'); } });
 		await type('');
-		press('7', { ctrl: true });
+		// The next free number: after the core's panels and the built-in plugins' (Tasks).
+		const n = app.docket.orderedPanels().findIndex((p) => p.id === 'test:panel') + 1;
+		press(String(n), { ctrl: true });
 		await sleep(30);
-		const plugin = document.querySelector('.docket-panel')?.textContent === 'hello';
+		const plugin = n === app.docket.orderedPanels().length && document.querySelector('.docket-panel')?.textContent === 'hello';
 		remove();
 		press('1', { ctrl: true });
 		press('Escape');
@@ -2235,7 +2403,9 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await app.setConfig('docket', false);
 		await app.setConfig('docket', true);
 		await until(() => app.docket.panels.has('custom:files-and-folders'), 2000);
-		const tabs = app.docket.orderedPanels().map((p) => p.id).join(',');
+		// Built-in plugins' panels (Tasks) come after the layout's own.
+		const own = () => app.docket.orderedPanels().filter((p) => !p.source?.startsWith('plugin:'));
+		const tabs = own().map((p) => p.id).join(',');
 		if (tabs !== 'custom:files-and-folders,core:homebase,core:layout') problems.push(`generic tabs: ${tabs}`);
 		ui.showPanel('custom:files-and-folders');
 		await sleep(150);
@@ -2245,7 +2415,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await app.setConfig('docket', false);
 		await app.setConfig('docket', true);
 		await sleep(150);
-		if (app.docket.orderedPanels().length !== 6) problems.push(`after reset: ${app.docket.orderedPanels().map((p) => p.id).join(',')}`);
+		if (own().length !== 6) problems.push(`after reset: ${own().map((p) => p.id).join(',')}`);
 		(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
 		return problems.length === 0 || problems.join('; ');
 	});
@@ -3009,9 +3179,11 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await app.setConfig('docketPanel', 'core:outline');
 		const gone = !document.querySelector('.docket') && !ui();
 		const palette = !commands.isAvailable(commands.findCommand('app:command-palette')!); // nothing to open without the Docket
-		const noProviders = app.docket.providers.size === 0 && app.docket.panels.size === 0;
+		// The core's own go; plugins' panels (Tasks) are theirs to keep.
+		const core = () => [...app.docket.panels.values()].filter((p) => !p.source?.startsWith('plugin:')).length;
+		const noProviders = app.docket.providers.size === 0 && core() === 0;
 		await app.setConfig('docket', true);
-		const back = !!ui() && app.docket.panels.size === 6;
+		const back = !!ui() && core() === 6;
 		return (gone && palette && noProviders && back) || `gone=${gone} palette=${palette} providers=${app.docket.providers.size} back=${back}`;
 	});
 }

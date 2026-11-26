@@ -76,15 +76,25 @@ export function notePlaces(app: App, archive: string): TFolder[] {
 }
 
 /** Make the note `name` in `folder` (or open it, if it is already there) and put the cursor in it. */
-export async function createNote(app: App, folder: TFolder, name: string, where: 'current' | 'tab' = 'current'): Promise<TFile | null> {
+/**
+ * Make a note called `name` in `folder` and open it. `content` gives a new note its text (a template, given the
+ * note's name); a cursor mark (\u2038) in it is where the cursor goes.
+ */
+export async function createNote(app: App, folder: TFolder, name: string, where: 'current' | 'tab' = 'current', content?: (title: string) => string | Promise<string>): Promise<TFile | null> {
 	const clean = name.trim().replace(/\.md$/i, '');
 	if (!clean) return null;
 	if (/[\\/:]/.test(clean)) { new Notice('A name cannot contain / \\ or :'); return null; }
 	const path = folder.isRoot() ? `${clean}.md` : `${folder.path}/${clean}.md`;
 	const existing = app.vault.getFileByPath(path);
-	const file = existing ?? await app.vault.create(path, '');
+	const text = !existing && content ? await content(clean) : '';
+	const at = text.indexOf('\u2038');
+	const file = existing ?? await app.vault.create(path, text.replace('\u2038', ''));
 	if (existing) new Notice(`“${clean}” is already there: opened it.`);
 	await app.workspace.getLeaf(where === 'tab' ? 'tab' : false).openFile(file);
+	if (at !== -1) {
+		const editor = app.workspace.activeEditor?.editor;
+		if (editor && app.workspace.getActiveFile() === file) { editor.setCursor(editor.offsetToPos(at)); editor.focus(); }
+	}
 	return file;
 }
 
@@ -94,15 +104,15 @@ export async function createNote(app: App, folder: TFolder, name: string, where:
  */
 export class NewNoteModal extends Modal {
 	private name = '';
-	constructor(app: App, private folder: TFolder, private places: TFolder[]) {
+	constructor(app: App, private folder: TFolder, private places: TFolder[], private from?: { title: string; content: (title: string) => string | Promise<string> }) {
 		super(app);
-		this.setTitle('New note');
+		this.setTitle(from?.title ?? 'New note');
 	}
 	override onOpen(): void {
 		const submit = async () => {
 			if (!this.name.trim()) return;
 			this.close();
-			await createNote(this.app, this.folder, this.name);
+			await createNote(this.app, this.folder, this.name, 'current', this.from?.content);
 		};
 		new Setting(this.contentEl).setName('Name').addText((t) => {
 			t.setPlaceholder('Smith v Jones brief').onChange((v) => { this.name = v; });

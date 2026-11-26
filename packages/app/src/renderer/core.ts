@@ -7,14 +7,15 @@ import type { EditorView } from '@codemirror/view';
 import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, type CommandContext, fontStack, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty,
+	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty, HoverPreview,
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerTiling } from './tiling';
 import { registerMedia } from './media';
 import { registerPdf } from './pdf/view';
 import { registerHomebases } from './homebases';
-import { SlashSuggest } from './slash';
+import { SLASH_ITEMS, SlashSuggest } from './slash';
+import { registerTemplates, templateSlashItems } from './templates';
 import { unitsStore } from './units-store';
 import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
@@ -44,8 +45,13 @@ class EditorTab extends SettingTab {
 		new Setting(el).setName('Editor').setHeading();
 		new Setting(el).setName('Readable line length').setDesc('Limit the width of the text so lines are easy to read.')
 			.addToggle((t) => t.setValue(c.readableLineLength).onChange((v) => { void this.app.setConfig('readableLineLength', v); }));
-		new Setting(el).setName('Live preview').setDesc('Show Markdown formatted as you write: headings without #, bold without **, links as their text, bullets and task boxes. The lines you are editing show the Markdown as written. Off: the Markdown is always shown as written (source mode).')
+		new Setting(el).setName('Live preview').setDesc('Show Markdown formatted as you write: headings without #, bold without **, links as their text, bullets and task boxes. What the cursor is in (a bold word, a link, a list marker) shows its Markdown as written. Off: the Markdown is always shown as written (source mode).')
 			.addToggle((t) => t.setValue(c.livePreview).onChange((v) => { void this.app.setConfig('livePreview', v); }));
+		new Setting(el).setName('Hover preview').setDesc('Show a linked note (or the section a link points to) in a popup when the mouse rests on its link. Holding Ctrl (⌘ on a Mac) shows it at once.')
+			.addDropdown((d) => d.addOptions({ hover: 'When the mouse rests on a link', mod: 'Only with Ctrl/⌘ held', off: 'Off' }).setValue(c.hoverPreview ?? 'hover')
+				.onChange((v) => { void this.app.setConfig('hoverPreview', v as 'hover' | 'mod' | 'off'); }));
+		new Setting(el).setName('Templates folder').setDesc('Notes in this folder are templates: offered in the / menu, by "Insert template…" and by "New note from template…". In a template, {{title}}, {{date}}, {{time}} (or {{date:D MMMM YYYY}}) are filled in, and {{cursor}} is where the cursor goes.')
+			.addText((t) => t.setPlaceholder('Templates').setValue(String(c.templatesFolder ?? '')).onChange((v) => { void this.app.setConfig('templatesFolder', v.trim()); }));
 		new Setting(el).setName('Note name as title').setDesc('Show each note\'s name as a title above its text. Editing it (then Enter, or moving away) renames the note; links to it follow. It is not part of the note\'s text.')
 			.addToggle((t) => t.setValue(c.inlineTitle !== false).onChange((v) => { void this.app.setConfig('inlineTitle', v); }));
 		new Setting(el).setName('Vim key bindings').setDesc('Edit with Vim keys: normal, insert and visual modes, motions, operators, :w to save and :q to close the tab. The modeline shows the mode.')
@@ -546,7 +552,7 @@ function wrapSelection(app: App, before: string, after = before) {
 
 export function registerCore(app: App): { reveal(): void } {
 	const { workspace, vault } = app;
-	app.editorSuggests.push(new LinkSuggest(app), new SlashSuggest(app));
+	app.editorSuggests.push(new LinkSuggest(app), new SlashSuggest(app, () => [...SLASH_ITEMS, ...templateSlashItems(app)]));
 	for (const tab of [new EditorTab(app), new FilesTab(app), new AppearanceTab(app), new HotkeysTab(app), new PluginsTab(app), new AboutTab(app)]) app.setting.addCoreTab(tab);
 	// Vim's ex commands act on the app: save, close the tab.
 	const vimView = () => workspace.getActiveViewOfType(MarkdownView);
@@ -701,6 +707,7 @@ export function registerCore(app: App): { reveal(): void } {
 	editorCmd('editor:toggle-bold', 'Toggle bold', 'b', '**');
 	editorCmd('editor:toggle-italics', 'Toggle italics', 'i', '*');
 	editorCmd('editor:insert-wikilink', 'Insert internal link', 'k', '[[', ']]');
+	registerTemplates(app, add);
 	add({
 		id: 'editor:add-property', name: 'Add a property', icon: 'list-plus', section: 'Edit', aliases: ['Add file property', 'Properties'],
 		hotkeys: [{ modifiers: ['Mod'], key: ';' }],
@@ -739,6 +746,7 @@ export function registerCore(app: App): { reveal(): void } {
 	docketBtn.addEventListener('click', () => app.commands.executeCommandById('app:docket'));
 
 	registerLocking(app);
+	new HoverPreview(app, () => app.config.hoverPreview ?? 'hover').install();
 	const tiling = registerTiling(app);
 	registerMedia(app);
 	registerPdf(app);

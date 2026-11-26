@@ -67,6 +67,44 @@ export interface ResultAction {
 	source?: string;
 }
 
+/** An action offered for a row (→ or Mod+.), or in a list of actions. */
+export interface DocketAction { title: string; icon?: string; run(): unknown }
+
+export interface DocketRowOptions {
+	/** A second line of smaller text, or text after the title. */
+	detail?: string | null;
+	icon?: string | null;
+	/** Shown at the row's end: "overdue", "3×". */
+	badge?: string;
+	italic?: boolean;
+	/** Indent, in levels. */
+	level?: number;
+	/** The row's actions, offered by → (or Mod+.). */
+	actions?: () => DocketAction[];
+	/** Extra classes for the row. */
+	cls?: string;
+	/** A fuller name for screen readers and the tooltip. */
+	label?: string;
+}
+
+/**
+ * What a panel draws with, so its rows look and move like the Docket's own: ↑↓ between rows, Enter or a click
+ * runs one (Mod+Enter: to the right; Shift+Enter: insert), → offers its actions.
+ */
+export interface DocketPanelUI {
+	row(parent: HTMLElement, title: string, run: (where: OpenWhere | 'insert') => unknown, options?: DocketRowOptions): HTMLElement;
+	/** A titled section; rows go in the element it returns. */
+	section(parent: HTMLElement, title: string, count?: number): HTMLElement;
+	/** A line saying there is nothing to show. */
+	empty(parent: HTMLElement, text: string): void;
+	/** Draw the panel again (keeping the selected row). */
+	refresh(): Promise<void>;
+	/** A list of actions in place of the panel (Escape goes back). */
+	showActions(title: string, actions: DocketAction[]): void;
+	/** Close the Docket (as Escape does). */
+	close(): void;
+}
+
 export interface DocketPanel {
 	id: string;
 	title: string;
@@ -78,7 +116,7 @@ export interface DocketPanel {
 	 * case name under the cursor for the Authorities panel. Items marked `data-docket-item` can be reached
 	 * with the arrow keys.
 	 */
-	render(el: HTMLElement, opts: { focus?: string }): void | Promise<void>;
+	render(el: HTMLElement, opts: { focus?: string; ui?: DocketPanelUI }): void | Promise<void>;
 	/** Called when the panel is hidden. */
 	hide?(): void;
 	source?: string;
@@ -109,6 +147,12 @@ export class DocketRegistry extends Events {
 	}
 
 	addPanel(p: DocketPanel): () => void { return this.add(this.panels, p); }
+
+	/** Open the Docket on the panel `id` (a plugin's full id: "plugin-id:panel"). */
+	showPanel(id: string): void { this.trigger('show-panel', id); }
+
+	/** Draw the panel `id` again if it is the one shown (its data changed). */
+	refreshPanel(id: string): void { this.trigger('refresh-panel', id); }
 	addSearchProvider(p: SearchProvider): () => void { return this.add(this.providers, p); }
 	addResultAction(a: ResultAction): () => void { return this.add(this.actions, a); }
 

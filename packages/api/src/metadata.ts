@@ -17,6 +17,8 @@ export type EmbedCache = ReferenceCache;
 export interface FootnoteCache extends CacheItem { id: string; }
 export interface FootnoteRefCache extends CacheItem { id: string; }
 export interface TagCache extends CacheItem { tag: string; }
+/** A list item: `task` is the character in its box (" ", "x" …) when it is a task. */
+export interface ListItemCache extends CacheItem { task?: string; parent: number; }
 export type FrontMatterCache = Record<string, any>;
 
 export interface CachedMetadata {
@@ -26,6 +28,7 @@ export interface CachedMetadata {
 	links?: LinkCache[];
 	embeds?: EmbedCache[];
 	tags?: TagCache[];
+	listItems?: ListItemCache[];
 	footnotes?: FootnoteCache[];
 	footnoteRefs?: FootnoteRefCache[];
 }
@@ -146,6 +149,17 @@ export function parseMetadata(text: string): CachedMetadata {
 		tags.push({ tag: `#${m[2]}`, position: pos(start, start + 1 + (m[2]?.length ?? 0)) });
 	}
 	if (tags.length) meta.tags = tags;
+
+	// List items (tasks among them): what plugins such as Task Docket look for before reading a note.
+	const listItems: ListItemCache[] = [];
+	const lre = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(?:\[(.)\](?=\s|$))?/gm;
+	for (let m = lre.exec(text); m; m = lre.exec(text)) {
+		if (inCode(m.index) || m.index < fm.end) continue;
+		const item: ListItemCache = { position: pos(m.index, m.index + m[0].length), parent: -1 };
+		if (m[2] !== undefined) item.task = m[2];
+		listItems.push(item);
+	}
+	if (listItems.length) meta.listItems = listItems;
 
 	const footnotes: FootnoteCache[] = [];
 	const refs: FootnoteRefCache[] = [];

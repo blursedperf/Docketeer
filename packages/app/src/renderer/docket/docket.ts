@@ -6,11 +6,12 @@
 import type { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import {
-	type App, type DocketPanel, type OpenWhere, type SearchResult,
+	type App, type DocketPanel, type DocketPanelUI, type OpenWhere, type SearchResult,
 	MarkdownView, Notice, Platform, TFile, clampHeight, contextPanel, formatHotkey, groupResults, mergeResults, parsePrefix, setIcon, topModal,
 } from '@quire/api';
 
 import { noteActions } from './actions';
+import { empty, row, section } from './panels/common';
 
 type Zone = 'input' | 'results' | 'panel' | 'tabs';
 type Where = OpenWhere | 'insert';
@@ -49,6 +50,8 @@ export class Docket {
 	private actionsOf: SearchResult | null = null;
 	private selected = 0;
 	private panelId: string;
+	/** The panel on screen (not hidden behind search results), if any. */
+	get shownPanelId(): string | null { return this.panelEl.hasAttribute('hidden') ? null : this.shownPanel?.id ?? null; }
 	private panelFocus: string | undefined;
 	private shownPanel: DocketPanel | null = null;
 	private saved: { cm: EditorView | null; selection: EditorSelection | null; el: Element | null } | null = null;
@@ -457,7 +460,14 @@ export class Docket {
 		this.panelEl.empty();
 		if (!panel) { this.panelEl.createDiv({ cls: 'docket-empty', text: 'No panels.' }); return Promise.resolve(); }
 		try {
-			return Promise.resolve(panel.render(this.panelEl, { focus: this.panelFocus })).catch(() => console.error(`Docket panel ${panel.id} failed`));
+			const ui: DocketPanelUI = {
+				row: (parent, title, run, o) => row(parent, this, title, run, o),
+				section, empty,
+				refresh: () => this.refreshPanel(),
+				showActions: (title, actions) => this.showActionList(title, actions),
+				close: () => this.close(),
+			};
+			return Promise.resolve(panel.render(this.panelEl, { focus: this.panelFocus, ui })).catch(() => console.error(`Docket panel ${panel.id} failed`));
 		} catch {
 			console.error(`Docket panel ${panel.id} failed`);
 			return Promise.resolve();

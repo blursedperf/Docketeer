@@ -1,0 +1,10 @@
+{
+	"id": "task-docket",
+	"name": "Task Docket",
+	"version": "1.1.0",
+	"minAppVersion": "0.18.0",
+	"description": "Every checkbox task in your homebase in a Tasks panel in the Docket: sorted by urgency, due date or priority, grouped by when they are due; check them off, reschedule and reprioritise them from the list. Type @ on a task line for due dates and priorities.",
+	"author": "blursedperf",
+	"authorUrl": "https://github.com/blursedperf",
+	"isDesktopOnly": false
+}

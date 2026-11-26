@@ -8,7 +8,7 @@ import { syntaxTree } from '@codemirror/language';
 import { type App, type Editor, type EditorPosition, EditorSuggest, type EditorSuggestContext, type EditorSuggestTriggerInfo, fuzzyScore, setIcon } from '@quire/api';
 
 /** Where the cursor goes in a template, and (optionally) where a selection from there ends. */
-const CURSOR = '\u2038';
+export const CURSOR = '\u2038';
 const SELECT_END = '\u2041';
 
 export interface SlashItem {

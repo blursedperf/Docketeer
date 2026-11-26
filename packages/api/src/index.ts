@@ -20,7 +20,7 @@ export {
 	MetadataCache, FileManager, parseFrontMatter, splitFrontMatter, parseMetadata, getAllTags, parseLinktext, withFrontMatter,
 	parseYamlSafe as parseYaml, stringifyYaml,
 	type CachedMetadata, type FrontMatterCache, type HeadingCache, type LinkCache, type EmbedCache, type FootnoteCache,
-	type FootnoteRefCache, type TagCache, type Pos, type Loc,
+	type FootnoteRefCache, type TagCache, type ListItemCache, type Pos, type Loc,
 } from './metadata';
 export { View, ItemView, FileView, EmptyView, type ViewStateResult } from './view';
 export {
@@ -46,13 +46,14 @@ export { outlineHeadings, moveSection, shiftLevel, isCaseBrief, addBriefField, B
 export { PRESETS, neighbour, paneRects, resizePane, equalise, zoomChain, type LayoutNode, type Direction, type Preset } from './layout-tree';
 export { CITATION_STYLES, AGLC4, planCitation, footnoteChanges, noteFootnotes, type CitationStyle, type FieldDef, type Source, type SourceKind, type SourceKindDef } from './cite';
 export { Usage, frecency, type UsageEntry } from './usage';
-export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
+export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type DocketPanelUI, type DocketAction, type DocketRowOptions, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
 export { getHost, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostPluginInfo, type PluginManifestData } from './host';
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
 export { addProperty, editFrontmatter } from './properties-editor';
 export { InputSuggest } from './input-suggest';
+export { HoverPreview, type HoverMode } from './hover-preview';
 export { Spellchecker, SPELL_LANGUAGES, spellRefresh } from './spellcheck';
 export { LEGAL_WORDS } from './legal-words';
 export { VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, mediaKind, isMedia, parseTimestamp, formatTimestamp, timeFromSubpath, timestampLink, SPEEDS, nextSpeed, captionsFor, createPlayer, MediaPlayers, MediaView } from './media';
