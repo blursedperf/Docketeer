@@ -2467,9 +2467,15 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		/** Choose the list item called `title` (or starting with it), with the keys. */
 		const pick = async (title: string) => {
 			await until(() => visible().some((t) => t === title || t.startsWith(title)), 2000);
-			const i = visible().findIndex((t) => t === title || t.startsWith(title));
+			// Rows by their titles; the presses count from the row selected now (after a redraw it may not be the
+			// first yet on a slow machine), not from the top.
+			const rows = [...document.querySelectorAll<HTMLElement>('.docket-option')].filter((o) => o.querySelector('.docket-option-title')?.textContent);
+			const named = (o: HTMLElement) => o.querySelector('.docket-option-title')!.textContent!;
+			const i = rows.findIndex((o) => named(o) === title || named(o).startsWith(title));
 			if (i < 0) { problems.push(`no "${title}" in ${visible().slice(0, 8).join(' | ')}`); return false; }
-			for (let k = 0; k < i; k++) press('ArrowDown');
+			const from = Math.max(0, rows.findIndex((o) => o.classList.contains('is-selected')));
+			for (let k = from; k < i; k++) press('ArrowDown');
+			for (let k = from; k > i; k--) press('ArrowUp');
 			press('Enter');
 			await sleep(200);
 			return true;
