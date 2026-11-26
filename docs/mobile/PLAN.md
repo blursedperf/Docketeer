@@ -261,7 +261,7 @@ with a Magic Keyboard?
       `packages/ios/README.md`.
 - [x] Lockdown basics: the content rule list and the navigation delegate (§2.7).
 - [x] Run on the iPhone and iPad simulators. Fix the crashes.
-- [ ] Write `docs/mobile/spike.md`. Cover:
+- [ ] Write `docs/mobile/spike.md` (started: simulators and the iPhone; the iPad is still to try). Cover:
       - typing, selection handles, autocorrect, dictation, IME composition, undo;
       - live preview on the cursor's line;
       - `[[` suggestions;
@@ -363,6 +363,8 @@ recorded. **The user studies on the iPad alone for a week.** Stop and report.
 - [ ] Compact layout (`body.is-compact`):
       - one pane, with tiling turned off and the current pane kept;
       - a back gesture to the previous note;
+      - open tabs behind a "show open tabs" button instead of the tab bar (the owner's suggestion after
+        trying Phase 0 on an iPhone, `spike.md`);
       - Phone, and an iPad in Slide Over, both use it.
 - [ ] The Docket as a sheet:
       - Pull down from the top edge, or tap a Docket button.
