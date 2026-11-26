@@ -964,7 +964,7 @@ export async function runSmoke(app: App): Promise<void> {
 		const cmds = app.commands;
 		await cmds.setHotkeys('app:toggle-live-preview', [{ modifiers: ['Mod', 'Alt'], key: 'l' }]);
 		const before = app.config.livePreview;
-		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ctrlKey: true, altKey: true, bubbles: true }));
+		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ...modKeys(), altKey: true, bubbles: true }));
 		const toggled = app.config.livePreview !== before;
 		if (toggled) await app.setConfig('livePreview', before);
 		const clash = cmds.conflicts(defaultDocketKey(Platform)).map((c) => c.id).includes('app:docket');
@@ -1843,9 +1843,18 @@ function pressDocketKey(shift = false): void {
 	}));
 }
 
-function press(key: string, mods: { ctrl?: boolean; shift?: boolean; alt?: boolean } = {}): void {
+/** The modifier keys for Mod as this system has it: ⌘ on macOS, Ctrl elsewhere. */
+function modKeys(): { ctrlKey: boolean; metaKey: boolean } {
+	return { ctrlKey: !Platform.isMacOS, metaKey: Platform.isMacOS };
+}
+
+/** Press a key where the keyboard is. `mod` is Mod (⌘ on macOS, Ctrl elsewhere); `ctrl` is the Ctrl key itself. */
+function press(key: string, mods: { mod?: boolean; ctrl?: boolean; shift?: boolean; alt?: boolean } = {}): void {
 	const target = document.activeElement ?? document.body;
-	target.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: !!mods.ctrl, shiftKey: !!mods.shift, altKey: !!mods.alt, bubbles: true, cancelable: true }));
+	const mod = mods.mod ? modKeys() : { ctrlKey: false, metaKey: false };
+	target.dispatchEvent(new KeyboardEvent('keydown', {
+		key, ctrlKey: mod.ctrlKey || !!mods.ctrl, metaKey: mod.metaKey, shiftKey: !!mods.shift, altKey: !!mods.alt, bubbles: true, cancelable: true,
+	}));
 }
 
 /** The Docket, used only from the keyboard (Phase 2 of docs/docket/PLAN.md). */
@@ -2024,7 +2033,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const live = document.querySelector('.docket [role=status]')?.textContent ?? '';
 		const active = input().getAttribute('aria-activedescendant');
 		const before = rootLeaves();
-		press('Enter', { ctrl: true });
+		press('Enter', { mod: true });
 		await sleep(200);
 		const opened = rootLeaves() === before + 1 && workspace.getActiveFile()?.basename === 'Renamed note';
 		commands.executeCommandById('app:close-tab');
@@ -2065,7 +2074,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('docket: Mod+2 shows the outline; Tab moves between input, panel and tabs', async () => {
 		cm.focus();
 		pressDocketKey();
-		press('2', { ctrl: true });
+		press('2', { mod: true });
 		await sleep(50);
 		const outline = document.querySelectorAll('.docket-outline-item').length > 3;
 		const tabActive = document.querySelector('.docket-tab.is-active')?.textContent?.includes('Outline');
@@ -2108,14 +2117,14 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(30);
 		const pinned = ui()!.el.classList.contains('is-pinned') && app.config.docketMode === 'pinned';
 		const h0 = Number(app.config.docketHeight);
-		press('ArrowDown', { ctrl: true, alt: true });
+		press('ArrowDown', { mod: true, alt: true });
 		const taller = Number(app.config.docketHeight) > h0;
 		press('Escape');
 		await sleep(20);
 		const docked = ui()!.isOpen && !ui()!.el.contains(document.activeElement);
 		pressDocketKey(); // focuses the docked Docket
 		const refocused = document.activeElement === input();
-		press('ArrowUp', { ctrl: true, alt: true });
+		press('ArrowUp', { mod: true, alt: true });
 		pressDocketKey(true); // back to peek
 		press('Escape');
 		await sleep(20);
@@ -2130,11 +2139,11 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await type('');
 		// The next free number: after the core's panels and the built-in plugins' (Tasks).
 		const n = app.docket.orderedPanels().findIndex((p) => p.id === 'test:panel') + 1;
-		press(String(n), { ctrl: true });
+		press(String(n), { mod: true });
 		await sleep(30);
 		const plugin = n === app.docket.orderedPanels().length && document.querySelector('.docket-panel')?.textContent === 'hello';
 		remove();
-		press('1', { ctrl: true });
+		press('1', { mod: true });
 		press('Escape');
 		return (help && plugin) || `help=${help} plugin=${plugin}`;
 	});
@@ -2207,7 +2216,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		ed.dispatch({ selection: { anchor: 0 } });
 		ed.focus();
 		pressDocketKey();
-		press('1', { ctrl: true });
+		press('1', { mod: true });
 		await sleep(150);
 		const groups = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
 		const r = focusRow(rowsText().find((t) => t.startsWith('Mabo v Queensland')) ?? '');
@@ -2221,7 +2230,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('authorities: → lists every note citing it; "@" searches them', async () => {
 		await openEssay();
 		pressDocketKey();
-		press('1', { ctrl: true });
+		press('1', { mod: true });
 		await sleep(150);
 		focusRow(rowsText().find((t) => t.startsWith('Mabo v Queensland')) ?? '');
 		press('ArrowRight');
@@ -2246,7 +2255,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
 		ed.focus();
 		pressDocketKey();
-		press('2', { ctrl: true });
+		press('2', { mod: true });
 		await sleep(100);
 		const fields = rowsText().slice(0, 5).join('|');
 		focusRow('Facts');
@@ -2273,7 +2282,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		ed.focus();
 		const fill = async () => {
 			pressDocketKey();
-			press('4', { ctrl: true });
+			press('4', { mod: true });
 			await sleep(80);
 			focusRow('Case (reported)');
 			press('Enter');
@@ -2298,7 +2307,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('cite: reports, web pages and treaties are listed; a treaty goes in as a footnote, then Ibid with an article', async () => {
 		pressDocketKey();
-		press('4', { ctrl: true });
+		press('4', { mod: true });
 		await sleep(80);
 		const kinds = [...document.querySelectorAll('.docket-panel .docket-item')].map((r) => r.textContent ?? '');
 		const listed = ['Government report', 'Productivity Commission report', 'Law reform commission', 'Web page', 'Treaty'].every((k) => kinds.some((t) => t.includes(k)));
@@ -2311,7 +2320,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			ed.dispatch({ selection: { anchor: at() } });
 			ed.focus();
 			pressDocketKey();
-			press('4', { ctrl: true });
+			press('4', { mod: true });
 			await sleep(80);
 			focusRow('Treaty');
 			press('Enter');
@@ -2337,7 +2346,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const store = unitsStore(app);
 		await until(() => store.loaded, 3000);
 		pressDocketKey();
-		press('3', { ctrl: true });
+		press('3', { mod: true });
 		await sleep(120);
 		if (rowsText().includes('Folder')) problems.push('an unmarked folder is in Units');
 		const offer = rowsText().find((t) => t.startsWith('Mark my folders'));
@@ -2349,7 +2358,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const saved = await vault.adapter.read('.quire/units.json').catch(() => '');
 		if (!saved.includes('"Folder": "subject"')) problems.push(`units.json: ${saved}`);
 		// Homebase › Files: everything, attachments and other files too; a folder marked there joins Units.
-		press('5', { ctrl: true });
+		press('5', { mod: true });
 		await sleep(120);
 		const files = rowsText();
 		if (!files.includes('attachments') || !files.includes('Welcome') || !files.includes('Folder')) problems.push(`Files: ${files.slice(0, 12).join(' | ')}`);
@@ -2378,7 +2387,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('homebase files: N and F make a note or folder where you are; "+ New" rows at the top and in opened folders', async () => {
 		const problems: string[] = [];
 		pressDocketKey();
-		press('5', { ctrl: true });
+		press('5', { mod: true });
 		await sleep(150);
 		if (!rowsText().includes('New note') || !rowsText().includes('New folder')) problems.push('no "+ New" rows at the top');
 		const typeName = async (name: string) => {
@@ -2770,7 +2779,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		commands.executeCommandById('app:toggle-pin-note', { file: brief });
 		await sleep(50);
 		pressDocketKey();
-		press('3', { ctrl: true });
+		press('3', { mod: true });
 		await sleep(100);
 		const sections = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent);
 		const folder = focusRow('Folder');
@@ -2789,7 +2798,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('homebase: export asks first and redacts', async () => {
 		await openEssay();
 		pressDocketKey();
-		press('5', { ctrl: true });
+		press('5', { mod: true });
 		await sleep(80);
 		const lock = rowsText().includes('Set up locking…');
 		focusRow(rowsText().find((t) => t.startsWith('Export')) ?? '');
@@ -2811,7 +2820,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await workspace.duplicateLeaf(first, 'vertical');
 		await sleep(80);
 		pressDocketKey();
-		press('6', { ctrl: true });
+		press('6', { mod: true });
 		await sleep(80);
 		const panes = [...document.querySelectorAll('.docket-panel .docket-section-title')].map((e) => e.firstChild?.textContent).filter((t) => t?.startsWith('Pane')).length;
 		const rows = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-section[aria-label^="Pane"] .docket-item')];
@@ -2892,7 +2901,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		view.editor.setValue('Held in *Unsaved v Example* (2001) 210 CLR 1, 5.');
 		const saved = await vault.adapter.read('Unsaved cite.md');
 		pressDocketKey();
-		press('1', { ctrl: true });
+		press('1', { mod: true });
 		await sleep(120);
 		focusRow('Unsaved v Example');
 		press('ArrowRight');
@@ -2919,7 +2928,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(200);
 		typeInEditor('---\ntype: case-brief\n---\n# Example v Commonwealth\n\n## Facts\n\nA duty question.\n');
 		pressDocketKey();
-		press('2', { ctrl: true });
+		press('2', { mod: true });
 		await sleep(80);
 		if (!focusRow('Held')) steps.push('brief fields');
 		press('Enter');
@@ -2932,7 +2941,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(200);
 		const essayEd = typeInEditor('The duty was settled.');
 		pressDocketKey();
-		press('4', { ctrl: true });
+		press('4', { mod: true });
 		await sleep(80);
 		focusRow('Case (reported)');
 		press('Enter');
@@ -2943,7 +2952,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(100);
 		if (!/settled\.\[\^1\][\s\S]*\[\^1\]: \*Example v Commonwealth\* \(1999\) 200 CLR 10, 12\./.test(essayEd.state.doc.toString())) steps.push('footnote');
 		// 3. The brief beside the essay.
-		press('\\', { ctrl: true });
+		press('\\', { mod: true });
 		await sleep(150);
 		pressDocketKey();
 		await type('Journey brief');
@@ -2952,11 +2961,11 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const shown = workspace.rootTabs().map((t) => (t.activeLeaf?.view as MarkdownView | undefined)?.file?.basename).sort().join('|');
 		if (shown !== 'Journey brief|Journey essay') steps.push(`side by side (${shown})`);
 		// 4. Every note citing the case, from the essay's Authorities.
-		press('ArrowLeft', { ctrl: true, alt: true });
+		press('ArrowLeft', { mod: true, alt: true });
 		const ed = workspace.getActiveViewOfType(MarkdownView)!.editor.cm;
 		ed.dispatch({ selection: { anchor: 0 } });
 		pressDocketKey();
-		press('1', { ctrl: true });
+		press('1', { mod: true });
 		await sleep(120);
 		focusRow('Example v Commonwealth');
 		press('ArrowRight');
@@ -3007,7 +3016,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 	await check('notes: Ctrl+N asks for the name and the place first; no "Untitled"', async () => {
 		await vault.createFolder('Torts').catch(() => undefined);
 		focusEditorOrBody();
-		press('n', { ctrl: true });
+		press('n', { mod: true });
 		await sleep(80);
 		const modal = topModal();
 		const input = document.querySelector<HTMLInputElement>('.modal input[type="text"], .modal input:not([type])');
@@ -3028,7 +3037,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.create('Torts/Week 2.md', '');
 		await unitsStore(app).set('Torts', 'subject');
 		pressDocketKey();
-		press('3', { ctrl: true });
+		press('3', { mod: true });
 		await sleep(100);
 		const help = !!document.querySelector('.docket-panel .docket-help');
 		const rows = rowsText();
@@ -3044,7 +3053,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(200);
 		const topic = !!vault.getFolderByPath('Torts/Negligence');
 		pressDocketKey();
-		press('3', { ctrl: true });
+		press('3', { mod: true });
 		await sleep(100);
 		focusRow('Negligence')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true, cancelable: true }));
 		await sleep(80);
@@ -3052,7 +3061,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		topModal()?.close();
 		// An opened subject ends with "+ New topic" (a topic does not); Enter on it asks for the name and marks it.
 		pressDocketKey();
-		press('3', { ctrl: true });
+		press('3', { mod: true });
 		await sleep(100);
 		const rows2 = rowsText();
 		// The + rows show only what they make; the folder is in their indent (and their label, for screen readers).
@@ -3121,7 +3130,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			pressDocketKey();
 			await sleep(60);
 			if (!app.docketOpen) pressDocketKey();
-			press(String(app.docket.orderedPanels().indexOf(p) + 1), { ctrl: true });
+			press(String(app.docket.orderedPanels().indexOf(p) + 1), { mod: true });
 			await sleep(150);
 			const rows = [...list.querySelectorAll<HTMLElement>('[data-docket-item]')];
 			if (list.scrollTop !== 0) problems.push(`${p.title} opened scrolled to ${list.scrollTop}`);
@@ -3225,7 +3234,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		press('ArrowUp');
 		const fromResults = document.activeElement === input();
 		await type('');
-		press('3', { ctrl: true }); // Units always has rows
+		press('3', { mod: true }); // Units always has rows
 		await sleep(80);
 		press('ArrowDown');
 		const inRow = !!document.activeElement?.closest('.docket-panel');
@@ -3243,7 +3252,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.create('Old subject/Rename me.md', 'y').catch(() => undefined);
 		await unitsStore(app).set('Old subject', 'subject');
 		await unitsStore(app).set('Old subject/Old topic', 'topic');
-		press('3', { ctrl: true });
+		press('3', { mod: true });
 		await sleep(150);
 		const appeared = rowsText().includes('Old subject');
 		focusRow('Old subject');
@@ -3298,7 +3307,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 				press('Escape'); press('Escape');
 			}
 			pressDocketKey();
-			press('3', { ctrl: true });
+			press('3', { mod: true });
 			await sleep(80);
 			// Units lists a locked note by name only, with a lock and no actions.
 			const lockedRow = [...document.querySelectorAll<HTMLElement>('.docket-panel .docket-item')].find((r) => r.querySelector('.docket-option-title')?.textContent === 'AGLC4 example essay');
@@ -3447,18 +3456,18 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 
 	await check('tiling: Mod+\\ splits right, Mod+Shift+\\ splits down; arrows move between panes', async () => {
 		focusEditor();
-		press('\\', { ctrl: true });
+		press('\\', { mod: true });
 		await sleep(150);
 		const two = panes() === 2;
-		press('\\', { ctrl: true, shift: true });
+		press('\\', { mod: true, shift: true });
 		await sleep(150);
 		const three = panes() === 3;
 		const bottomRight = workspace.activeLeaf!;
-		press('ArrowUp', { ctrl: true, alt: true });
+		press('ArrowUp', { mod: true, alt: true });
 		const up = workspace.activeLeaf !== bottomRight;
-		press('ArrowLeft', { ctrl: true, alt: true });
+		press('ArrowLeft', { mod: true, alt: true });
 		const left = workspace.activeLeaf;
-		press('ArrowRight', { ctrl: true, alt: true });
+		press('ArrowRight', { mod: true, alt: true });
 		const right = workspace.activeLeaf !== left;
 		return (two && three && up && right) || `two=${two} three=${three} up=${up} right=${right} panes=${panes()}`;
 	});
@@ -3467,16 +3476,16 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 		const leaf = workspace.activeLeaf!;
 		const share = () => { const { tree, panes: ids } = workspace.layoutTree(); const id = [...ids].find(([, t]) => t === leaf.parent)![0]; return paneRects(tree).get(id)!.w; };
 		const before = share();
-		press(Platform.isMacOS ? 'ArrowRight' : ']', Platform.isMacOS ? { ctrl: true } : { ctrl: true, alt: true });
+		press(Platform.isMacOS ? 'ArrowRight' : ']', Platform.isMacOS ? { mod: true, ctrl: true } : { mod: true, alt: true });
 		const wider = share() > before + 0.01;
 		const saved = JSON.stringify(workspace.getLayout()).includes(String(leaf.parent!.parent!.children[0]!.weight).slice(0, 4));
-		press('=', { ctrl: true, shift: true });
+		press('=', { mod: true, shift: true });
 		const equal = workspace.rootSplit.children.every((c) => c.weight === 1);
-		press('Enter', { ctrl: true, shift: true });
+		press('Enter', { mod: true, shift: true });
 		await sleep(50);
 		const hidden = workspace.rootTabs().filter((t) => t.containerEl.offsetParent === null).length;
 		const zoomed = workspace.zoomed && hidden === panes() - 1;
-		press('Enter', { ctrl: true, shift: true });
+		press('Enter', { mod: true, shift: true });
 		await sleep(50);
 		const back = !workspace.zoomed && workspace.rootTabs().every((t) => t.containerEl.offsetParent !== null);
 		return (wider && saved && equal && zoomed && back) || `wider=${wider} saved=${saved} equal=${equal} zoomed=${zoomed} back=${back}`;
@@ -3487,14 +3496,14 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 		await leaf.openFile(vault.getFileByPath('Welcome.md')!);
 		workspace.setActiveLeaf(leaf, { focus: true });
 		const from = leaf.parent;
-		press('ArrowLeft', { ctrl: true, alt: true, shift: true });
+		press('ArrowLeft', { mod: true, alt: true, shift: true });
 		await sleep(50);
 		const moved = leaf.parent !== from && workspace.activeLeaf === leaf;
 		const before = panes();
-		press('w', { ctrl: true });
+		press('w', { mod: true });
 		await sleep(150);
 		const closed = !workspace.getLeavesOfType('markdown').some((l) => l === leaf);
-		press('t', { ctrl: true, shift: true });
+		press('t', { mod: true, shift: true });
 		await sleep(200);
 		const reopened = workspace.getActiveFile()?.path === 'Welcome.md';
 		return (moved && closed && reopened && panes() <= before) || `moved=${moved} closed=${closed} reopened=${reopened}`;
@@ -3753,7 +3762,7 @@ async function lockingChecks(app: App, check: CheckFn): Promise<void> {
 		const note = vault.getFileByPath('Client matter.md')!;
 		const v = workspace.getActiveViewOfType(MarkdownView);
 		v?.editor.cm.focus();
-		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ctrlKey: true, bubbles: true, cancelable: true }));
+		window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', ...modKeys(), bubbles: true, cancelable: true }));
 		await until(() => !app.lock.isUnlocked, 5000);
 		await sleep(100);
 		const closed = !workspace.getLeavesOfType('markdown').some((l) => (l.view as MarkdownView).file === note);
