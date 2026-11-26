@@ -29,7 +29,8 @@
 - **For plugins: `Platform` knows iPhone and iPad.** Its device flags (`isMobile`, `isPhone`, `isTablet`,
   `isIosApp`…) now come from the host; on iOS `isMacOS` stays true, so Mod is ⌘. The page has `body.is-compact`
   when the window is narrower than 700 pixels (an iPhone, an iPad in Slide Over, or a narrow desktop window;
-  `layoutMode()`) and `body.is-touch` on a touch screen. Nothing looks different yet.
+  `layoutMode()`) and `body.is-touch` on a touch screen. Nothing looks different yet. A plugin whose manifest says
+  `isDesktopOnly: true` is not loaded on iPhone and iPad; its settings say why.
 
 ## v0.20.0
 

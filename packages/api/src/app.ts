@@ -240,6 +240,11 @@ class ConfirmCommandModal extends Modal {
 // -------------------------------------------------------------------------------------------------
 // Plugins
 
+/** Why a plugin cannot run here, or null if it can: one marked isDesktopOnly is not loaded on iPhone or iPad. */
+export function cannotRunHere(manifest: { isDesktopOnly?: boolean }, platform: { isMobileApp: boolean } = Platform): string | null {
+	return manifest.isDesktopOnly && platform.isMobileApp ? 'Only for the desktop app' : null;
+}
+
 export class PluginManager {
 	manifests: Record<string, PluginManifest> = {};
 	plugins: Record<string, Plugin> = {};
@@ -302,6 +307,9 @@ export class PluginManager {
 		const manifest = this.manifests[id];
 		if (!manifest || this.plugins[id]) return !!this.plugins[id];
 		delete this.errors[id];
+		// Not here: said in its settings, without a notice each time the app starts.
+		const notHere = cannotRunHere(manifest);
+		if (notHere) { this.errors[id] = notHere; return false; }
 		try {
 			const url = `quire://app/plugins/${encodeURIComponent(id)}/main.js`;
 			const mod = (await import(/* webpackIgnore: true */ url)) as { default?: new (app: App, m: PluginManifest) => Plugin };

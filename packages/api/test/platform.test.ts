@@ -30,3 +30,13 @@ describe('layout mode', () => {
 		expect(layoutMode(1194)).toBe('regular'); // iPad landscape
 	});
 });
+
+describe('desktop-only plugins', () => {
+	it('are not loaded on iPhone or iPad, and say why', async () => {
+		const { cannotRunHere } = await import('../src/app');
+		expect(cannotRunHere({ isDesktopOnly: true }, { isMobileApp: true })).toBe('Only for the desktop app');
+		expect(cannotRunHere({ isDesktopOnly: true }, { isMobileApp: false })).toBeNull();
+		expect(cannotRunHere({ isDesktopOnly: false }, { isMobileApp: true })).toBeNull();
+		expect(cannotRunHere({}, { isMobileApp: true })).toBeNull();
+	});
+});
