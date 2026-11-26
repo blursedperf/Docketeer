@@ -1,4 +1,4 @@
-import { type App, type Editor, MarkdownView, type Menu, Modal, Notice, Platform, Plugin, Setting, SuggestModal, type TAbstractFile, TFile, type WorkspaceLeaf, normalizePath } from '@quire/api';
+import { type App, type Editor, MarkdownView, exportedNotice, type Menu, Modal, Notice, Platform, Plugin, Setting, SuggestModal, type TAbstractFile, TFile, type WorkspaceLeaf, normalizePath } from '@quire/api';
 import type { EditorView } from '@codemirror/view';
 import { type DocumentAnalysis, analyseDocument, applyFixes } from './aglc/document';
 import { suggestNext } from './aglc/citation';
@@ -1071,7 +1071,7 @@ export default class Aglc4Plugin extends Plugin {
 			if (kept) notes.push('The file it replaced is kept in the note\'s version history.');
 			if (errors > 0) notes.push(`${errors} AGLC4 ${errors === 1 ? 'error was' : 'errors were'} exported as written.`);
 			notes.push(...warnings);
-			new Notice(notes.join('\n'), 8000);
+			exportedNotice(this.app, path, notes.join('\n'), 8000);
 		} catch (e) {
 			console.error('AGLC4 export failed', e);
 			new Notice(`Export failed: ${e instanceof Error ? e.message : String(e)}`);

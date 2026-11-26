@@ -375,6 +375,41 @@ final class ChannelsTests: XCTestCase {
 		c.answerLater("app:chooseVault", [true, "generic", "{not json"]) { result = $0 }
 		XCTAssertThrowsError(try result?.get())
 	}
+
+	func testSharingHandsOverACopyOfAHomebaseFileAndRefusesTheRest() throws {
+		let folder = root.appendingPathComponent("Picked/Share")
+		try FileManager.default.createDirectory(at: folder.appendingPathComponent(".quire"), withIntermediateDirectories: true)
+		try Data("# Essay".utf8).write(to: folder.appendingPathComponent("Essay.md"))
+		try Data("{}".utf8).write(to: folder.appendingPathComponent(".quire/panels.json"))
+		try FileManager.default.createDirectory(at: folder.appendingPathComponent("Torts"), withIntermediateDirectories: true)
+		let c = channels()
+		c.chooseFolder = { done in done(folder) }
+		var result: Result<Any, Error>?
+		c.answerLater("app:chooseVault", [false, "legal", NSNull()]) { result = $0 }
+		var shared: (url: URL, text: String)?
+		c.shareFile = { url, closed in
+			shared = (url, (try? String(contentsOf: url, encoding: .utf8)) ?? "")
+			closed()
+		}
+		c.answerLater("app:shareFile", ["Essay.md"]) { result = $0 }
+		XCTAssertNoThrow(try result?.get())
+		XCTAssertEqual(shared?.url.lastPathComponent, "Essay.md")
+		XCTAssertEqual(shared?.text, "# Essay")
+		XCTAssertFalse(shared!.url.path.hasPrefix(folder.path), "the homebase file itself was handed over")
+		XCTAssertFalse(FileManager.default.fileExists(atPath: shared!.url.path), "the copy stays after the sheet closed")
+		// Not Docketeer's own files, not a folder, nothing outside the homebase.
+		for path in [".quire/panels.json", "Torts", "../../escape.md", "Missing.md"] {
+			result = nil
+			c.answerLater("app:shareFile", [path]) { result = $0 }
+			XCTAssertThrowsError(try result?.get(), path)
+		}
+		// Printing checks what it is given before anything is shown.
+		c.printPDF = { _, _, _, done in done(.success(Data("%PDF-".utf8))) }
+		c.answerLater("app:printToPdf", [""]) { result = $0 }
+		XCTAssertThrowsError(try result?.get())
+		c.answerLater("app:printToPdf", ["<p>Hi</p>", ["pageSize": "A4"]]) { result = $0 }
+		XCTAssertEqual(try result?.get() as? String, Data("%PDF-".utf8).base64EncodedString())
+	}
 }
 
 /** The homebases this device knows: bookmarks, the recent list, the example, where each is in words. */

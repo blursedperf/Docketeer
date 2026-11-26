@@ -2,7 +2,7 @@
  * Homebase (Mod+5): the homebase itself: what is in it, its lock status (locking comes in its own phase),
  * exporting a note with a confirmation step and redaction, and the homebase-wide tools.
  */
-import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Platform, Setting, TFile, TFolder, formatHotkey, isMedia } from '@quire/api';
+import { type App, type DocketPanel, MarkdownRenderer, Component, Modal, Notice, Platform, Setting, TFile, TFolder, formatHotkey, isMedia, exportedNotice } from '@quire/api';
 import type { ActionItem, Docket } from '../docket';
 import { archiveRoot, noteActions, pluginFileActions } from '../actions';
 import { NameModal, NewNoteModal, notePlaces, placeName } from '../../dialogs';
@@ -73,7 +73,7 @@ class ExportModal extends Modal {
 		if (existing) await this.app.vault.modify(existing, data);
 		else await this.app.vault.create(this.target, data);
 		this.close();
-		new Notice(`Exported to ${this.target}.`);
+		exportedNotice(this.app, this.target, `Exported to ${this.target}.`);
 	}
 }
 

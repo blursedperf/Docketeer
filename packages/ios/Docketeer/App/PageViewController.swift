@@ -93,13 +93,19 @@ final class PageViewController: UIViewController {
 		channels.reload = { [weak self] in self?.webView?.reload() }
 		// Only the Files app, at a folder on this device: never a web address.
 		channels.showInFiles = { url in if url.scheme == "shareddocuments" { UIApplication.shared.open(url) } }
+		let files = AppFiles(root: root, vault: { homebases.fs })
+		// Export to PDF: a page of its own with no scripts, under the same offline rules (Printer.swift).
+		channels.printPDF = { html, size, landscape, done in
+			Printer(rules: rules, scheme: QuireSchemeHandler(files: files), pageSize: size, landscape: landscape).print(html, done)
+		}
+		channels.shareFile = { [weak self] url, closed in self?.share(url, closed) ?? closed() }
 		let bridge = Bridge(channels: channels)
 		self.bridge = bridge
 
 		let config = WKWebViewConfiguration()
 		Lockdown.apply(to: config)
 		config.allowsInlineMediaPlayback = true
-		config.setURLSchemeHandler(QuireSchemeHandler(files: AppFiles(root: root, vault: { homebases.fs })), forURLScheme: "quire")
+		config.setURLSchemeHandler(QuireSchemeHandler(files: files), forURLScheme: "quire")
 		config.userContentController.add(rules)
 		config.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: Bridge.name)
 		#if DEBUG
@@ -150,6 +156,19 @@ final class PageViewController: UIViewController {
 	}
 
 	/** The system folder picker. Only the folder picked becomes reachable (through its security-scoped URL). */
+	/** The share sheet for a file (a copy: Channels.shareLater); `closed` once it is dismissed, shared or not. */
+	private func share(_ url: URL, _ closed: @escaping () -> Void) {
+		let sheet = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+		sheet.completionWithItemsHandler = { _, _, _, _ in closed() }
+		// On an iPad it is a popover: from the foot of the screen, where the notice offering it is.
+		if let pop = sheet.popoverPresentationController {
+			pop.sourceView = view
+			pop.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY - 60, width: 1, height: 1)
+			pop.permittedArrowDirections = [.down]
+		}
+		(presentedViewController ?? self).present(sheet, animated: true)
+	}
+
 	private func chooseFolder(_ done: @escaping (URL?) -> Void) {
 		picked?(nil)
 		picked = done

@@ -149,6 +149,9 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 			chooseVault: (create, layout) => call('app:chooseVault', !!create, layout ?? 'legal', create && layout === 'generic' ? JSON.stringify(genericPanels(), null, '\t') : null),
 			openVault: (path) => call('app:openVault', path),
 			showItemInFolder: (path) => call('app:showItemInFolder', path),
+			shareFile: (path) => call('app:shareFile', path),
+			// A page with no scripts, printed by WebKit (Printer.swift); the PDF comes back as base64.
+			printToPdf: async (html, options) => toBuffer(fromBase64(await call<string>('app:printToPdf', html, options ?? {}))),
 			onBeforeQuit: (cb) => { quitHandler = cb; },
 			onBackground: (cb) => { backgroundHandler = cb; },
 			dictionary: (lang) => call('spell:dictionary', lang),

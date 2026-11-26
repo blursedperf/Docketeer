@@ -5,7 +5,7 @@
  */
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
-import { type App, type HostBridge, type HostConflict, type HostFs, MarkdownView, Platform, defaultDocketKey, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
+import { type App, type HostBridge, type HostConflict, type HostFs, MarkdownView, Menu, Platform, canShare, defaultDocketKey, formatHotkey, paneRects, type TFile, type WorkspaceLeaf, saveAttachment, topModal } from '@quire/api';
 import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { conflictsStore } from './conflicts';
@@ -1094,7 +1094,13 @@ export async function runSmoke(app: App): Promise<void> {
 	await check('Export to PDF: a note (with its picture) printed to a PDF beside it, from the menus; AGLC4 with its footnotes', async () => {
 		if (!app.host.app.printToPdf) return { skip: 'the host does not print to PDF' };
 		const problems: string[] = [];
-		const png = await vault.createBinary('PDF smoke/dot.png', new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 0, 0, 3, 1, 1, 0, 201, 254, 146, 239, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]).buffer);
+		// Two colours, 8×8: WebKit draws a one-colour picture as a filled box, not a picture.
+		const canvas = document.createElement('canvas');
+		canvas.width = canvas.height = 8;
+		const g = canvas.getContext('2d')!;
+		g.fillStyle = '#a00'; g.fillRect(0, 0, 8, 8); g.fillStyle = '#00a'; g.fillRect(0, 0, 4, 4);
+		const pngBytes = Uint8Array.from(atob(canvas.toDataURL('image/png').split(',')[1]!), (c) => c.charCodeAt(0));
+		const png = await vault.createBinary('PDF smoke/dot.png', pngBytes.buffer);
 		const note = await vault.create('PDF smoke/PDF smoke.md', '---\ncourse: Torts\n---\n\n# Duty of care\n\nSome **bold** text and a [[Welcome]] link.\n\n![[dot.png]]\n\n- [x] done\n- [ ] to do\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n');
 		const leaf = workspace.getLeaf(false);
 		await leaf.openFile(note);
@@ -1119,6 +1125,13 @@ export async function runSmoke(app: App): Promise<void> {
 			if (head !== '%PDF-' || bytes.length < 2000) problems.push(`not a PDF: ${head} ${bytes.length} bytes`);
 			const latin = new TextDecoder('latin1').decode(bytes);
 			if (!/\/Image|\/XObject/.test(latin)) problems.push('the picture is not in the PDF');
+			// Where the system shares files (iOS), the notice offers Share…; on desktop it is a plain notice.
+			const share = [...document.querySelectorAll<HTMLElement>('.notice .notice-actions button')].some((b) => b.textContent === 'Share…');
+			if (share !== canShare(app)) problems.push(canShare(app) ? 'no Share… after the export' : 'Share… offered where nothing can share');
+			const menu = new Menu();
+			workspace.trigger('file-menu', menu, vault.getFileByPath(pdfPath)!, 'smoke', null);
+			const offered = (menu as unknown as { _items: unknown[] })._items.some((i) => typeof i === 'object' && (i as { dom?: HTMLElement }).dom?.textContent === 'Share…');
+			if (offered !== canShare(app)) problems.push(`Share… ${offered ? 'offered' : 'missing'} in the file menu`);
 		}
 		// Again: it asks whether to replace it; "Save as a new file" writes "PDF smoke 2.pdf".
 		app.commands.executeCommandById('app:export-pdf');

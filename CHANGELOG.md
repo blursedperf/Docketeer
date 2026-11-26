@@ -19,6 +19,12 @@
 - **iPhone and iPad: touch and hold for a menu**, the one a right-click opens on a computer: on a tab, a view's
   header, a Docket result or panel row, a PDF, and in a note on a link, a picture or a misspelt word. Elsewhere in
   a note, holding still moves the cursor and selects words as usual. Menu rows are a finger tall on a touch screen.
+- **iPhone and iPad: Export to PDF**, from a note's menus or the Docket, as on a computer: A4 pages, numbered,
+  with the note's pictures, and AGLC4's footnoted PDF too.
+- **iPhone and iPad: Share… after an export**: the notice that says a Word, HTML, PDF or Markdown export is done
+  has a Share… button, which opens the system's share sheet (Mail, Messages, AirDrop, Save to Files). Every file's
+  menu has Share… too. For plugins: `exportedNotice(app, path, message)` shows an export's notice with the
+  button where the system can share; `canShare(app)` and `shareFile(app, path)`; `host.app.shareFile?`.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

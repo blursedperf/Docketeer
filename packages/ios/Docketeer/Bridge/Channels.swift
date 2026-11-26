@@ -32,6 +32,10 @@ final class Channels {
 	var reload: (() -> Void)?
 	/** Opens the Files app at a folder (main thread). */
 	var showInFiles: ((URL) -> Void)?
+	/** Prints a page (HTML) to PDF: page size, landscape; answers with the PDF (main thread, Printer.swift). */
+	var printPDF: ((String, String?, Bool, @escaping (Result<Data, Error>) -> Void) -> Void)?
+	/** Opens the share sheet for a file; calls back when it closes (main thread). */
+	var shareFile: ((URL, @escaping () -> Void) -> Void)?
 	#if DEBUG
 	/** A smoke run: host:info says so, and smoke:* channels answer. */
 	var smoke: SmokeRun?
@@ -40,11 +44,13 @@ final class Channels {
 	#endif
 
 	/** Channels answered later, on the main thread (they show something first). */
-	static let later: Set<String> = ["app:chooseVault"]
+	static let later: Set<String> = ["app:chooseVault", "app:printToPdf", "app:shareFile"]
 	/** Channels that change which homebase is open, or touch UIKit: answered on the main thread. */
 	static let mainThread: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready", "app:recent", "app:openVault", "app:forgetVault", "app:openExample", "app:showItemInFolder"]
 	/** The most a new homebase's panels file may hold. */
 	static let maxPanelsJSON = 1_000_000
+	/** The most a page printed to PDF may hold, as desktop. */
+	static let maxPrintHTML = 50_000_000
 
 	static let configKey = "config"
 	static let dictionaryLanguages: Set<String> = ["en-AU", "en-GB", "en-US"]
@@ -144,7 +150,51 @@ final class Channels {
 	 * if it has none), and the page reloads. Answers false if the picker was cancelled.
 	 */
 	func answerLater(_ channel: String, _ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
-		guard channel == "app:chooseVault" else { reply(.failure(BridgeError("Unknown channel: \(channel)"))); return }
+		switch channel {
+		case "app:printToPdf": printLater(args, reply)
+		case "app:shareFile": shareLater(args, reply)
+		case "app:chooseVault": chooseLater(args, reply)
+		default: reply(.failure(BridgeError("Unknown channel: \(channel)")))
+		}
+	}
+
+	/** app:printToPdf(html, { pageSize, landscape }): the PDF, as base64 (as pdf:asset). */
+	private func printLater(_ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
+		guard let html = args.first as? String, !html.isEmpty, html.utf8.count <= Self.maxPrintHTML else { reply(.failure(BridgeError("Nothing to print"))); return }
+		let options = args.count > 1 ? args[1] as? [String: Any] : nil
+		let size = options?["pageSize"] as? String
+		guard let printPDF else { reply(.failure(BridgeError("Printing is not available"))); return }
+		printPDF(html, size.flatMap { Printer.sizes[$0] != nil ? $0 : nil }, options?["landscape"] as? Bool ?? false) { result in
+			reply(result.map { $0.base64EncodedString() })
+		}
+	}
+
+	/**
+	 * app:shareFile(path): the share sheet, with a copy of the homebase file (read under coordination), so the app
+	 * it goes to needs no access to the homebase. The copy is removed when the sheet closes.
+	 */
+	private func shareLater(_ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
+		guard let fs = homebases.fs else { reply(.failure(BridgeError("No homebase is open"))); return }
+		guard let shareFile else { reply(.failure(BridgeError("Sharing is not available"))); return }
+		do {
+			let url = try fs.resolve(args.first)
+			guard let path = args.first as? String, !path.split(separator: "/").contains(where: { $0.hasPrefix(".") }) else { throw BridgeError("That file cannot be shared") }
+			guard !HomebaseFS.isFolder(url.path) else { throw BridgeError("A folder cannot be shared") }
+			let data = try fs.readBinary(path)
+			let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Share-\(UUID().uuidString)", isDirectory: true)
+			try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+			let copy = folder.appendingPathComponent(url.lastPathComponent)
+			try data.write(to: copy, options: .atomic)
+			shareFile(copy) {
+				try? FileManager.default.removeItem(at: folder)
+				reply(.success(NSNull()))
+			}
+		} catch {
+			reply(.failure(error))
+		}
+	}
+
+	private func chooseLater(_ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
 		let create = args.first as? Bool ?? false
 		let panels = args.count > 2 ? args[2] as? String : nil
 		if let panels, panels.utf8.count > Self.maxPanelsJSON || (try? JSONSerialization.jsonObject(with: Data(panels.utf8))) == nil {

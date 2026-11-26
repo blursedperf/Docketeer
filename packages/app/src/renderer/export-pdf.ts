@@ -5,7 +5,7 @@
  *
  * Plugins print their own page with `exportHtmlToPdf` (AGLC4 Citations does, for its footnotes).
  */
-import { type App, Component, MarkdownRenderer, type Menu, Modal, Notice, Setting, TAbstractFile, TFile } from '@quire/api';
+import { type App, Component, MarkdownRenderer, type Menu, Modal, Notice, Setting, TAbstractFile, TFile, exportedNotice } from '@quire/api';
 
 /** The page's look: A4 by default, black on white, the text font chosen in Settings if it is on this computer. */
 function printCss(app: App): string {
@@ -115,7 +115,7 @@ function freePath(app: App, path: string): string {
  */
 export async function exportHtmlToPdf(app: App, html: string, path: string): Promise<TFile | null> {
 	const print = app.host.app.printToPdf;
-	if (!print) { new Notice('Exporting to PDF needs the desktop app.'); return null; }
+	if (!print) { new Notice('This version of Docketeer cannot export to PDF.'); return null; }
 	const existing = app.vault.getAbstractFileByPath(path);
 	if (existing) {
 		const replace = await new Promise<boolean | null>((resolve) => {
@@ -161,7 +161,7 @@ export async function exportNoteToPdf(app: App, file: TFile): Promise<TFile | nu
 	const html = await noteToPrintHtml(app, file, editor?.getValue());
 	const folder = file.parent && !file.parent.isRoot() ? `${file.parent.path}/` : '';
 	const out = await exportHtmlToPdf(app, html, `${folder}${file.basename}.pdf`);
-	if (out) new Notice(`Exported ${out.path}.`);
+	if (out) exportedNotice(app, out.path, `Exported ${out.path}.`);
 	return out;
 }
 

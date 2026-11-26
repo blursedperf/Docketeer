@@ -7,7 +7,7 @@ import type { EditorView } from '@codemirror/view';
 import { Vim } from '@replit/codemirror-vim';
 import {
 	type App, type AppConfig, type Command, type CommandContext, fontStack, TAbstractFile, WorkspaceLeaf, FuzzySuggestModal, type FuzzyMatch, MarkdownView, Notice, type Palette, Setting, SettingTab,
-	SuggestModal, TFile, TFolder, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty, HoverPreview,
+	SuggestModal, TFile, TFolder, canShare, shareFile, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty, HoverPreview,
 } from '@quire/api';
 import { registerDocket } from './docket';
 import { registerCompact } from './compact';
@@ -708,6 +708,16 @@ export function registerCore(app: App): { reveal(): void } {
 		id: 'app:show-in-folder', name: 'Show in system file manager', icon: 'folder-open', section: 'Notes',
 		when: (ctx) => !!fileArg(ctx),
 		run: (ctx) => { const f = fileArg(ctx)!; void app.host.app.showItemInFolder(f instanceof TFolder && f.isRoot() ? '' : f.path); },
+	});
+	add({
+		id: 'app:share-file', name: 'Share…', icon: 'share', section: 'Notes',
+		when: (ctx) => canShare(app) && ctx.args.file instanceof TFile,
+		run: (ctx) => { void shareFile(app, (ctx.args.file as TFile).path); },
+	});
+	// Share… in every file menu (tabs, the Docket's rows, a view's More options), where the system can share.
+	workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
+		if (!canShare(app) || !(file instanceof TFile)) return;
+		menu.addItem((i) => i.setTitle('Share…').setIcon('share').onClick(() => { void shareFile(app, file.path); }));
 	});
 	const editorCmd = (id: string, name: string, key: string, before: string, after = before) => add({
 		id, name, section: 'Edit', hotkeys: [{ modifiers: ['Mod'], key }], editorCallback: () => wrapSelection(app, before, after),

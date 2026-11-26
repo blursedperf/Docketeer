@@ -47,6 +47,7 @@ export { PRESETS, neighbour, paneRects, resizePane, equalise, zoomChain, type La
 export { CITATION_STYLES, AGLC4, planCitation, footnoteChanges, noteFootnotes, type CitationStyle, type FieldDef, type Source, type SourceKind, type SourceKindDef } from './cite';
 export { Usage, frecency, type UsageEntry } from './usage';
 export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type DocketPanelUI, type DocketAction, type DocketRowOptions, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
+export { canShare, shareFile, exportedNotice } from './share';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
 export { getHost, isConflict, type FormFactor, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostConflict, type HostPluginInfo, type PluginManifestData } from './host';

@@ -356,10 +356,14 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
       `workspace.ts`, `embeds-editor.ts`, `docket/docket.ts`, `docket/panels/common.ts` and `pdf/view.ts`.
       Done in one place (`long-press.ts`): a still hold sends `contextmenu`; in note text only on a link, an
       embed or a misspelt word, so the system's cursor and selection hold stays.
-- [ ] Export: AGLC4 Word, HTML and Markdown exports still write into the homebase. Add an optional
+- [x] Export: AGLC4 Word, HTML and Markdown exports still write into the homebase. Add an optional
       `app.shareFile?(path)` to `HostBridge` that opens the share sheet on iOS, and offer "Share…" after an
       export. Desktop leaves it out and keeps its current behaviour. Export to PDF on iOS: `printToPdf` with
       WebKit's own PDF output (`WKWebView.createPDF`), a page that runs no scripts, as desktop.
+      Done: `app:shareFile` hands the share sheet a temporary copy (no dot-folders, no folders), and Share… is in
+      the notice after any export and in every file menu. `app:printToPdf` is `Printer.swift`: a web view with
+      scripts off, the offline rules and its own scheme handler, paginated by `UIPrintPageRenderer` (the print
+      formatter keeps CSS page breaks, which `createPDF`'s one tall page would not), page numbers at the foot.
 - [ ] PDF viewer: pdf.js loads its engine, CMaps, standard fonts and wasm from the bundle, and opens a
       PDF from the homebase.
 - [ ] Hide these in compact mode: tiling commands, the hotkey editor, vim mode, custom-panel editing and AGLC4

@@ -124,6 +124,8 @@ export interface HostBridge {
 		chooseVault(create?: boolean, layout?: 'legal' | 'generic'): Promise<boolean>;
 		openVault(path: string): Promise<boolean>;
 		showItemInFolder(path: string): Promise<void>;
+		/** Offer a homebase file to other apps: the share sheet (iPhone, iPad). Desktop leaves it out. */
+		shareFile?(path: string): Promise<void>;
 		/** A whole HTML page printed to PDF (pictures and fonts from quire:// only; no scripts run). */
 		printToPdf?(html: string, options?: { landscape?: boolean; pageSize?: string }): Promise<ArrayBuffer>;
 		/** Smoke-test mode: report results and exit. */
