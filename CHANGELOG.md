@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.19.0
 
 - **A calculator in the / menu**: type arithmetic after the slash (`/12*3.5+4`, `/(1200-300)/3`, `/15% of 80`,
   `/2^10`, `/sqrt(2)`) and the menu offers the answer first (`= 46`, which inserts 46), then the working with its
