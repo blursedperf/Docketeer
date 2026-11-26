@@ -326,8 +326,8 @@ that editing feels right, or decides what changes. Stop here and report.
 - [x] Split `smoke.ts` into renderer checks and host checks. Add an iOS host-check set, and run it in the
       simulator from `xcodebuild test`. The run must report blocked requests = 0 and console errors = 0.
 
-**Exit check:** XCTests and the simulator smoke run pass. The user edits a note on the laptop and on the iPad
-in both directions, through iCloud Drive (the owner does not use Syncthing, §6), and forces a conflict once. Nothing is lost.
+**Exit check:** XCTests and the simulator smoke run pass. The user edits a note on the laptop and on the iPhone
+(their second device, decisions.md §8) in both directions, through iCloud Drive (the owner does not use Syncthing, §6), and forces a conflict once. Nothing is lost.
 Stop and report.
 
 ### Phase 2: iPhone, with full editing (3 to 4 weeks)
