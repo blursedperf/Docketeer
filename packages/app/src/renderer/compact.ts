@@ -2,7 +2,8 @@
  * The compact layout (body.is-compact: a narrow window, such as an iPhone; docs/mobile/PLAN.md, Phase 2): one pane
  * at a time, its tabs behind an "Open tabs" button in the view header instead of a tab bar, no tiling, and a
  * swipe in from the left edge to go back. Panes already open stay open, out of sight: widening the window shows
- * them again.
+ * them again. The Docket is a sheet that rises from a button at the bottom, within thumb's reach and away from
+ * the iPhone's Dynamic Island (decisions.md §9), and stays above the keyboard.
  */
 import { type App, ItemView, Modal, type WorkspaceLeaf, setIcon } from '@quire/api';
 
@@ -75,6 +76,62 @@ export function registerCompact(app: App): void {
 		}
 	}, { passive: true });
 	root.addEventListener('touchend', () => { start = null; }, { passive: true });
+
+	dockAtTheBottom(app);
+}
+
+/** How far a swipe down on the Docket's top closes it (CSS pixels). */
+export const SHEET_SWIPE = 70;
+
+/**
+ * The Docket on a narrow window: a full-width button at the bottom opens it, it rises as a sheet (styles in
+ * app.css), sits above the keyboard, and a swipe down on its grab bar or search row closes it.
+ */
+function dockAtTheBottom(app: App): void {
+	const container = document.querySelector<HTMLElement>('.app-container');
+	if (!container) return;
+	const button = container.createEl('button', { cls: 'compact-docket-button', attr: { type: 'button', 'aria-label': 'Open the Docket: notes, search, commands and panels' } });
+	setIcon(button.createSpan({ cls: 'compact-docket-icon' }), 'search');
+	button.createSpan({ text: 'Docket' });
+	// The tap that opens it may focus its search field, which brings up the keyboard.
+	button.addEventListener('click', () => app.commands.executeCommandById('app:docket'));
+
+	// The keyboard covers the page rather than resizing it (WebKit): the sheet stands on it.
+	const vv = window.visualViewport;
+	const keyboard = () => {
+		const inset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+		document.documentElement.style.setProperty('--keyboard-inset', `${Math.round(inset)}px`);
+		document.documentElement.style.setProperty('--visible-height', `${Math.round(vv?.height ?? window.innerHeight)}px`);
+	};
+	keyboard();
+	vv?.addEventListener('resize', keyboard);
+	vv?.addEventListener('scroll', keyboard);
+
+	// A grab bar on the Docket, whenever one is built (it is built after this, and again in tests).
+	const grab = () => {
+		for (const d of Array.from(container.querySelectorAll<HTMLElement>('.docket'))) {
+			if (!d.querySelector(':scope > .compact-docket-grab')) d.prepend(createDiv({ cls: 'compact-docket-grab', attr: { 'aria-hidden': 'true' } }));
+		}
+	};
+	grab();
+	new MutationObserver(grab).observe(container, { childList: true });
+
+	// A swipe down on the grab bar or the search row closes it.
+	let from: number | null = null;
+	document.addEventListener('touchstart', (e) => {
+		const t = e.touches[0];
+		const onTop = e.target instanceof Element && !!e.target.closest('.docket .compact-docket-grab, .docket .docket-head');
+		from = isCompact() && onTop && t ? t.clientY : null;
+	}, { passive: true });
+	document.addEventListener('touchmove', (e) => {
+		const t = e.touches[0];
+		if (from === null || !t) return;
+		if (t.clientY - from >= SHEET_SWIPE) {
+			from = null;
+			(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
+		}
+	}, { passive: true });
+	document.addEventListener('touchend', () => { from = null; }, { passive: true });
 }
 
 /** Every open tab, in every pane: go to one, close one, or open a new one. */

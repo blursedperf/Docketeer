@@ -1635,6 +1635,59 @@ export async function runSmoke(app: App): Promise<void> {
 		return problems.length === 0 || problems.join('; ');
 	});
 
+	await check('compact layout: the Docket opens from a button at the bottom, as a sheet; a swipe down closes it', async () => {
+		const problems: string[] = [];
+		const real = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+		const width = (w: number) => { Object.defineProperty(window, 'innerWidth', { value: w, configurable: true }); window.dispatchEvent(new Event('resize')); };
+		const ui = (app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI;
+		const docketEl = document.querySelector<HTMLElement>('.docket')!;
+		const isOpen = () => !docketEl.hidden;
+		try {
+			ui?.close(true);
+			width(393);
+			await sleep(150);
+			const handle = document.querySelector<HTMLElement>('.docket-handle');
+			if (handle && handle.offsetParent !== null) problems.push('the top Docket handle shows');
+			const button = document.querySelector<HTMLElement>('.compact-docket-button');
+			const b = button?.getBoundingClientRect();
+			if (!button || button.offsetParent === null || !b) problems.push('no Docket button');
+			else {
+				if (b.height < 44) problems.push(`the Docket button is ${Math.round(b.height)}px tall`);
+				if (b.bottom < window.innerHeight - 2) problems.push(`the Docket button is not at the bottom (${Math.round(b.bottom)} of ${window.innerHeight})`);
+			}
+			button?.click();
+			await sleep(250);
+			if (!isOpen()) problems.push('the button did not open the Docket');
+			const d = docketEl.getBoundingClientRect();
+			if (Math.abs(d.bottom - window.innerHeight) > 2) problems.push(`the sheet ends at ${Math.round(d.bottom)}, not the bottom (${window.innerHeight})`);
+			// Widths against the page's real layout width (the check only pretends the window is narrow).
+			const pageW = document.documentElement.clientWidth;
+			if (d.left < -1 || d.right > pageW + 1) problems.push(`the sheet is ${Math.round(d.left)}..${Math.round(d.right)} of ${pageW}`);
+			const tabs = docketEl.querySelector<HTMLElement>('.docket-tabs')!.getBoundingClientRect();
+			if (tabs.right > pageW + 1) problems.push('the panel tabs run past the window');
+			for (const sel of ['.docket-foot', '.docket-resize', '.docket-mode']) if (docketEl.querySelector<HTMLElement>(sel)?.offsetParent) problems.push(`${sel} shows`);
+			if (!docketEl.querySelector<HTMLElement>('.compact-docket-grab')?.offsetParent) problems.push('no grab bar');
+			// A swipe down on its top closes it.
+			const head = docketEl.querySelector<HTMLElement>('.docket-head')!;
+			const touch = (type: string, y: number) => head.dispatchEvent(new TouchEvent(type, { bubbles: true, touches: type === 'touchend' ? [] : [new Touch({ identifier: 2, target: head, clientX: 200, clientY: y })] }));
+			touch('touchstart', d.top + 20); touch('touchmove', d.top + 60); touch('touchmove', d.top + 120); touch('touchend', d.top + 120);
+			await sleep(200);
+			if (isOpen()) problems.push('a swipe down did not close it');
+			// The button opens and closes it.
+			button?.click(); await sleep(200);
+			const opened = isOpen();
+			button?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); button?.click(); await sleep(200);
+			if (!opened || isOpen()) problems.push(`the button does not open and close it (opened=${opened}, then open=${isOpen()})`);
+		} finally {
+			ui?.close(true);
+			if (real) Object.defineProperty(window, 'innerWidth', real); else delete (window as { innerWidth?: number }).innerWidth;
+			window.dispatchEvent(new Event('resize'));
+			await sleep(150);
+		}
+		if (document.querySelector<HTMLElement>('.compact-docket-button')?.offsetParent) problems.push('the bottom button shows on a wide window');
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	// Offline: the page itself must not be able to reach the network.
 	await check('network blocked in the page', async () => {
 		try {

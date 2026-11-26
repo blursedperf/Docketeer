@@ -23,6 +23,9 @@ const ALLOW = [
 	['.cm-inline-code', 'padding', 'inline code shape'],
 	['.markdown-rendered code', 'padding', 'inline code shape'],
 	['input.color-picker', 'padding', 'native colour swatch inset'],
+	['.app-container', 'padding', 'iPhone and iPad: clear of the home indicator and rounded corners, sized by the system (env)'],
+	['.is-compact .compact-docket-button', 'padding', 'clear of the home indicator, sized by the system (env)'],
+	['.is-compact .docket.is-peek', 'padding', 'clear of the home indicator unless the keyboard covers it (env)'],
 ];
 
 const css = readFileSync(FILE, 'utf8').replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));

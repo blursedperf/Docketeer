@@ -283,7 +283,8 @@ export class Docket {
 		if (!this.opened || this.mode !== 'peek') return;
 		const t = e.target as Node | null;
 		if (!t || this.el.contains(t) || this.handleEl.contains(t)) return;
-		if (topModal() || (t instanceof Element && t.closest('.menu, .modal-container, .notice-container'))) return;
+		// Other ways in (the Docket button at the bottom of a narrow window) open and close it themselves.
+		if (topModal() || (t instanceof Element && t.closest('.menu, .modal-container, .notice-container, .compact-docket-button'))) return;
 		this.dismissPeek();
 	};
 

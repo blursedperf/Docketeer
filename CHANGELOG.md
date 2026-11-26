@@ -7,6 +7,10 @@
   in from the left edge goes back. Splitting, moving between panes and layouts are not offered there; whatever
   would open beside the note (a PDF, a recording) opens as a new tab. Panes already open stay, and show again
   when the window is wider. For plugins: `workspace.singlePane`.
+- **On a narrow window the Docket opens from a button at the bottom**, in reach of your thumb and away from the
+  iPhone's Dynamic Island, and rises as a sheet: above the keyboard while you type, its panel tabs scrolling within
+  it. Swipe down on its top, or press Escape, to close it. The small handle at the top shows on wider windows.
+- **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.
 

@@ -276,6 +276,9 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 
 /* --------------------------------------------------------------------------- layout */
 .app-container { display: flex; flex-direction: column; height: 100vh; }
+/* iPhone and iPad (viewport-fit=cover): clear of the home indicator and the rounded corners; 0 on desktop. */
+.app-container { padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); box-sizing: border-box; }
+.is-compact .app-container { padding-bottom: 0; }
 .workspace { flex: 1; display: flex; min-height: 0; }
 
 .workspace-split { display: flex; min-width: 0; min-height: 0; }
@@ -1177,3 +1180,32 @@ body.is-frameless .welcome::before { content: ""; position: fixed; inset: 0 0 au
 .open-tabs-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .open-tabs-close { min-width: 44px; min-height: 44px; }
 .open-tabs-new { width: 100%; min-height: 44px; }
+
+/* The Docket on a narrow window: a button at the bottom, and a sheet that rises from it (compact.ts). */
+.compact-docket-button { display: none; }
+.is-compact .docket-handle, .is-compact .docket-hint { display: none; }
+.is-compact .compact-docket-button {
+	display: flex; align-items: center; justify-content: center; gap: var(--space-2); flex-shrink: 0;
+	min-height: calc(48px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); margin: 0; border: none; border-top: var(--border-width) solid var(--doom-border-subtle); border-radius: 0; box-shadow: none;
+	font-family: var(--font-chrome); font-size: var(--text-lg); color: var(--doom-blue-text); background: var(--doom-base0);
+}
+.compact-docket-icon { display: flex; }
+.compact-docket-grab { display: none; }
+.is-compact .docket.is-peek, .is-compact .docket.is-pinned {
+	position: fixed; top: auto; left: 0; right: 0; bottom: var(--keyboard-inset, 0px); z-index: 90;
+	height: min(80vh, calc(var(--visible-height, 100vh) - var(--space-8)));
+	border-bottom: none; border-top: var(--border-width) solid var(--doom-blue); border-radius: var(--radius-l, 12px) var(--radius-l, 12px) 0 0;
+	box-shadow: var(--doom-shadow);
+	/* Clear of the home indicator, unless the keyboard is up (it covers that). */
+	padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - var(--keyboard-inset, 0px)));
+}
+.is-compact .compact-docket-grab { display: block; flex-shrink: 0; width: var(--space-8); height: 5px; margin: var(--space-2) auto var(--space-1); border-radius: 3px; background: var(--doom-border-strong); }
+.is-compact .docket-head { border-radius: var(--radius-l, 12px) var(--radius-l, 12px) 0 0; }
+.is-compact .docket-foot, .is-compact .docket-resize, .is-compact .docket-mode { display: none; }
+.is-compact .docket-head .clickable-icon { min-width: 44px; min-height: 44px; }
+.is-compact .docket-tabs { flex-shrink: 0; scrollbar-width: none; }
+.is-compact .docket-tabs::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+	.is-compact .docket.is-open { animation: docket-rise 160ms ease-out; }
+}
+@keyframes docket-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }

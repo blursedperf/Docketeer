@@ -133,8 +133,9 @@ export async function buildApp({ dist = join(here, 'dist'), target = 'chrome130'
 	].join('; ');
 	await writeFile(join(rendererOut, 'csp.txt'), csp);
 	// iOS: no zooming in on a field when it is tapped (iOS zooms to any text under 16px, and the zoomed page then
-	// pans sideways). Text size is a setting; the desktop page is as before.
-	const viewport = boot ? 'width=device-width, initial-scale=1, maximum-scale=1' : 'width=device-width, initial-scale=1';
+	// pans sideways); text size is a setting. viewport-fit=cover: the page reaches the screen's edges and keeps
+	// clear of the home indicator and rounded corners itself (env(safe-area-inset-*) in app.css). Desktop as before.
+	const viewport = boot ? 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover' : 'width=device-width, initial-scale=1';
 	await writeFile(join(rendererOut, 'index.html'), `<!DOCTYPE html>
 <html lang="en">
 <head>

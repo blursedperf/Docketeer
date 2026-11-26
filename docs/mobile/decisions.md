@@ -337,3 +337,18 @@ are, in order, macOS, then the iPhone, with the iPad a distant third. So:
 **Found on the iPhone before Phase 2:** the page scrolled sideways and the first-run hint's × was off the screen
 (the hint was one line wider than the screen). Fixed: on a narrow window the hint wraps within the screen and the
 status bar scrolls within itself.
+
+## 9. The Docket at the bottom on the iPhone (2026-11-27)
+
+The plan had the Docket pull down from the top. On the iPhone its handle sat just under the Dynamic Island, about
+20 px tall: the owner kept missing it and opening the app playing music instead. The owner chose the bottom:
+
+- **A full-width Docket button at the bottom** (48 px, plus the home indicator's height), in reach of a thumb; the
+  top handle shows only on wider windows. The Docket rises as a sheet from there, with a grab bar; a swipe down on
+  its top, or Escape, closes it. Its keyboard hints, drag-to-resize edge and pin button are hidden.
+- **Above the keyboard:** WebKit covers the page with the keyboard rather than resizing it, so `visualViewport`
+  sets `--keyboard-inset` and `--visible-height`, and the sheet stands on the keyboard. To try on the device.
+- **Safe areas came with it** (a Phase 2 task, brought forward): the button was drawn behind the home indicator,
+  because the web view added its own inset, which the page cannot see. The iOS page now declares
+  `viewport-fit=cover`, the web view adds no inset (`contentInsetAdjustmentBehavior = .never`), and the page pads
+  itself with `env(safe-area-inset-*)`, which is 0 on desktop.

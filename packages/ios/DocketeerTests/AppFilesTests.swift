@@ -55,7 +55,7 @@ final class AppFilesTests: XCTestCase {
 		// 16px unless the page says not to, and a zoomed page pans sideways.
 		let page = try XCTUnwrap(Bundle.main.url(forResource: "app", withExtension: nil)?.appendingPathComponent("renderer/index.html"))
 		let html = try String(contentsOf: page, encoding: .utf8)
-		XCTAssertTrue(html.contains(#"<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">"#), html.prefix(300).description)
+		XCTAssertTrue(html.contains(#"<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">"#), html.prefix(300).description)
 	}
 
 	func testIndexIsNotServedWithoutACSP() throws {

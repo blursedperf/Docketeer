@@ -117,6 +117,9 @@ final class PageViewController: UIViewController {
 		webView.navigationDelegate = lockdown
 		webView.uiDelegate = lockdown
 		webView.allowsLinkPreview = false
+		// The page keeps clear of the home indicator itself (viewport-fit=cover, env(safe-area-inset-*)): no inset
+		// added here, which the page cannot see (its bottom would sit behind the home indicator).
+		webView.scrollView.contentInsetAdjustmentBehavior = .never
 		#if DEBUG
 		webView.isInspectable = true
 		#endif

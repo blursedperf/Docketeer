@@ -343,11 +343,11 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
       - open tabs behind a "show open tabs" button instead of the tab bar (the owner's suggestion after
         trying Phase 0 on an iPhone, `spike.md`);
       - Phone, and an iPad in Slide Over, both use it.
-- [ ] The Docket as a sheet (it is too wide for the iPhone now, `spike.md`):
-      - Pull down from the top edge, or tap a Docket button.
-      - The search field gets focus and the keyboard opens.
-      - Panels become tabs in the order set in `panels-model.ts`.
-      - Dismiss by swiping up or pressing Escape.
+- [x] The Docket as a sheet (it is too wide for the iPhone now, `spike.md`), **from the bottom** (decisions.md §9):
+      - A full-width Docket button at the bottom, away from the Dynamic Island and in reach of a thumb.
+      - The search field gets focus and the keyboard opens; the sheet stays above the keyboard.
+      - Panels become tabs in the order set in `panels-model.ts`, scrolling within the sheet.
+      - Dismiss by swiping down on its top or pressing Escape.
 - [ ] Toolbar above the keyboard, positioned with `visualViewport`:
       - `[[` link, bold, task, heading, footnote, AGLC4 cite, slash menu (`slash.ts`), undo, and a button to
         hide the keyboard;
@@ -363,7 +363,7 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
 - [ ] Hide these in compact mode: tiling commands, the hotkey editor, vim mode, custom-panel editing and AGLC4
       page preview.
 - [ ] Settings: hide desktop-only items, such as title bar colours and relaunch.
-- [ ] Safe areas: `viewport-fit=cover` and `env(safe-area-inset-*)` in `app.css`.
+- [x] Safe areas: `viewport-fit=cover` and `env(safe-area-inset-*)` in `app.css`.
 - [ ] On touch, density defaults to "spacious" when no density has been saved.
 - [ ] Locking: lock when the app goes to the background (when locking is enabled). **Face ID / Touch ID
       unlock is design only:**
