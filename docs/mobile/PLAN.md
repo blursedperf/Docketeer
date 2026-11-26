@@ -324,7 +324,7 @@ that editing feels right, or decides what changes. Stop here and report.
       simulator from `xcodebuild test`. The run must report blocked requests = 0 and console errors = 0.
 
 **Exit check:** XCTests and the simulator smoke run pass. The user edits a note on the laptop and on the iPad
-in both directions, through iCloud Drive and through Syncthing, and forces a conflict once. Nothing is lost.
+in both directions, through iCloud Drive (the owner does not use Syncthing, §6), and forces a conflict once. Nothing is lost.
 Stop and report.
 
 ### Phase 2: iPad parity (3 to 4 weeks)
@@ -435,8 +435,10 @@ are listed below.
 
 ## 6. Open questions (ask; don't guess)
 
-- [ ] The minimum iOS version is **assumed to be 17**. Confirm it with the user.
+- [x] The minimum iOS version is **17** (confirmed 2026-11-27).
 - [ ] Face ID / Touch ID unlock in v1?
 - [ ] Several windows on iPad (one homebase per window), or later?
-- [ ] Which iOS Syncthing client does the user use? Test with that one.
-- [ ] Bundle id and app name on the App Store.
+- [x] Sync: the owner uses **iCloud Drive**, not Syncthing (2026-11-27). Phase 1 is tested with iCloud Drive;
+      Syncthing's conflict files are still recognised, but no Syncthing client is tested.
+- [x] Bundle id **`io.github.blursedperf.docketeer`**, the same as the desktop app (2026-11-27). The App Store
+      name is still to settle in Phase 4.

@@ -119,3 +119,79 @@ What else Phase 0 settled:
   WebPrivacy's fingerprinting list; that is a list the system keeps, not a request from Docketeer.
 - **Phone layout:** the iPhone shows the desktop layout squeezed (two panes, the first-run hint running off the
   side). That is expected until the compact layout in Phase 3.
+
+## 5. Phase 1: homebases on disk
+
+PLAN §0 rule 8: path checks, folder access and the scheme handler's `vault/` route are security-sensitive, so this
+was written before the code, and the owner signed it off on 2026-11-27. It ports `resolvePath()`, `atomicWrite()`, `tree()`, the `fs:*` handlers and
+`vault-files.ts` from `packages/app/src/main/`, and adds what iCloud Drive needs. The owner syncs with iCloud
+Drive (PLAN §6).
+
+### Reaching the folder
+
+- The homebase is a folder picked with the system picker (`UIDocumentPickerViewController` for folders). The app
+  keeps a **security-scoped bookmark** to it in `UserDefaults` (on this device only; it does not sync). Nothing
+  else on the device is reachable: the app does not ask for other access.
+- Access is started (`startAccessingSecurityScopedResource`) when the homebase opens and stopped when another
+  opens. A stale bookmark is renewed from the URL it resolves to; one that no longer resolves makes the homebase
+  `missing` in the recent list (the desktop's behaviour for a deleted folder).
+- **Recent homebases:** up to 12, each with its bookmark and name. `forgetVault` deletes the bookmark.
+  `openExample` copies the bundled example into the app's own Documents folder once and opens it from there.
+  `chooseVault(create, layout)` writes the new-homebase layout ported from `homebase-layout.ts`.
+- The page never sees a real path: `vault.path` is an id for the recent list (the bookmark's key), and every
+  `fs:*` path is relative to the homebase.
+
+### Path checks (every `fs:*` call and `vault/`)
+
+- The argument must be a string without NUL. Leading `/` and `\` are dropped, as on desktop.
+- The path is joined to the root and normalised (`.` and `..` resolved by name). If the result is not the root or
+  inside it, the call is refused.
+- Then, as on desktop, the nearest part of the path that exists is resolved with symlinks followed, and it must
+  lie inside the root (resolved the same way). This stops a symlink inside the homebase from leading out of it.
+- The root itself cannot be removed, trashed or renamed.
+- `tree()` skips names starting with `.` and symlinks; `list()` includes hidden names (as desktop).
+
+### Reading and writing
+
+- Every read and write goes through `NSFileCoordinator`, so iCloud is not halfway through changing a file
+  while Docketeer reads or replaces it.
+- **Writes are atomic.** The new contents go to a temporary file beside the old one
+  (`.<name>.<uuid>.quire-tmp`, hidden, so `tree()` and watching skip it), which then replaces the old file.
+  Missing parent folders are created. If anything fails, the temporary file is removed.
+- **`trash()`** uses `FileManager.trashItem`. Where the folder has no trash (some iCloud Drive and "On My iPad"
+  folders), it moves the item to `<homebase>/.trash/` with a unique name and returns `true`.
+- **Nothing is overwritten silently.** Native remembers the modification time it last served or wrote for each
+  file. A `write` to a file that changed on disk since then is refused with the error code `conflict`. The
+  renderer then saves the editor's text as `<name> (conflict <date>).md` and shows a notice, so neither version
+  is lost. This applies to notes and attachments; the settings in `.quire/` stay last-write-wins, as on desktop
+  (the pane layout gets a file per device, PLAN §2.6).
+
+### iCloud Drive
+
+- **Files not downloaded yet** are listed by `tree()` with `pending: true` (from the file's iCloud download
+  status), and their download is started. The search index skips them until an `fs:events` entry says they
+  arrived. Whether iOS 17 and later show them as `.<name>.icloud` stand-ins or as files without their data is
+  checked on the device; both are handled.
+- **Changes from other devices** are found by an `NSMetadataQuery` on the homebase while the app is open, and by
+  a rescan by modification time when it returns to the foreground. Both send the existing `fs:events`.
+- **Conflicts iCloud keeps** (`NSFileVersion` unresolved versions) and Syncthing's `*.sync-conflict-*` files are
+  listed by a new optional `fs.conflicts()`. The Docket shows a notice and lets you keep one version or the other;
+  the other version is removed only when you choose.
+
+### Serving homebase files (`quire://app/vault/`)
+
+- The same allow-list of types as desktop (`vaultType()`); everything else answers 403. Path checks as above.
+- **Byte ranges** (206, and 416 when unsatisfiable) ported from `parseRange()` with the same tests, so lecture
+  recordings seek. Files are read in pieces from a `FileHandle`, never whole into memory.
+- A file not downloaded yet answers 404 and starts its download.
+
+### Additions to `HostBridge` (all optional; desktop unchanged)
+
+`HostEntry.pending?: true`; `fs.conflicts?()`; the `conflict` error code; `formFactor?` (PLAN §2.5). The Electron
+host gets no-op versions in the same commit, per PLAN §0 rule 2.
+
+### Tests
+
+XCTests mirroring `packages/app/test/vault-files.test.ts`: escapes (`..`, encoded, absolute, NUL, symlinks
+out), hidden files, atomic writes (no temporary file left; parent folders made), rename and copy, refusing the
+root, Range answers, conflict detection, a bookmark round trip.
