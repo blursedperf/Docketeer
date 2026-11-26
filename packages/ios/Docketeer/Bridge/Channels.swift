@@ -192,6 +192,14 @@ final class Channels {
 			return NSNull()
 		case "fs:trash":
 			return try fs.trash(path)
+		case "fs:conflicts":
+			return try fs.conflicts().map(\.json)
+		case "fs:readConflict":
+			return try fs.readConflict(path)
+		case "fs:resolveConflict":
+			guard let keep = second as? String else { throw BridgeError("Argument 2 has the wrong type") }
+			try fs.resolveConflict(path, keep: keep, copyPath: args.count > 2 ? args[2] : nil)
+			return NSNull()
 		default:
 			throw BridgeError("Unknown channel: \(channel)")
 		}

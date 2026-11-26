@@ -237,3 +237,17 @@ root, Range answers, conflict detection, a bookmark round trip.
 - **Reading waits.** Opening a note that is still downloading waits up to a minute, then says it is still on its
   way. The search and link index know pending notes by name only, and take them in when the watcher reports them
   (an arrival counts as a change even when the file's time is the same).
+
+**What versions from other devices settled (Phase 1):**
+
+- **Three choices, not two.** The design offered keeping one version or the other. *Keep both* is added: the other
+  version is saved beside the note as a conflict copy (the same name as the guard's copies), so choosing never
+  has to lose anything. The version not kept is removed only when you choose.
+- **Where they show:** a notice when one appears, and *Versions from other devices* at the top of the Homebase
+  panel while any are there. A row opens Compare (both texts side by side); its actions settle it directly.
+- **How they are found:** iCloud's unresolved `NSFileVersion`s, asked only for files whose "has unresolved
+  conflicts" flag is set, and Syncthing's `.sync-conflict-` files beside their note. An id names the note and the
+  version (its time); native finds the version again from it, through the usual path checks, and refuses
+  anything else. Settings in `.quire/` are not listed (they stay last-write-wins).
+- **Tested:** Syncthing completely in XCTests; for iCloud, refusing bad ids, since the simulator cannot make
+  conflict versions. The first real iCloud conflict is part of the Phase 1 exit check.

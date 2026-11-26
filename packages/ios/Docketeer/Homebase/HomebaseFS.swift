@@ -393,4 +393,122 @@ final class HomebaseFS {
 			return false
 		}
 	}
+
+	// MARK: Versions from other devices
+
+	/** Another version of a file, kept by the sync service until you choose (HostConflict in host.ts). */
+	struct Conflict: Equatable {
+		var id: String
+		var path: String
+		var from: String
+		var mtime: Int
+
+		var json: [String: Any] { ["id": id, "path": path, "from": from, "mtime": mtime] }
+	}
+
+	/** Syncthing's name for another device's version: "Note.sync-conflict-20261127-090500-ABCDEFG.md". */
+	static let syncthingPattern = try! NSRegularExpression(pattern: #"^(.*)\.sync-conflict-(\d{8})-(\d{6})-([A-Z0-9]{7})(\.[^./]+)?$"#)
+
+	/** The file a Syncthing conflict file is for, and the device it came from; nil for any other name. */
+	static func syncthingOriginal(_ rel: String) -> (path: String, device: String)? {
+		let dir = (rel as NSString).deletingLastPathComponent, name = (rel as NSString).lastPathComponent
+		let ns = name as NSString
+		guard let m = syncthingPattern.firstMatch(in: name, range: NSRange(location: 0, length: ns.length)) else { return nil }
+		let base = ns.substring(with: m.range(at: 1))
+		let ext = m.range(at: 5).location == NSNotFound ? "" : ns.substring(with: m.range(at: 5))
+		let original = base + ext
+		return (dir.isEmpty ? original : dir + "/" + original, ns.substring(with: m.range(at: 4)))
+	}
+
+	/**
+	 * Every version from another device: iCloud's unresolved conflict versions (found through each file's "has
+	 * unresolved conflicts" flag, so only those files are asked for versions), and Syncthing's conflict files.
+	 */
+	func conflicts() throws -> [Conflict] {
+		var out: [Conflict] = []
+		for e in try tree("") where e.stat.type == "file" {
+			let url = root.appendingPathComponent(e.path)
+			if let (original, device) = Self.syncthingOriginal(e.path), fm.fileExists(atPath: root.appendingPathComponent(original).path) {
+				out.append(Conflict(id: "syncthing:\(e.path)", path: original, from: "Syncthing (device \(device))", mtime: e.stat.mtime))
+				continue
+			}
+			guard (try? url.resourceValues(forKeys: [.ubiquitousItemHasUnresolvedConflictsKey]))?.ubiquitousItemHasUnresolvedConflicts == true else { continue }
+			for v in NSFileVersion.unresolvedConflictVersionsOfItem(at: url) ?? [] {
+				let mtime = Int(((v.modificationDate ?? Date()).timeIntervalSince1970) * 1000 + 0.5)
+				out.append(Conflict(id: "icloud:\(mtime):\(e.path)", path: e.path, from: v.localizedNameOfSavingComputer ?? "another device", mtime: mtime))
+			}
+		}
+		return out
+	}
+
+	/** The other version behind an id: a Syncthing file, or one of iCloud's versions of a note. */
+	private enum Other {
+		case syncthing(file: URL, original: URL)
+		case icloud(version: NSFileVersion, original: URL)
+	}
+
+	private func other(_ id: Any?) throws -> Other {
+		guard let id = id as? String else { throw HomebaseError("Not a version") }
+		if id.hasPrefix("syncthing:") {
+			let rel = String(id.dropFirst("syncthing:".count))
+			guard let (original, _) = Self.syncthingOriginal(rel) else { throw HomebaseError("Not a version") }
+			return .syncthing(file: try resolve(rel), original: try resolve(original))
+		}
+		if id.hasPrefix("icloud:") {
+			let rest = id.dropFirst("icloud:".count)
+			guard let colon = rest.firstIndex(of: ":"), let mtime = Int(rest[..<colon]) else { throw HomebaseError("Not a version") }
+			let url = try resolve(String(rest[rest.index(after: colon)...]))
+			let match = (NSFileVersion.unresolvedConflictVersionsOfItem(at: url) ?? []).first {
+				Int((($0.modificationDate ?? Date()).timeIntervalSince1970) * 1000 + 0.5) == mtime
+			}
+			guard let match else { throw HomebaseError("That version is not there any more") }
+			return .icloud(version: match, original: url)
+		}
+		throw HomebaseError("Not a version")
+	}
+
+	/** The other version's text, to compare. */
+	func readConflict(_ id: Any?) throws -> String {
+		let data: Data
+		switch try other(id) {
+		case .syncthing(let file, _): data = try reading(file) { try Data(contentsOf: $0) }
+		case .icloud(let version, _): data = try Data(contentsOf: version.url)
+		}
+		guard let text = String(data: data, encoding: .utf8) else { throw HomebaseError("That version is not text") }
+		return text
+	}
+
+	/**
+	 * Settle a conflict: keep this device's version ("mine"), the other ("theirs"), or both (the other written at
+	 * `copyPath`, through the usual path checks). The version not kept is removed; nothing else is touched.
+	 */
+	func resolveConflict(_ id: Any?, keep: String, copyPath: Any?) throws {
+		guard ["mine", "theirs", "both"].contains(keep) else { throw HomebaseError("Keep which?") }
+		switch try other(id) {
+		case .syncthing(let file, let original):
+			switch keep {
+			case "theirs":
+				let data = try reading(file) { try Data(contentsOf: $0) }
+				forget(relative(original))
+				try write(relative(original), data)
+				_ = try trash(relative(file))
+			case "both":
+				guard copyPath is String else { throw HomebaseError("Where should the other version go?") }
+				try rename(relative(file), copyPath)
+			default:
+				_ = try trash(relative(file))
+			}
+		case .icloud(let version, let original):
+			if keep == "both" {
+				guard copyPath is String else { throw HomebaseError("Where should the other version go?") }
+				try write(copyPath, try Data(contentsOf: version.url))
+			}
+			if keep == "theirs" {
+				try writing(original) { u in _ = try version.replaceItem(at: u, options: []) }
+				forget(relative(original))
+			}
+			version.isResolved = true
+			try? version.remove()
+		}
+	}
 }

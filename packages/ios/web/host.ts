@@ -6,7 +6,7 @@
  *
  * Bytes cross the bridge as base64. Large media never does: the page loads it from quire://app/vault/.
  */
-import type { HostBridge, HostFs, HostFsEvent, HostPluginInfo, HostStat } from '@quire/api';
+import type { HostBridge, HostConflict, HostFs, HostFsEvent, HostPluginInfo, HostStat } from '@quire/api';
 import { genericPanels } from '../../app/src/renderer/docket/panels-model';
 
 /** Ask the native shell: resolves with its answer, rejects with its error. */
@@ -94,6 +94,9 @@ export function nativeFs(native: Native): HostFs {
 		rename: (a, b) => call('fs:rename', a, b),
 		copy: (a, b) => call('fs:copy', a, b),
 		trash: (p) => call('fs:trash', p),
+		conflicts: () => call<HostConflict[]>('fs:conflicts'),
+		readConflict: (id) => call('fs:readConflict', id),
+		resolveConflict: (id, keep, copyPath) => call('fs:resolveConflict', id, keep, copyPath ?? null),
 	};
 }
 

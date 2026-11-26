@@ -293,10 +293,8 @@ that editing feels right, or decides what changes. Stop here and report.
       the app's Documents folder. Port the new-homebase layout from `homebase-layout.ts`.
 - [x] Change watching (`NSMetadataQuery`, plus a rescan on returning to the foreground) sends `fs:events`.
       Also a file presenter and a 20-second rescan while open (decisions.md §5); to check on a device with iCloud.
-- [ ] Conflicts: `fs.conflicts()`, the `conflict` write error, saving a conflict copy, and the Docket UI
-      (§2.6). *Done: the `conflict` write error and the conflict copy (also when a change arrives while you have
-      unsaved edits). Left: `fs.conflicts()` for iCloud's own conflict versions and Syncthing files, and its
-      Docket UI.*
+- [x] Conflicts: `fs.conflicts()`, the `conflict` write error, saving a conflict copy, and the Docket UI
+      (§2.6). iCloud's own conflict versions are to be checked on a device (the simulator has no iCloud).
 - [ ] `quire://app/vault/<path>` with the `vaultType()` allow-list and HTTP Range (206) responses, ported from
       `vault-files.ts`.
 - [ ] `quire://app/plugins/<id>/<file>`: built-in plugins only. `plugins.list()` returns the built-ins, and

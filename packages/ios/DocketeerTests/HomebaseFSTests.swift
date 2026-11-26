@@ -229,6 +229,68 @@ final class HomebaseFSTests: XCTestCase {
 		XCTAssertFalse(try fs.stat("Torts/Brief.md")!.pending)
 	}
 
+	// MARK: Versions from other devices
+
+	private let syncthing = "Torts/Negligence/Duty of care.sync-conflict-20261127-090500-ABCDEFG.md"
+
+	func testSyncthingNamesAreRecognised() {
+		XCTAssertEqual(HomebaseFS.syncthingOriginal(syncthing)?.path, "Torts/Negligence/Duty of care.md")
+		XCTAssertEqual(HomebaseFS.syncthingOriginal(syncthing)?.device, "ABCDEFG")
+		XCTAssertEqual(HomebaseFS.syncthingOriginal("Notes.sync-conflict-20261127-090500-ABCDEFG")?.path, "Notes")
+		XCTAssertNil(HomebaseFS.syncthingOriginal("Torts/Duty of care.md"))
+		XCTAssertNil(HomebaseFS.syncthingOriginal("x.sync-conflict-2026-090500-ABCDEFG.md"))
+	}
+
+	func testASyncthingVersionIsListedAndReadAndOnlyWhenItsNoteIsThere() throws {
+		try "theirs".write(to: root.appendingPathComponent(syncthing), atomically: true, encoding: .utf8)
+		try "orphan".write(to: root.appendingPathComponent("Gone.sync-conflict-20261127-090500-ABCDEFG.md"), atomically: true, encoding: .utf8)
+		let list = try fs.conflicts()
+		XCTAssertEqual(list.count, 1)
+		XCTAssertEqual(list.first?.path, "Torts/Negligence/Duty of care.md")
+		XCTAssertEqual(list.first?.from, "Syncthing (device ABCDEFG)")
+		XCTAssertEqual(try fs.readConflict(list.first?.id), "theirs")
+	}
+
+	func testKeepingThisDevicesVersionRemovesTheOther() throws {
+		try "theirs".write(to: root.appendingPathComponent(syncthing), atomically: true, encoding: .utf8)
+		try fs.resolveConflict(try fs.conflicts().first?.id, keep: "mine", copyPath: nil)
+		XCTAssertEqual(try text("Torts/Negligence/Duty of care.md"), "duty")
+		XCTAssertFalse(try fs.exists(syncthing))
+		XCTAssertTrue(try fs.conflicts().isEmpty)
+	}
+
+	func testKeepingTheOtherVersionReplacesTheNote() throws {
+		_ = try fs.read("Torts/Negligence/Duty of care.md")
+		try "theirs".write(to: root.appendingPathComponent(syncthing), atomically: true, encoding: .utf8)
+		try fs.resolveConflict(try fs.conflicts().first?.id, keep: "theirs", copyPath: nil)
+		XCTAssertEqual(try text("Torts/Negligence/Duty of care.md"), "theirs")
+		XCTAssertFalse(try fs.exists(syncthing))
+	}
+
+	func testKeepingBothPutsTheOtherAtTheCopyPath() throws {
+		try "theirs".write(to: root.appendingPathComponent(syncthing), atomically: true, encoding: .utf8)
+		let copy = "Torts/Negligence/Duty of care (conflict 2026-11-27 09.05).md"
+		try fs.resolveConflict(try fs.conflicts().first?.id, keep: "both", copyPath: copy)
+		XCTAssertEqual(try text("Torts/Negligence/Duty of care.md"), "duty")
+		XCTAssertEqual(try text(copy), "theirs")
+		XCTAssertFalse(try fs.exists(syncthing))
+		XCTAssertTrue(try fs.conflicts().isEmpty)
+	}
+
+	func testBadVersionsAreRefused() throws {
+		try "theirs".write(to: root.appendingPathComponent(syncthing), atomically: true, encoding: .utf8)
+		let id = try XCTUnwrap(try fs.conflicts().first?.id)
+		for bad: Any? in [nil, 3, "Welcome.md", "syncthing:Welcome.md", "syncthing:../Outside/x.sync-conflict-20261127-090500-ABCDEFG.md", "icloud:1:Welcome.md", "icloud:x:Welcome.md", "icloud:1:../Outside/secret.md"] {
+			XCTAssertThrowsError(try fs.readConflict(bad), "\(String(describing: bad))")
+			XCTAssertThrowsError(try fs.resolveConflict(bad, keep: "theirs", copyPath: nil), "\(String(describing: bad))")
+		}
+		XCTAssertThrowsError(try fs.resolveConflict(id, keep: "everything", copyPath: nil))
+		XCTAssertThrowsError(try fs.resolveConflict(id, keep: "both", copyPath: nil), "keeping both needs a place for the copy")
+		XCTAssertThrowsError(try fs.resolveConflict(id, keep: "both", copyPath: "../Outside/copy.md"))
+		XCTAssertTrue(try fs.exists(syncthing), "nothing was removed")
+		XCTAssertEqual(try text("Welcome.md"), "# Welcome")
+	}
+
 	func testTrashMovesItOutOfTheHomebaseTree() throws {
 		XCTAssertTrue(try fs.trash("Welcome.md"))
 		XCTAssertFalse(try fs.exists("Welcome.md"))

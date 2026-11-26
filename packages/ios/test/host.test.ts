@@ -71,6 +71,21 @@ describe('conflicts', () => {
 		expect((other as Error).message).toBe('No homebase is open');
 		expect(hostError('conflict: x')).toMatchObject({ code: 'conflict', message: 'x' });
 	});
+
+	it('lists, reads and settles versions from other devices through native', async () => {
+		const versions = [{ id: 'icloud:1:a.md', path: 'a.md', from: 'MacBook', mtime: 1 }];
+		const { native, calls } = fakeNative({ 'fs:conflicts': versions, 'fs:readConflict': 'theirs', 'fs:resolveConflict': undefined });
+		const fs = nativeFs(native);
+		expect(await fs.conflicts!()).toEqual(versions);
+		expect(await fs.readConflict!('icloud:1:a.md')).toBe('theirs');
+		await fs.resolveConflict!('icloud:1:a.md', 'both', 'a (conflict).md');
+		await fs.resolveConflict!('icloud:1:a.md', 'mine');
+		expect(calls.slice(1)).toEqual([
+			['fs:readConflict', ['icloud:1:a.md']],
+			['fs:resolveConflict', ['icloud:1:a.md', 'both', 'a (conflict).md']],
+			['fs:resolveConflict', ['icloud:1:a.md', 'mine', null]],
+		]);
+	});
 });
 
 describe('createHost', () => {
