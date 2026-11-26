@@ -1678,7 +1678,9 @@ export async function runShots(app: App): Promise<void> {
 	}
 	// Properties edited in place, a hover preview, and the Tasks panel.
 	{
-		const tasks = await app.vault.create('Torts/Negligence/Shot tasks.md', '- [ ] Read *Donoghue v Stevenson* and brief the ratio 📅 2020-01-01 ⏫ #torts\n- [ ] Tutorial problem question 📅 2099-11-14 14:00\n- [ ] Moot submissions [due:: 2099-11-21] [priority:: highest]\n- [x] Summarise *Wagon Mound* ✅ 2026-11-12\n');
+		// Due yesterday, today and tomorrow: labels that read the same whichever day the screenshots are taken.
+		const day = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+		const tasks = await app.vault.create('Torts/Negligence/Shot tasks.md', `- [ ] Read *Donoghue v Stevenson* and brief the ratio 📅 ${day(-1)} ⏫ #torts\n- [ ] Tutorial problem question 📅 ${day(0)} 14:00\n- [ ] Moot submissions [due:: ${day(1)}] [priority:: highest]\n- [x] Summarise *Wagon Mound*\n`);
 		const note = await app.vault.create('Properties and links.md', '---\ncourse: Torts\ntopics: [duty, breach]\ndue: 2026-12-01\nreviewed: false\n---\n\nSee [[Welcome]] for how this homebase works.\n');
 		const leaf = workspace.getLeaf('tab');
 		await leaf.openFile(note);
