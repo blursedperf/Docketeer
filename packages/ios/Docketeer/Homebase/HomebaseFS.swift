@@ -30,6 +30,9 @@ final class HomebaseFS {
 	/** The root with symlinks resolved, for the containment check. */
 	let realRoot: String
 	private let fm = FileManager.default
+	/** For the conflict guard: the modification time Docketeer last read or wrote, by homebase path. */
+	private var known: [String: Int] = [:]
+	private let knownLock = NSLock()
 
 	init(root: URL) throws {
 		let root = root.standardizedFileURL
@@ -97,6 +100,40 @@ final class HomebaseFS {
 		if url.path == root.path { throw HomebaseError("Cannot remove the homebase") }
 	}
 
+	// MARK: The conflict guard
+
+	/**
+	 * Files the guard covers: everything but the settings in .quire/, which stay last-write-wins as on desktop
+	 * (decisions.md §5).
+	 */
+	static func guarded(_ rel: String) -> Bool {
+		!(rel == ".quire" || rel.hasPrefix(".quire/"))
+	}
+
+	private func remember(_ rel: String, _ mtime: Int?) {
+		knownLock.lock(); defer { knownLock.unlock() }
+		known[rel] = mtime
+	}
+
+	/** Forget a path and everything under it (removed), or move what is remembered (renamed). */
+	private func forget(_ rel: String, movingTo dest: String? = nil) {
+		knownLock.lock(); defer { knownLock.unlock() }
+		for (path, mtime) in known where path == rel || path.hasPrefix(rel + "/") {
+			known[path] = nil
+			if let dest { known[dest + path.dropFirst(rel.count)] = mtime }
+		}
+	}
+
+	/** Refuse to replace a file that changed on disk since Docketeer last read or wrote it. */
+	private func check(_ rel: String, _ url: URL) throws {
+		guard Self.guarded(rel) else { return }
+		knownLock.lock()
+		let last = known[rel]
+		knownLock.unlock()
+		guard let last, let now = statOf(url), now.mtime != last else { return }
+		throw HomebaseError("“\(rel)” changed on disk since Docketeer read it", code: "conflict")
+	}
+
 	// MARK: Coordination
 
 	private func reading<T>(_ url: URL, _ body: (URL) throws -> T) throws -> T {
@@ -162,7 +199,13 @@ final class HomebaseFS {
 
 	func readBinary(_ rel: Any?) throws -> Data {
 		let url = try resolve(rel)
-		return try reading(url) { try Data(contentsOf: $0) }
+		let path = relative(url)
+		return try reading(url) { u in
+			let before = statOf(u)
+			let data = try Data(contentsOf: u)
+			remember(path, before?.mtime)
+			return data
+		}
 	}
 
 	/** Atomic write: a hidden temporary file beside the old one replaces it. Creates missing parent folders. */
@@ -170,7 +213,9 @@ final class HomebaseFS {
 	func write(_ rel: Any?, _ data: Data) throws -> HostStat {
 		let url = try resolve(rel)
 		if Self.isFolder(url.path) { throw HomebaseError("A folder is there: \(relative(url))") }
+		let path = relative(url)
 		return try writing(url) { u in
+			try check(path, u)
 			try fm.createDirectory(at: u.deletingLastPathComponent(), withIntermediateDirectories: true)
 			let tmp = u.deletingLastPathComponent().appendingPathComponent(".\(u.lastPathComponent).\(UUID().uuidString).quire-tmp")
 			do {
@@ -181,6 +226,7 @@ final class HomebaseFS {
 				throw error
 			}
 			guard let st = statOf(u) else { throw HomebaseError("Could not save \(relative(u))") }
+			remember(path, st.mtime)
 			return st
 		}
 	}
@@ -196,6 +242,7 @@ final class HomebaseFS {
 			try handle.seekToEnd()
 			try handle.write(contentsOf: data)
 			guard let st = statOf(u) else { throw HomebaseError("Could not save \(relative(u))") }
+			remember(relative(u), st.mtime)
 			return st
 		}
 	}
@@ -221,6 +268,7 @@ final class HomebaseFS {
 		let url = try resolve(rel)
 		if !Self.isSymlink(url.path) && Self.isFolder(url.path) { throw HomebaseError("A folder, not a file: \(relative(url))") }
 		try writing(url, .forDeleting) { try fm.removeItem(at: $0) }
+		forget(relative(url))
 	}
 
 	/** Remove a folder: with everything in it if `recursive`, otherwise only when it is empty. */
@@ -230,6 +278,7 @@ final class HomebaseFS {
 		guard Self.isFolder(url.path) else { throw HomebaseError("Not a folder: \(relative(url))") }
 		if !recursive, !(try fm.contentsOfDirectory(atPath: url.path)).isEmpty { throw HomebaseError("The folder is not empty: \(relative(url))") }
 		try writing(url, .forDeleting) { try fm.removeItem(at: $0) }
+		forget(relative(url))
 	}
 
 	/** Move or rename; replaces what is at `to`, as desktop does. Creates missing parent folders. */
@@ -249,6 +298,7 @@ final class HomebaseFS {
 		}
 		if let coordError { throw coordError }
 		try result.get()
+		forget(relative(a), movingTo: relative(b))
 	}
 
 	/** Copy a file; replaces what is at `to`, atomically. */
@@ -262,7 +312,10 @@ final class HomebaseFS {
 		let url = try resolve(rel)
 		try refuseRoot(url)
 		guard Self.exists(url.path) else { return false }
-		if (try? writing(url, .forDeleting, { try fm.trashItem(at: $0, resultingItemURL: nil) })) != nil { return true }
+		if (try? writing(url, .forDeleting, { try fm.trashItem(at: $0, resultingItemURL: nil) })) != nil {
+			forget(relative(url))
+			return true
+		}
 		let bin = root.appendingPathComponent(".trash", isDirectory: true)
 		let base = url.deletingPathExtension().lastPathComponent, ext = url.pathExtension
 		var dest = bin.appendingPathComponent(url.lastPathComponent)

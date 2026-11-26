@@ -14,6 +14,8 @@ final class PageViewController: UIViewController {
 	private var saving: [String: UIBackgroundTaskIdentifier] = [:]
 	/** Answers the folder picker that is showing. */
 	private var picked: ((URL?) -> Void)?
+	/** Watches the open homebase for changes made outside Docketeer. */
+	private var watcher: HomebaseWatcher?
 
 	static let startURL = URL(string: "quire://app/index.html")!
 
@@ -42,6 +44,7 @@ final class PageViewController: UIViewController {
 			exampleSource: root.appendingPathComponent("example-homebase", isDirectory: true),
 			deviceStorage: pad ? "On My iPad" : "On My iPhone"
 		)
+		homebases.onOpen = { [weak self] fs in self?.watch(fs) }
 		homebases.reopenLast()
 		#if DEBUG
 		// Simulator runs: `-openExample` opens the example homebase without tapping (Debug builds only).
@@ -89,6 +92,19 @@ final class PageViewController: UIViewController {
 		])
 		self.webView = webView
 		webView.load(URLRequest(url: Self.startURL))
+	}
+
+	/** Watch the homebase that just opened (and stop watching the last one). */
+	private func watch(_ fs: HomebaseFS) {
+		watcher?.stop()
+		let w = HomebaseWatcher(fs: fs) { [weak self] events in self?.webView?.emitQuireEvent("fs:events", events) }
+		w.start()
+		watcher = w
+	}
+
+	/** Back in the foreground: look for changes made while the app was away. */
+	func enteredForeground() {
+		watcher?.rescanSoon()
 	}
 
 	/** The system folder picker. Only the folder picked becomes reachable (through its security-scoped URL). */

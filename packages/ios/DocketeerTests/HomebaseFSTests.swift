@@ -142,10 +142,114 @@ final class HomebaseFSTests: XCTestCase {
 		XCTAssertEqual(try fs.read("Copies/Welcome.md"), "# Welcome")
 	}
 
+	// MARK: The conflict guard
+
+	/** Change a file as another device would: new text and a later modification time. */
+	private func changeOnDisk(_ rel: String, _ text: String, secondsLater: TimeInterval = 5) throws {
+		let url = root.appendingPathComponent(rel)
+		try text.write(to: url, atomically: true, encoding: .utf8)
+		try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(secondsLater)], ofItemAtPath: url.path)
+	}
+
+	func testAWriteOverAChangeOnDiskIsRefusedAsAConflict() throws {
+		XCTAssertEqual(try fs.read("Welcome.md"), "# Welcome")
+		try changeOnDisk("Welcome.md", "# Changed on the laptop")
+		XCTAssertThrowsError(try fs.write("Welcome.md", Data("# Mine".utf8))) { e in
+			XCTAssertEqual((e as? HomebaseError)?.code, "conflict")
+		}
+		XCTAssertEqual(try text("Welcome.md"), "# Changed on the laptop", "the other device's version is kept")
+		XCTAssertThrowsError(try fs.write("Welcome.md", Data("# Mine".utf8)), "still refused until it is read again")
+
+		// After reading the new version, writing is fine again.
+		XCTAssertEqual(try fs.read("Welcome.md"), "# Changed on the laptop")
+		try fs.write("Welcome.md", Data("# Both".utf8))
+		XCTAssertEqual(try text("Welcome.md"), "# Both")
+	}
+
+	func testOwnWritesDoNotConflictAndNewFilesAreFree() throws {
+		try fs.write("New.md", Data("1".utf8))
+		try fs.write("New.md", Data("2".utf8))
+		try fs.write("Pic.png", Data([1, 2]))
+		try fs.write("Pic.png", Data([3]))
+		try changeOnDisk("Torts/Negligence/Duty of care.md", "changed")
+		try fs.write("Torts/Negligence/Duty of care.md", Data("never read here".utf8))
+		XCTAssertEqual(try text("Torts/Negligence/Duty of care.md"), "never read here", "a file Docketeer never read is written as on desktop")
+	}
+
+	func testSettingsInQuireStayLastWriteWins() throws {
+		_ = try fs.read(".quire/units.json")
+		try changeOnDisk(".quire/units.json", "{\"other\":1}")
+		try fs.write(".quire/units.json", Data("{}".utf8))
+		XCTAssertEqual(try text(".quire/units.json"), "{}")
+	}
+
+	func testTheGuardFollowsRenamesAndForgetsRemovals() throws {
+		_ = try fs.read("Torts/Negligence/Duty of care.md")
+		try fs.rename("Torts", "Law/Torts")
+		try changeOnDisk("Law/Torts/Negligence/Duty of care.md", "changed")
+		XCTAssertThrowsError(try fs.write("Law/Torts/Negligence/Duty of care.md", Data("mine".utf8)))
+		_ = try fs.read("Welcome.md")
+		try fs.remove("Welcome.md")
+		try changeOnDisk("Welcome.md", "new, from elsewhere")
+		try fs.write("Welcome.md", Data("mine".utf8))
+		XCTAssertEqual(try text("Welcome.md"), "mine", "a removed file's time is forgotten")
+	}
+
 	func testTrashMovesItOutOfTheHomebaseTree() throws {
 		XCTAssertTrue(try fs.trash("Welcome.md"))
 		XCTAssertFalse(try fs.exists("Welcome.md"))
 		XCTAssertFalse(try fs.tree("").map(\.path).contains("Welcome.md"))
 		XCTAssertFalse(try fs.trash("Missing.md"))
+	}
+}
+
+/** Changes made outside Docketeer, found by rescanning (decisions.md §5). */
+final class HomebaseWatcherTests: XCTestCase {
+	private var root: URL!
+	private var fs: HomebaseFS!
+
+	override func setUpWithError() throws {
+		root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		try FileManager.default.createDirectory(at: root.appendingPathComponent("Torts"), withIntermediateDirectories: true)
+		try "a".write(to: root.appendingPathComponent("Torts/Duty.md"), atomically: true, encoding: .utf8)
+		try "b".write(to: root.appendingPathComponent("Gone.md"), atomically: true, encoding: .utf8)
+		fs = try HomebaseFS(root: root)
+	}
+
+	override func tearDownWithError() throws {
+		try? FileManager.default.removeItem(at: root)
+	}
+
+	func testARescanReportsWhatChangedOutsideDocketeer() throws {
+		let got = Got()
+		let w = HomebaseWatcher(fs: fs) { got.events.append(contentsOf: $0) }
+		w.start()
+		defer { w.stop() }
+		w.rescan()
+		XCTAssertTrue(got.drain().isEmpty, "nothing changed")
+
+		try "changed".write(to: root.appendingPathComponent("Torts/Duty.md"), atomically: true, encoding: .utf8)
+		try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(5)], ofItemAtPath: root.appendingPathComponent("Torts/Duty.md").path)
+		try FileManager.default.createDirectory(at: root.appendingPathComponent("Contracts"), withIntermediateDirectories: true)
+		try "new".write(to: root.appendingPathComponent("Contracts/Offer.md"), atomically: true, encoding: .utf8)
+		try "hidden".write(to: root.appendingPathComponent(".hidden.md"), atomically: true, encoding: .utf8)
+		try FileManager.default.removeItem(at: root.appendingPathComponent("Gone.md"))
+		w.rescan()
+		let events = got.drain()
+		XCTAssertEqual(events.map { $0["path"] as? String }, ["Contracts", "Contracts/Offer.md", "Torts/Duty.md", "Gone.md"], "folders before what is in them; hidden names skipped")
+		XCTAssertEqual((events[2]["stat"] as? [String: Any])?["size"] as? Int, 7)
+		XCTAssertTrue(events[3]["stat"] is NSNull, "gone")
+		w.rescan()
+		XCTAssertTrue(got.drain().isEmpty, "reported once")
+	}
+
+	/** The events emitted (they arrive on the main thread). */
+	private final class Got {
+		var events: [[String: Any]] = []
+		func drain() -> [[String: Any]] {
+			RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+			defer { events = [] }
+			return events
+		}
 	}
 }

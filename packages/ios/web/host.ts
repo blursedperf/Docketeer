@@ -62,10 +62,23 @@ export function fromBase64(b64: string): Uint8Array {
 
 const toBuffer = (u8: Uint8Array): ArrayBuffer => u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
 
-/** HostFs answered by native (Phase 1's HomebaseFS). */
+/**
+ * Native's errors arrive as text. One it codes (`conflict: …`, a file that changed on disk since Docketeer read it)
+ * becomes an Error with that `code`, as the renderer expects (isConflict in @quire/api).
+ */
+export function hostError(e: unknown): unknown {
+	const message = e instanceof Error ? e.message : typeof e === 'string' ? e : null;
+	const m = message ? /^(conflict): ([\s\S]*)$/.exec(message) : null;
+	return m ? Object.assign(new Error(m[2]), { code: m[1] }) : e;
+}
+
+/** HostFs answered by native (HomebaseFS), which refuses to overwrite a file changed on disk meanwhile. */
 export function nativeFs(native: Native): HostFs {
-	const call = <T>(channel: string, ...args: unknown[]) => native(channel, ...args) as Promise<T>;
+	const call = async <T>(channel: string, ...args: unknown[]): Promise<T> => {
+		try { return await native(channel, ...args) as T; } catch (e) { throw hostError(e); }
+	};
 	return {
+		guardsConflicts: true,
 		tree: (p) => call('fs:tree', p),
 		stat: (p) => call('fs:stat', p),
 		exists: (p) => call('fs:exists', p),

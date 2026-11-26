@@ -209,3 +209,19 @@ root, Range answers, conflict detection, a bookmark round trip.
   `.quire/panels.json` only if the folder has none (as `applyHomebaseLayout()` on desktop).
 - **The app's Documents folder shows in Files** (`UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`),
   so the example homebase can be seen and backed up there. This was a Phase 4 item, brought forward.
+
+**What change watching and the conflict guard settled (Phase 1):**
+
+- **Watching is one rescan with several triggers.** Every signal leads to the same comparison of each file's
+  type, size and modification time with the last scan: a file presenter on the folder (iCloud and Files
+  coordinate their changes), an `NSMetadataQuery` in the scope for documents outside the app's container, coming
+  back to the foreground, and a rescan every 20 seconds while the app is open, in case a change comes with no
+  signal. Folders are reported only when they appear or go. Whether the metadata query sees a folder picked from
+  iCloud Drive is to be checked on a device; the other triggers do not depend on it.
+- **Desktop's rule for unsaved typing does not hold on a host that guards conflicts.** On desktop, a change on
+  disk while you have unsaved edits is overwritten by your next save ("typing since the last save wins"). On iOS
+  that would bypass the guard, because reloading the note tells native it has seen the new version. So when
+  `fs.guardsConflicts` is set, the editor keeps both versions at that moment too. Desktop is unchanged, and a smoke
+  check says so.
+- **A locked note's conflict copy is locked too** (`VaultCrypt.onCopy`), so your version is never written out
+  unencrypted.

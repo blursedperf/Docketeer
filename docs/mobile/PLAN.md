@@ -291,9 +291,12 @@ that editing feels right, or decides what changes. Stop here and report.
 - [x] Folder picker and security-scoped bookmarks, with `chooseVault(create, layout)`, `openVault`,
       `recentVaults` (with `missing` and `current`) and `forgetVault`. `openExample` copies the example into
       the app's Documents folder. Port the new-homebase layout from `homebase-layout.ts`.
-- [ ] Change watching (`NSMetadataQuery`, plus a rescan on returning to the foreground) sends `fs:events`.
+- [x] Change watching (`NSMetadataQuery`, plus a rescan on returning to the foreground) sends `fs:events`.
+      Also a file presenter and a 20-second rescan while open (decisions.md §5); to check on a device with iCloud.
 - [ ] Conflicts: `fs.conflicts()`, the `conflict` write error, saving a conflict copy, and the Docket UI
-      (§2.6).
+      (§2.6). *Done: the `conflict` write error and the conflict copy (also when a change arrives while you have
+      unsaved edits). Left: `fs.conflicts()` for iCloud's own conflict versions and Syncthing files, and its
+      Docket UI.*
 - [ ] `quire://app/vault/<path>` with the `vaultType()` allow-list and HTTP Range (206) responses, ported from
       `vault-files.ts`.
 - [ ] `quire://app/plugins/<id>/<file>`: built-in plugins only. `plugins.list()` returns the built-ins, and

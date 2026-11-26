@@ -24,6 +24,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		self.page = page
 	}
 
+	func sceneWillEnterForeground(_ scene: UIScene) {
+		page?.enteredForeground()
+	}
+
 	func sceneDidEnterBackground(_ scene: UIScene) {
 		page?.enteredBackground()
 	}

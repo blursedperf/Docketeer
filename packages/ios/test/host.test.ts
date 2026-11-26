@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createHost, fromBase64, NativeEvents, nativeFs, toBase64, type HostInfo } from '../web/host';
+import { isConflict } from '@quire/api';
+import { createHost, fromBase64, hostError, NativeEvents, nativeFs, toBase64, type HostInfo } from '../web/host';
 import { genericPanels } from '../../app/src/renderer/docket/panels-model';
 
 const info: HostInfo = { platform: 'ios', appVersion: '0.20.0', formFactor: 'tablet', vault: { path: 'iCloud Drive/Law', name: 'Law' } };
@@ -52,6 +53,23 @@ describe('nativeFs', () => {
 		await fs.writeBinary('b.bin', new Uint8Array([104, 105]).buffer);
 		await fs.rmdir('f', true);
 		expect(calls).toEqual([['fs:read', ['a.md']], ['fs:write', ['a.md', 'text']], ['fs:readBinary', ['a.bin']], ['fs:writeBinary', ['b.bin', 'aGk=']], ['fs:rmdir', ['f', true]]]);
+	});
+});
+
+describe('conflicts', () => {
+	it('a write native refused as a conflict rejects with that code; other errors pass as they are', async () => {
+		const fs = nativeFs(async (channel) => {
+			if (channel === 'fs:write') throw new Error('conflict: Torts/Duty.md changed on disk');
+			throw new Error('No homebase is open');
+		});
+		expect(fs.guardsConflicts).toBe(true);
+		const e = await fs.write('Torts/Duty.md', 'x').catch((x: unknown) => x);
+		expect(isConflict(e)).toBe(true);
+		expect((e as Error).message).toBe('Torts/Duty.md changed on disk');
+		const other = await fs.read('a.md').catch((x: unknown) => x);
+		expect(isConflict(other)).toBe(false);
+		expect((other as Error).message).toBe('No homebase is open');
+		expect(hostError('conflict: x')).toMatchObject({ code: 'conflict', message: 'x' });
 	});
 });
 

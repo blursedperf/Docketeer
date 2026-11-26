@@ -33,6 +33,9 @@ final class Homebases {
 	/** "On My iPad" or "On My iPhone", as Files says it. */
 	let deviceStorage: String
 
+	/** Called on the main thread when a homebase opens (with its files), to start watching it. */
+	var onOpen: ((HomebaseFS) -> Void)?
+
 	private let lock = NSLock()
 	private var openEntry: Entry?
 	private var openFolder: URL?
@@ -175,6 +178,7 @@ final class Homebases {
 		lock.unlock()
 		// Access is counted: the new one was started already, so the old one ends even when it is the same folder.
 		if let oldURL, oldScoped { oldURL.stopAccessingSecurityScopedResource() }
+		onOpen?(fs)
 	}
 
 	func entries() -> [Entry] {
