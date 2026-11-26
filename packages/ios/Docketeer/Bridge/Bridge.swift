@@ -1,0 +1,47 @@
+import Foundation
+import WebKit
+
+/**
+ * window.quire's native side: `webkit.messageHandlers.quire.postMessage({ channel, args })` from the page, answered
+ * by Channels. Only the main frame of quire://app is answered. Work runs off the main thread, except the clipboard,
+ * which UIKit wants on it.
+ */
+final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
+	static let name = "quire"
+	let channels: Channels
+	private let queue = DispatchQueue(label: "quire.bridge", qos: .userInitiated, attributes: .concurrent)
+	private static let mainThreadChannels: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready"]
+
+	init(channels: Channels) {
+		self.channels = channels
+	}
+
+	func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+		let origin = message.frameInfo.securityOrigin
+		guard message.frameInfo.isMainFrame, origin.protocol == "quire", origin.host == "app" else {
+			replyHandler(nil, "Refused")
+			return
+		}
+		guard let body = message.body as? [String: Any], let channel = body["channel"] as? String else {
+			replyHandler(nil, "A message needs a channel")
+			return
+		}
+		let args = body["args"] as? [Any] ?? []
+		let run = { [channels] in
+			let reply: (Any?, String?)
+			do { reply = (try channels.answer(channel, args), nil) } catch let e as BridgeError { reply = (nil, e.message) } catch { reply = (nil, error.localizedDescription) }
+			DispatchQueue.main.async { replyHandler(reply.0, reply.1) }
+		}
+		if Self.mainThreadChannels.contains(channel) { run() } else { queue.async(execute: run) }
+	}
+}
+
+extension WKWebView {
+	/** Tell the page of an event: window.__quireNative.emit(name, payload), which only calls registered handlers. */
+	func emitQuireEvent(_ name: String, _ payload: Any = NSNull()) {
+		guard let n = try? JSONSerialization.data(withJSONObject: name, options: .fragmentsAllowed),
+			let p = try? JSONSerialization.data(withJSONObject: payload, options: .fragmentsAllowed) else { return }
+		let js = "window.__quireNative && window.__quireNative.emit(\(String(decoding: n, as: UTF8.self)), \(String(decoding: p, as: UTF8.self)))"
+		evaluateJavaScript(js, completionHandler: nil)
+	}
+}

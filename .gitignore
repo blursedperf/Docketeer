@@ -5,3 +5,6 @@ plugins/*/main.js
 .DS_Store
 release/
 packages/ios/Docketeer/Resources/app/
+packages/ios/Docketeer/build/
+packages/ios/Docketeer/Docketeer.xcodeproj/xcuserdata/
+packages/ios/Docketeer/Docketeer.xcodeproj/project.xcworkspace/xcuserdata/

@@ -11,13 +11,24 @@ plan and its progress are in [docs/mobile/PLAN.md](../../docs/mobile/PLAN.md); d
 | `web/host.ts` | `window.quire` over `webkit.messageHandlers.quire`, native events, base64 for bytes |
 | `web/memory-fs.ts` | Phase 0: the example homebase in memory, with the desktop host's file rules |
 | `build.mjs` | Builds the page into `Docketeer/Resources/app/` (git-ignored) for Safari 17 |
-| `Docketeer/` | The Xcode project (arrives with the Swift shell; macOS only) |
+| `Docketeer/Docketeer.xcodeproj` | The Xcode project (universal iPhone and iPad, iOS 17 and later; no Swift packages) |
+| `Docketeer/App/` | App and scene, `PageViewController` (the one `WKWebView`), the Debug-only console relay |
+| `Docketeer/Scheme/` | `AppFiles` (what each `quire://app/` URL answers) and `QuireSchemeHandler` |
+| `Docketeer/Bridge/` | `Channels` (the answer for each channel) and `Bridge` (the message handler, events to the page) |
+| `Docketeer/Lockdown/` | The offline content rule list, and the navigation and UI delegate |
+| `DocketeerTests/` | XCTests: paths, routes and headers; channel arguments, settings, plugins |
 
 ```bash
 npm run build                 # from the repository root: the plugins and the desktop app
 npm run build -w @quire/ios   # the iOS page, into packages/ios/Docketeer/Resources/app/
 npm test -w @quire/ios        # unit tests for web/, then the iOS build
+npm run build:xcode -w @quire/ios   # macOS: the page, then the app for the simulator (Docketeer/build/)
+npm run test:xcode -w @quire/ios    # macOS: the XCTests on a simulator (DOCKETEER_SIMULATOR, default "iPhone 17")
 ```
+
+To try it, open `Docketeer/Docketeer.xcodeproj` in Xcode after `npm run build -w @quire/ios`, pick a simulator and
+run. For a device, pick a signing team first. In Debug builds the page's console errors reach the system log as
+`[page] …`, and Safari's Web Inspector can attach (Develop menu).
 
 ## What the shell serves and answers
 

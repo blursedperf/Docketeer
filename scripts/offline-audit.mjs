@@ -3,6 +3,7 @@
  * Offline audit for Docketeer: fails if anything that ships could make a network request, run generated
  * code, or inject raw HTML. Same rules as the AGLC4 plugin's audit, applied to:
  *   - the app's source (packages/api/src, packages/app/src, packages/ios/web),
+ *   - the iOS shell (Swift in packages/ios/Docketeer and DocketeerTests, its Info.plist and Xcode project),
  *   - the built app (packages/app/dist: main, preload, renderer bundle, shims, CSS),
  *   - every plugin, through its own audit (plugins/<name>/scripts/offline-audit.mjs) or these rules.
  *
@@ -47,6 +48,18 @@ const CODE_RULES = [
 /** innerHTML is checked in our own source only: bundled libraries (CodeMirror) use it on their own, non-user content. */
 const SOURCE_ONLY_RULES = [[/\.innerHTML\s*[+]?=/, 'innerHTML assignment']];
 
+/** Swift: nothing that opens a connection or hands a web address to another app (docs/mobile/PLAN.md §0, §2.7). */
+const SWIFT_RULES = [
+	[/\bURLSession\w*/, 'URLSession'],
+	[/\bURLRequest\b/, 'URLRequest'],
+	[/\bNW(Connection|Listener|Browser|PathMonitor)\b|import\s+Network\b/, 'Network framework'],
+	[/\bCF(Network|Stream|Socket|HTTP)\w*/, 'CFNetwork'],
+	[/WebSocket/, 'WebSocket'],
+	[/\bSFSafariViewController\b|import\s+SafariServices\b/, 'SFSafariViewController'],
+	[/\bopen(URL)?\s*\(|\.openURL\b/, 'opening a URL in another app'],
+	[/["']https?:|["']wss?:|["']ftp:/, 'a web address'],
+];
+
 const CSS_RULES = [
 	[/@import\b/i, '@import'],
 	// Allowed: inline data: URIs, #fragments, and the fonts shipped with the app (a relative path under fonts/, which
@@ -58,6 +71,8 @@ const CSS_RULES = [
 /** Deliberate uses: [file (relative), label, reason]. */
 const ALLOWED = [
 	['packages/api/src/app.ts', 'dynamic import()', 'loads a plugin\'s main.js from quire://app/plugins/ (local files only; the CSP allows scripts only from quire:)'],
+	['packages/ios/Docketeer/App/PageViewController.swift', 'URLRequest', 'iOS: the WebView opens the app\'s own page, quire://app/index.html (served from the bundle by QuireSchemeHandler)'],
+	['packages/ios/DocketeerTests/AppFilesTests.swift', 'a web address', 'iOS test: checks that the scheme handler refuses an https: address'],
 	['packages/ios/web/boot.ts', 'dynamic import()', 'iOS: loads the app\'s own renderer from quire://app/renderer.js once window.quire is in place (the CSP allows scripts only from quire:)'],
 	['packages/app/src/renderer/smoke.ts', 'fetch()', 'smoke test: checks that a request from the page is refused'],
 	['packages/app/src/main/main.ts', 'fetch()', 'smoke test: checks that a request from the main process is refused'],
@@ -98,12 +113,12 @@ function stripComments(code) {
 	return out;
 }
 
-function walk(dir, exts, found = []) {
+function walk(dir, exts, found = [], skip = []) {
 	if (!existsSync(dir)) return found;
 	for (const name of readdirSync(dir)) {
-		if (name === 'node_modules' || name.startsWith('.')) continue;
+		if (name === 'node_modules' || name.startsWith('.') || skip.includes(name)) continue;
 		const path = join(dir, name);
-		if (statSync(path).isDirectory()) walk(path, exts, found);
+		if (statSync(path).isDirectory()) walk(path, exts, found, skip);
 		else if (exts.some((e) => name.endsWith(e)) && !name.endsWith('.d.ts') && !name.endsWith('.map')) found.push(path);
 	}
 	return found;
@@ -128,6 +143,25 @@ function check(path, text, rules) {
 const source = [...walk(join(ROOT, 'packages/api/src'), ['.ts']), ...walk(join(ROOT, 'packages/app/src'), ['.ts']), ...walk(join(ROOT, 'packages/ios/web'), ['.ts'])];
 for (const f of source) check(f, stripComments(readFileSync(f, 'utf8')), [...CODE_RULES, ...SOURCE_ONLY_RULES]);
 for (const f of walk(join(ROOT, 'packages/app/src'), ['.css'])) check(f, readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''), CSS_RULES);
+
+// The iOS shell: Swift (not the built page in Resources/ or Xcode's build/), Info.plist and the Xcode project.
+const iosDir = join(ROOT, 'packages/ios/Docketeer');
+const swift = [...walk(iosDir, ['.swift'], [], ['Resources', 'build']), ...walk(join(ROOT, 'packages/ios/DocketeerTests'), ['.swift'])];
+for (const f of swift) check(f, stripComments(readFileSync(f, 'utf8')), SWIFT_RULES);
+for (const f of walk(iosDir, ['.plist'], [], ['Resources', 'build'])) {
+	if (/NSAppTransportSecurity|NSAllows\w*Loads|NSExceptionDomains/.test(readFileSync(f, 'utf8'))) problems.push(`${relative(ROOT, f)}: App Transport Security exceptions are not allowed`);
+}
+/** Swift packages the shell may use. Empty: none so far. */
+const SWIFT_PACKAGES = [];
+for (const f of walk(iosDir, ['.pbxproj'], [], ['Resources', 'build'])) {
+	for (const m of readFileSync(f, 'utf8').matchAll(/repositoryURL = "?([^";]+)/g)) {
+		if (!SWIFT_PACKAGES.includes(m[1])) problems.push(`${relative(ROOT, f)}: Swift package ${m[1]} is not on the allow-list`);
+	}
+	if (/XC(Local|Remote)SwiftPackageReference/.test(readFileSync(f, 'utf8')) && !SWIFT_PACKAGES.length) problems.push(`${relative(ROOT, f)}: Swift packages are not allowed`);
+}
+for (const pod of ['Podfile', 'Cartfile', 'Package.swift']) {
+	for (const dir of [join(ROOT, 'packages/ios'), iosDir]) if (existsSync(join(dir, pod))) problems.push(`${relative(ROOT, join(dir, pod))}: dependency managers are not allowed`);
+}
 
 // The built app (bundled libraries included).
 const dist = join(ROOT, 'packages/app/dist');
@@ -183,4 +217,4 @@ if (problems.length) {
 	for (const p of problems) console.error(`  ${p}`);
 	process.exit(1);
 }
-console.log(`Offline audit passed: ${source.length} source files${built ? ', the built app' : ' (app not built: run npm run build to audit the bundle)'} and ${readdirSync(pluginsDir).length} plugin(s).`);
+console.log(`Offline audit passed: ${source.length} source files, ${swift.length} Swift files${built ? ', the built app' : ' (app not built: run npm run build to audit the bundle)'} and ${readdirSync(pluginsDir).length} plugin(s).`);

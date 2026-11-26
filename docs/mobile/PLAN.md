@@ -253,14 +253,14 @@ with a Magic Keyboard?
       `target: 'safari17'` instead of `chrome130`, the iOS `index.html` with `/boot.js` (§2.3), and output
       to `Docketeer/Resources/app/`. Refactor `packages/app/build.mjs` into a reusable function rather than
       copying it.
-- [ ] Swift shell: one scene, one `WKWebView`, and `QuireSchemeHandler` serving bundled files for
+- [x] Swift shell: one scene, one `WKWebView`, and `QuireSchemeHandler` serving bundled files for
       `quire://app/*` with the CSP header on `index.html`. Start the page at `quire://app/index.html`.
-- [ ] `web/boot.ts` and `web/host.ts`, with an **in-memory `HostFs`** seeded from the bundled example
+- [x] `web/boot.ts` and `web/host.ts`, with an **in-memory `HostFs`** seeded from the bundled example
       homebase. Add enough of `app.*` to open it (`recentVaults`, `getConfig`/`setConfig` in
-      `UserDefaults`, `dictionary`, `notices`). *The web side is done; the channels the Swift shell must answer
-      are listed in `packages/ios/README.md`.*
-- [ ] Lockdown basics: the content rule list and the navigation delegate (§2.7).
-- [ ] Run on the iPhone and iPad simulators. Fix the crashes.
+      `UserDefaults`, `dictionary`, `notices`). The Swift shell answers the channels listed in
+      `packages/ios/README.md`.
+- [x] Lockdown basics: the content rule list and the navigation delegate (§2.7).
+- [x] Run on the iPhone and iPad simulators. Fix the crashes.
 - [ ] Write `docs/mobile/spike.md`. Cover:
       - typing, selection handles, autocorrect, dictation, IME composition, undo;
       - live preview on the cursor's line;
@@ -268,7 +268,7 @@ with a Magic Keyboard?
       - Magic Keyboard shortcuts, including whether ⌘D reaches the page;
       - performance opening the example homebase.
       Include screenshots.
-- [ ] Record the shell choice (§2.1) in `docs/mobile/decisions.md`.
+- [x] Record the shell choice (§2.1) in `docs/mobile/decisions.md`.
 
 **Exit check:** the app boots on both simulators. **The user tries it on a real iPhone and iPad** and confirms
 that editing feels right, or decides what changes. Stop here and report.
