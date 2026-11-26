@@ -610,7 +610,7 @@ app.whenReady().then(async () => {
 	if (SMOKE) await setVault(arg ?? (await smokeVault()));
 	else await setVault(arg ?? config.last);
 	createWindow();
-	if (SMOKE) setTimeout(() => { console.error('Smoke test timed out'); app.exit(2); }, BENCH ? 180_000 : 60_000);
+	if (SMOKE) setTimeout(() => { console.error('Smoke test timed out'); app.exit(2); }, BENCH ? 180_000 : 120_000);
 }).catch((e) => {
 	console.error(e);
 	app.exit(1);

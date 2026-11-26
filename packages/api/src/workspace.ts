@@ -179,6 +179,11 @@ export class WorkspaceTabs extends WorkspaceItem {
 			this.headerEl.createDiv({ cls: 'workspace-tab-header-spacer' });
 		}
 		this.contentEl = this.containerEl.createDiv({ cls: 'workspace-tab-container' });
+		// The empty part of the tab bar (a tab has a menu of its own).
+		this.headerEl.addEventListener('contextmenu', (e) => {
+			if ((e.target as HTMLElement).closest('.workspace-tab-header')) return;
+			this.workspace.showTabBarMenu(this, e);
+		});
 	}
 
 	insertChild(index: number, leaf: WorkspaceLeaf): void {
@@ -306,10 +311,33 @@ export class WorkspaceLeaf extends Events {
 			const menu = new Menu();
 			// Each item runs a command for this pane (falling back to the action if the command is absent).
 			const run = (id: string, fallback: () => unknown) => () => { if (!this.app.commands.executeCommandById(id, { leaf: this })) fallback(); };
+			e.preventDefault();
+			e.stopPropagation();
+			const ws = this.workspace;
+			const tabs = this.parent;
+			const count = tabs?.children.length ?? 1;
+			const after = tabs ? tabs.children.length - 1 - tabs.children.indexOf(this) : 0;
 			menu.addItem((i) => i.setTitle('Close').setIcon('x').onClick(run('app:close-tab', () => this.detach())));
-			menu.addItem((i) => i.setTitle('Split right').setIcon('separator-vertical').onClick(run('app:split-right', () => this.workspace.duplicateLeaf(this, 'vertical'))));
-			menu.addItem((i) => i.setTitle('Split down').setIcon('separator-horizontal').onClick(run('app:split-down', () => this.workspace.duplicateLeaf(this, 'horizontal'))));
-			menu.addItem((i) => i.setTitle(this.parent?.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => this.parent?.setStacked(!this.parent.stacked)));
+			if (count > 1) menu.addItem((i) => i.setTitle('Close the other tabs').setIcon('x').onClick(() => { ws.closeOtherTabs(this); }));
+			if (after > 0) menu.addItem((i) => i.setTitle('Close tabs to the right').setIcon('arrow-right').onClick(() => { ws.closeTabsToRight(this); }));
+			menu.addItem((i) => i.setTitle(this.pinned ? 'Unpin' : 'Pin').setIcon('pin').onClick(() => { this.setPinned(!this.pinned); this.updateHeader(); ws.requestSaveLayout(); }));
+			menu.addItem((i) => i.setTitle('Duplicate tab').setIcon('copy').onClick(() => {
+				if (!tabs) return;
+				const copy = ws.createLeafInTabs(tabs, tabs.children.indexOf(this) + 1);
+				void copy.setViewState({ ...this.getViewState(), active: true }).then(() => ws.setActiveLeaf(copy, { focus: true }));
+			}));
+			menu.addSeparator();
+			menu.addItem((i) => i.setTitle('Split right').setIcon('separator-vertical').onClick(run('app:split-right', () => ws.duplicateLeaf(this, 'vertical'))));
+			menu.addItem((i) => i.setTitle('Split down').setIcon('separator-horizontal').onClick(run('app:split-down', () => ws.duplicateLeaf(this, 'horizontal'))));
+			menu.addItem((i) => i.setTitle('Split left').setIcon('separator-vertical').onClick(run('app:split-left', () => ws.duplicateLeaf(this, 'vertical', true))));
+			menu.addItem((i) => i.setTitle('Split up').setIcon('separator-horizontal').onClick(run('app:split-up', () => ws.duplicateLeaf(this, 'horizontal', true))));
+			if (count > 1 || ws.rootTabs().length > 1) {
+				for (const [dir, name] of [['right', 'right'], ['down', 'below'], ['left', 'left'], ['up', 'above']] as const) {
+					menu.addItem((i) => i.setTitle(`Move to the pane ${name}`).setIcon('move').onClick(() => { ws.moveLeafToPane(this, dir); }));
+				}
+			}
+			menu.addItem((i) => i.setTitle(tabs?.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => tabs?.setStacked(!tabs.stacked)));
+			menu.addSeparator();
 			this.view.onPaneMenu(menu, 'tab-header');
 			menu.showAtMouseEvent(e);
 		});
@@ -928,13 +956,50 @@ export class Workspace extends Events {
 		return others.length > 0;
 	}
 
-	/** Close every tab in the active pane but the active one. */
-	closeOtherTabs(): boolean {
-		const pane = this.activePane();
-		const keep = pane?.activeLeaf;
+	/** Close every tab in a pane but `keep` (the active tab by default); pinned tabs stay. */
+	closeOtherTabs(keep: WorkspaceLeaf | null = this.activePane()?.activeLeaf ?? null): boolean {
+		const pane = keep?.parent;
 		if (!pane || !keep || pane.children.length < 2) return false;
 		for (const l of [...pane.children]) if (l !== keep && !l.pinned) l.detach();
 		return true;
+	}
+
+	/** Close the tabs after `leaf` in its pane; pinned tabs stay. */
+	closeTabsToRight(leaf: WorkspaceLeaf): boolean {
+		const pane = leaf.parent;
+		if (!pane) return false;
+		const after = pane.children.slice(pane.children.indexOf(leaf) + 1).filter((l) => !l.pinned);
+		for (const l of after) l.detach();
+		return after.length > 0;
+	}
+
+	/** The right-click menu of a pane's tab bar (its empty part): new tabs, splits and the pane itself. */
+	showTabBarMenu(tabs: WorkspaceTabs, e: MouseEvent): void {
+		e.preventDefault();
+		const leaf = tabs.activeLeaf;
+		if (leaf) this.setActiveLeaf(leaf, { focus: false });
+		const menu = new Menu();
+		const cmd = (title: string, icon: string, id: string, args: Record<string, unknown> = {}) =>
+			menu.addItem((i) => i.setTitle(title).setIcon(icon).onClick(() => { this.app.commands.executeCommandById(id, args); }));
+		menu.addItem((i) => i.setTitle('New tab').setIcon('plus').onClick(() => { const l = this.createLeafInTabs(tabs); this.setActiveLeaf(l, { focus: true }); }));
+		if (this.closedTabs.length) cmd('Reopen closed tab', 'rotate-ccw', 'app:reopen-closed-tab');
+		menu.addSeparator();
+		if (leaf) {
+			cmd('Split right', 'separator-vertical', 'app:split-right', { leaf });
+			cmd('Split down', 'separator-horizontal', 'app:split-down', { leaf });
+		}
+		menu.addItem((i) => i.setTitle(tabs.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => tabs.setStacked(!tabs.stacked)));
+		const several = this.rootTabs().length > 1;
+		if (several) {
+			menu.addSeparator();
+			menu.addItem((i) => i.setTitle(this.zoomed ? 'Show every pane' : 'Zoom this pane').setIcon('maximize-2').onClick(() => { this.toggleZoom(); }));
+			menu.addItem((i) => i.setTitle('Make all panes the same size').setIcon('columns-3').onClick(() => this.equalisePanes()));
+			menu.addItem((i) => i.setTitle('Turn the split').setIcon('rotate-cw').onClick(() => { this.rotateSplit(); }));
+			menu.addItem((i) => i.setTitle('Put every tab in one pane').setIcon('combine').onClick(() => this.mergeAllPanes()));
+			menu.addItem((i) => i.setTitle('Close the other panes').setIcon('square').onClick(() => { this.closeOtherPanes(); }));
+			menu.addItem((i) => i.setTitle('Close this pane').setIcon('x-square').setWarning(true).onClick(() => { this.closePane(); }));
+		}
+		menu.showAtMouseEvent(e);
 	}
 
 	// ---------------------------------------------------------------------------------------------

@@ -3502,6 +3502,49 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 		return (two && files[0] === essay.basename && !!files[1] && one && restored) || `two=${two} files=${files.join('|')} one=${one} restored=${restored}`;
 	});
 
+	await check('tab menus: a tab closes others or those to its right, pins, duplicates, moves; the tab bar splits and manages panes', async () => {
+		const problems: string[] = [];
+		await single();
+		const files = vault.getMarkdownFiles().slice(0, 3);
+		await workspace.getLeaf(false).openFile(files[0]!);
+		for (const f of files.slice(1)) await workspace.getLeaf('tab').openFile(f);
+		await sleep(100);
+		const tabs = workspace.rootTabs()[0]!;
+		const titles = () => [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
+		const click = async (title: string) => { [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent === title)?.click(); await sleep(120); };
+		const rightClick = (el: HTMLElement) => { const r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 5, clientY: r.top + 5 })); };
+		const n = tabs.children.length;
+		// The first tab: close those to its right, after duplicating it and pinning the copy (pinned tabs stay).
+		rightClick(tabs.children[0]!.tabHeaderEl);
+		for (const want of ['Close', 'Close the other tabs', 'Close tabs to the right', 'Pin', 'Duplicate tab', 'Split left', 'Move to the pane right']) if (!titles().includes(want)) problems.push(`tab menu lacks ${want}: ${titles().join('|')}`);
+		await click('Duplicate tab');
+		if (tabs.children.length !== n + 1) problems.push(`duplicate: ${tabs.children.length} tabs`);
+		const copy = tabs.children[1]!;
+		rightClick(copy.tabHeaderEl);
+		await click('Pin');
+		if (!copy.pinned) problems.push('not pinned');
+		rightClick(tabs.children[0]!.tabHeaderEl);
+		await click('Close tabs to the right');
+		if (tabs.children.length !== 2 || !tabs.children.includes(copy)) problems.push(`close to the right left ${tabs.children.length} tabs (pinned kept: ${tabs.children.includes(copy)})`);
+		copy.setPinned(false);
+		// Move a tab into a new pane to the right.
+		rightClick(copy.tabHeaderEl);
+		await click('Move to the pane right');
+		if (panes() !== 2) problems.push(`move: ${panes()} panes`);
+		// The empty part of a tab bar: its own menu.
+		const bar = workspace.rootTabs()[0]!.headerEl;
+		const spacer = bar.querySelector<HTMLElement>('.workspace-tab-header-spacer') ?? bar;
+		rightClick(spacer);
+		for (const want of ['New tab', 'Split right', 'Stack tabs', 'Close the other panes', 'Close this pane']) if (!titles().includes(want)) problems.push(`tab bar menu lacks ${want}: ${titles().join('|')}`);
+		if (titles().includes('Pin')) problems.push('the tab bar showed a tab\'s menu');
+		await click('Close the other panes');
+		if (panes() !== 1) problems.push(`close other panes from the bar: ${panes()}`);
+		document.querySelectorAll('.menu').forEach((m) => m.remove());
+		await single();
+		await workspace.getLeaf(false).openFile(essay);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	await check('tiling commands: split left and up, swap, next pane, pane by number, turn the split, close panes and tabs, saved layouts', async () => {
 		const problems: string[] = [];
 		const run = (id: string) => { if (!app.commands.executeCommandById(id)) problems.push(`${id} did not run`); };

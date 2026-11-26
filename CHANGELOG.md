@@ -9,6 +9,11 @@
 - **Right-click in the Docket**: a row or a search result has a menu of what → offers for it: a note's Open, Open to
   the right, Open below, rename, move, copy a link …; an authority's next place, cite or merge; a task's check off,
   due dates and priorities. The Docket stays open while the menu is.
+- **Fuller tab menus**: right-clicking a tab now also offers *Close the other tabs*, *Close tabs to the right*
+  (pinned tabs stay), *Pin*, *Duplicate tab*, *Split left* and *Split up*, and *Move to the pane right / below /
+  left / above*, as well as its note's actions. Right-clicking the empty part of a tab bar offers a new tab,
+  reopening a closed one, splitting, stacking, and the pane's own: zoom, same sizes, turn the split, every tab in one
+  pane, close the other panes, close this pane.
 - **Stacked tabs fill the pane**: when closing tabs leaves fewer than fill the pane, the ones left grow to share its
   width, so a single stacked tab takes the whole pane, instead of keeping their reading width with empty space beside.
 - **More tiling commands**, each of which can be given a hotkey in Settings → Hotkeys: *Split left*, *Split up*,
