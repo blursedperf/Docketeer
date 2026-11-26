@@ -15,9 +15,23 @@ import { openFileIn } from './docket/providers';
 const splitCells = (line: string) => line.trim().replace(/^\||\|$/g, '').split('|');
 import { revealInUnits } from './docket/panels/units';
 
-interface Check { name: string; ok: boolean; detail?: string; }
+interface Check { name: string; ok: boolean; detail?: string; skipped?: string }
+
+/**
+ * What a check returns: true when it passes, text saying what went wrong, or `{ skip }` when it tests a host feature
+ * this host does not have (desktop has them all; the iOS run skips, for instance, printing to PDF). A skipped check
+ * is reported with its reason and is not a failure.
+ */
+type CheckResult = boolean | string | { skip: string };
 
 const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+
+/** The same JSON value, whatever the order of object keys (a host may store settings in an unordered map). */
+function sameJSON(a: unknown, b: unknown): boolean {
+	const norm = (v: unknown): unknown => Array.isArray(v) ? v.map(norm)
+		: v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, norm((v as Record<string, unknown>)[k])])) : v;
+	return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
+}
 
 async function until(cond: () => boolean | Promise<boolean>, ms = 5000): Promise<boolean> {
 	const end = Date.now() + ms;
@@ -64,9 +78,10 @@ export async function runSmoke(app: App): Promise<void> {
 	const checks: Check[] = [];
 	const notices: string[] = [];
 	(globalThis as { __quireNotices?: string[] }).__quireNotices = notices;
-	const check = async (name: string, fn: () => Promise<boolean | string> | boolean | string) => {
+	const check = async (name: string, fn: () => Promise<CheckResult> | CheckResult) => {
 		try {
 			const r = await fn();
+			if (typeof r === 'object') { checks.push({ name, ok: true, skipped: r.skip }); return; }
 			checks.push({ name, ok: r === true, detail: typeof r === 'string' ? r : undefined });
 		} catch (e) {
 			checks.push({ name, ok: false, detail: e instanceof Error ? `${e.message}\n${e.stack}` : String(e) });
@@ -348,7 +363,7 @@ export async function runSmoke(app: App): Promise<void> {
 		await sleep(50);
 		if (app.docketOpen) { problems.push('the old key still opens the Docket'); ui?.close(true); }
 		const saved = (await app.host.app.getConfig()).hotkeys as Record<string, unknown> | undefined;
-		if (JSON.stringify(saved?.['app:docket']) !== JSON.stringify([next])) problems.push(`app settings: ${JSON.stringify(saved)}`);
+		if (!sameJSON(saved?.['app:docket'], [next])) problems.push(`app settings: ${JSON.stringify(saved)}`);
 		await setDocketKey(app, null);
 		if (handleKey() !== modP) problems.push(`after reset the handle says ${handleKey()}`);
 		return problems.length === 0 || problems.join('; ');
@@ -1075,6 +1090,7 @@ export async function runSmoke(app: App): Promise<void> {
 	});
 
 	await check('Export to PDF: a note (with its picture) printed to a PDF beside it, from the menus; AGLC4 with its footnotes', async () => {
+		if (!app.host.app.printToPdf) return { skip: 'the host does not print to PDF' };
 		const problems: string[] = [];
 		const png = await vault.createBinary('PDF smoke/dot.png', new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 0, 0, 3, 1, 1, 0, 201, 254, 146, 239, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]).buffer);
 		const note = await vault.create('PDF smoke/PDF smoke.md', '---\ncourse: Torts\n---\n\n# Duty of care\n\nSome **bold** text and a [[Welcome]] link.\n\n![[dot.png]]\n\n- [x] done\n- [ ] to do\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n');
@@ -1406,6 +1422,7 @@ export async function runSmoke(app: App): Promise<void> {
 		return (loaded.every((n) => n >= 3) && /^\s*"Inter"/.test(ui) && /^\s*"JetBrains Mono"/.test(mono)) || `loaded=${loaded.join(',')} ui=${ui} mono=${mono}`;
 	});
 	await check('fonts are chosen from the installed fonts, with a sample', async () => {
+		if (Platform.isMobileApp) return { skip: 'iPhone and iPad offer only the fonts Docketeer ships' };
 		const fonts = ((await app.host.app.fonts?.()) ?? []).filter((f) => !['Inter', 'JetBrains Mono', 'Source Serif 4'].includes(f.family));
 		app.setting.openTabById('appearance');
 		await sleep(100);
@@ -1536,7 +1553,7 @@ export async function runSmoke(app: App): Promise<void> {
 	await lockingChecks(app, check);
 	await titleChecks(app, check);
 	await conflictChecks(app, check);
-	await check('layout: the window\'s width sets body.is-compact; desktop flags stay desktop', async () => {
+	await check('layout: the window\'s width sets body.is-compact; the device flags follow the host', async () => {
 		const real = Object.getOwnPropertyDescriptor(window, 'innerWidth');
 		const at = (w: number) => { Object.defineProperty(window, 'innerWidth', { value: w, configurable: true }); window.dispatchEvent(new Event('resize')); return document.body.classList.contains('is-compact'); };
 		const wide = at(1200);
@@ -1544,8 +1561,9 @@ export async function runSmoke(app: App): Promise<void> {
 		const back = at(1200);
 		if (real) Object.defineProperty(window, 'innerWidth', real); else delete (window as { innerWidth?: number }).innerWidth;
 		window.dispatchEvent(new Event('resize'));
-		const desktop = Platform.isDesktopApp && !Platform.isMobile && !Platform.isPhone && !Platform.isTablet && !Platform.isIosApp;
-		return (!wide && narrow && !back && desktop) || `wide=${wide} narrow=${narrow} back=${back} desktop=${desktop}`;
+		const f = app.host.formFactor ?? 'desktop';
+		const flags = Platform.isDesktopApp === (f === 'desktop') && Platform.isMobile === (f !== 'desktop') && Platform.isPhone === (f === 'phone') && Platform.isTablet === (f === 'tablet') && Platform.isIosApp === (app.host.platform === 'ios');
+		return (!wide && narrow && !back && flags) || `wide=${wide} narrow=${narrow} back=${back} flags=${flags} (${f})`;
 	});
 
 	// Offline: the page itself must not be able to reach the network.
@@ -1841,7 +1859,7 @@ export async function runShots(app: App): Promise<void> {
 	app.host.app.smokeReport?.({ ok: true, checks: [], notices: [] });
 }
 
-type CheckFn = (name: string, fn: () => Promise<boolean | string> | boolean | string) => Promise<void>;
+type CheckFn = (name: string, fn: () => Promise<CheckResult> | CheckResult) => Promise<void>;
 
 /** Press a key where the keyboard is (the window's capture handlers see it too). */
 /** Press the Docket key as it comes on this system (Super+D; Ctrl+P on Windows), with Shift for peek/pinned. */
@@ -2706,6 +2724,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		if (!view.editor.getLine(0).startsWith('\t') && !view.editor.getLine(0).startsWith('  ')) problems.push('Tab outside a table no longer indents');
 		await view.save();
 		workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file === note)?.detach();
+		await sleep(80); // closing a tab is asynchronous: delete the note once it has closed
 		await vault.delete(note);
 		return problems.length === 0 || problems.join('; ');
 	});
@@ -3125,7 +3144,8 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			void gap;
 			// (Reaching the very top, the list may settle the last part of a row.)
 			const settled = list.scrollTop === 0 && Math.abs(moved) <= rowH * 2;
-			if (!settled && (key === 'ArrowDown' ? moved < -1 : moved > 1)) problems.push(`${where}: the selection went back ${Math.round(moved)}px`);
+			// Up to 2px either way is rounding (WebKit lays out in fractions of a pixel), not the list going back.
+			if (!settled && (key === 'ArrowDown' ? moved < -2 : moved > 2)) problems.push(`${where}: the selection went back ${Math.round(moved)}px`);
 			if (Math.abs(moved) > rowH * 1.1 + titleH + 12) problems.push(`${where}: the selection moved ${Math.round(moved)}px`);
 		};
 		for (let i = 0; i < n - 1; i++) step('ArrowDown');
@@ -3966,6 +3986,7 @@ async function conflictChecks(app: App, check: CheckFn): Promise<void> {
 		}
 	});
 	await check('conflicts: the desktop host does not guard; typing since the last save wins, as before', async () => {
+		if (original.fs.guardsConflicts) return { skip: 'this host guards conflicts' };
 		const { file, v } = await open('Base.\n');
 		type(v, 'Mine.\n');
 		await original.fs.write(file.path, 'Base.\nTheirs.\n');
