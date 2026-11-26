@@ -128,15 +128,16 @@ function walk(dir, exts, found = [], skip = []) {
 
 const problems = [];
 const used = new Set();
-function check(path, text, rules) {
+/** Report each line that breaks a rule into `sink`, unless ALLOWED lists it (`allow` false: report everything). */
+function check(path, text, rules, sink = problems, allow = true) {
 	const rel = relative(ROOT, path);
 	const lines = text.split('\n');
 	for (const [regex, label] of rules) {
 		for (let i = 0; i < lines.length; i++) {
 			if (!regex.test(lines[i])) continue;
-			const allowed = ALLOWED.findIndex(([f, l]) => f === rel && l === label);
+			const allowed = allow ? ALLOWED.findIndex(([f, l]) => f === rel && l === label) : -1;
 			if (allowed !== -1) { used.add(allowed); continue; }
-			problems.push(`${rel}:${i + 1}: ${label}`);
+			sink.push(`${rel}:${i + 1}: ${label}`);
 		}
 	}
 }
@@ -147,22 +148,45 @@ for (const f of source) check(f, stripComments(readFileSync(f, 'utf8')), [...COD
 for (const f of walk(join(ROOT, 'packages/app/src'), ['.css'])) check(f, readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''), CSS_RULES);
 
 // The iOS shell: Swift (not the built page in Resources/ or Xcode's build/), Info.plist and the Xcode project.
-const iosDir = join(ROOT, 'packages/ios/Docketeer');
-const swift = [...walk(iosDir, ['.swift'], [], ['Resources', 'build']), ...walk(join(ROOT, 'packages/ios/DocketeerTests'), ['.swift'])];
-for (const f of swift) check(f, stripComments(readFileSync(f, 'utf8')), SWIFT_RULES);
-for (const f of walk(iosDir, ['.plist'], [], ['Resources', 'build'])) {
-	if (/NSAppTransportSecurity|NSAllows\w*Loads|NSExceptionDomains/.test(readFileSync(f, 'utf8'))) problems.push(`${relative(ROOT, f)}: App Transport Security exceptions are not allowed`);
-}
+
 /** Swift packages the shell may use. Empty: none so far. */
 const SWIFT_PACKAGES = [];
-for (const f of walk(iosDir, ['.pbxproj'], [], ['Resources', 'build'])) {
-	for (const m of readFileSync(f, 'utf8').matchAll(/repositoryURL = "?([^";]+)/g)) {
-		if (!SWIFT_PACKAGES.includes(m[1])) problems.push(`${relative(ROOT, f)}: Swift package ${m[1]} is not on the allow-list`);
+
+/** Audit an iOS shell: `pkg` holds the app folder `Docketeer/` and `DocketeerTests/`. Returns the Swift files seen. */
+function auditIos(pkg, sink = problems, allow = true) {
+	const appDir = join(pkg, 'Docketeer');
+	const swiftFiles = [...walk(appDir, ['.swift'], [], ['Resources', 'build']), ...walk(join(pkg, 'DocketeerTests'), ['.swift'])];
+	for (const f of swiftFiles) check(f, stripComments(readFileSync(f, 'utf8')), SWIFT_RULES, sink, allow);
+	for (const f of walk(appDir, ['.plist'], [], ['Resources', 'build'])) {
+		if (/NSAppTransportSecurity|NSAllows\w*Loads|NSExceptionDomains/.test(readFileSync(f, 'utf8'))) sink.push(`${relative(ROOT, f)}: App Transport Security exceptions are not allowed`);
 	}
-	if (/XC(Local|Remote)SwiftPackageReference/.test(readFileSync(f, 'utf8')) && !SWIFT_PACKAGES.length) problems.push(`${relative(ROOT, f)}: Swift packages are not allowed`);
+	for (const f of walk(appDir, ['.pbxproj'], [], ['Resources', 'build'])) {
+		const text = readFileSync(f, 'utf8');
+		for (const m of text.matchAll(/repositoryURL = "?([^";]+)/g)) {
+			if (!SWIFT_PACKAGES.includes(m[1])) sink.push(`${relative(ROOT, f)}: Swift package ${m[1]} is not on the allow-list`);
+		}
+		if (/XC(Local|Remote)SwiftPackageReference/.test(text) && !SWIFT_PACKAGES.length) sink.push(`${relative(ROOT, f)}: Swift packages are not allowed`);
+	}
+	for (const pod of ['Podfile', 'Cartfile', 'Package.swift']) {
+		for (const dir of [pkg, appDir]) if (existsSync(join(dir, pod))) sink.push(`${relative(ROOT, join(dir, pod))}: dependency managers are not allowed`);
+	}
+	return swiftFiles;
 }
-for (const pod of ['Podfile', 'Cartfile', 'Package.swift']) {
-	for (const dir of [join(ROOT, 'packages/ios'), iosDir]) if (existsSync(join(dir, pod))) problems.push(`${relative(ROOT, join(dir, pod))}: dependency managers are not allowed`);
+const swift = auditIos(join(ROOT, 'packages/ios'));
+
+// The rules themselves: a planted shell (scripts/offline-audit-fixtures/ios) breaks each once, and each must fire.
+{
+	const fixtures = join(ROOT, 'scripts/offline-audit-fixtures/ios');
+	const found = [];
+	auditIos(fixtures, found, false);
+	const expected = [
+		...SWIFT_RULES.map(([, label]) => `: ${label}`),
+		'App Transport Security exceptions are not allowed', 'is not on the allow-list', 'Swift packages are not allowed',
+		'Podfile: dependency managers are not allowed',
+	];
+	for (const e of expected) if (!found.some((p) => p.includes(e))) problems.push(`scripts/offline-audit-fixtures/ios: the rule for "${e.replace(/^: /, '')}" did not fire on its fixture`);
+	const quiet = found.filter((p) => p.includes('Quiet.swift'));
+	if (quiet.length) problems.push(`scripts/offline-audit-fixtures/ios: rules fired on code that is allowed: ${quiet.join('; ')}`);
 }
 
 // The built app (bundled libraries included).

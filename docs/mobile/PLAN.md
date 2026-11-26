@@ -297,9 +297,9 @@ that editing feels right, or decides what changes. Stop here and report.
       (§2.6). iCloud's own conflict versions are to be checked on a device (the simulator has no iCloud).
 - [x] `quire://app/vault/<path>` with the `vaultType()` allow-list and HTTP Range (206) responses, ported from
       `vault-files.ts`. Seeking in a real recording is to be tried on a device.
-- [ ] `quire://app/plugins/<id>/<file>`: built-in plugins only. `plugins.list()` returns the built-ins, and
+- [x] `quire://app/plugins/<id>/<file>`: built-in plugins only. `plugins.list()` returns the built-ins, and
       the loader skips manifests with `isDesktopOnly: true` on iOS.
-- [ ] Assets:
+- [x] Assets:
       - `dictionary`, `notices` and `pdfAsset` read from the bundle.
       - `fonts()` returns the bundled fonts only.
       - `showItemInFolder` opens the Files app at that folder where possible; otherwise it does nothing.
@@ -316,7 +316,7 @@ that editing feels right, or decides what changes. Stop here and report.
       - Range responses;
       - conflict detection;
       - bookmark round trip.
-- [ ] **Offline audit:** extend `scripts/offline-audit.mjs` to fail on:
+- [x] **Offline audit:** extend `scripts/offline-audit.mjs` to fail on:
       - `URLSession`, `URLRequest`, `NWConnection`, `CFNetwork`, `WebSocket`, `SFSafariViewController` or
         `openURL` with http(s) in `packages/ios/**/*.swift`;
       - `NSAllowsArbitraryLoads` or any ATS exception in `Info.plist`;

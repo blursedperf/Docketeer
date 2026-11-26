@@ -1,0 +1,5 @@
+// A fragment of a project with a Swift package. Never opened.
+		D0000000000000000000AAAA /* XCRemoteSwiftPackageReference "analytics" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/example/analytics";
+		};

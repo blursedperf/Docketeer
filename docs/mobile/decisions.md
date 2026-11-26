@@ -273,3 +273,16 @@ the host as the page starts (on iOS also `isMacOS` and `isSafari`), and `layoutM
 window is compact too, since the layout follows the window; no style uses it yet beyond Compare's columns.
 Checked on the simulators: the iPhone 17 (402 px) is a phone, compact and touch; the iPad Pro 11-inch in portrait
 (834 px) is a tablet, regular and touch.
+
+**Plugins, assets and the audit (Phase 1):**
+
+- **Desktop-only plugins** (`isDesktopOnly: true`) are not loaded on iPhone and iPad (`cannotRunHere()`); the plugin's
+  settings say "Only for the desktop app" instead of a failure notice at every start. Both built-in plugins run
+  everywhere.
+- **Show in folder** opens the Files app at the folder (a note's own folder for a note) through its
+  `shareddocuments://` address. It is the one place the app hands a URL to another app; the view controller opens
+  only that scheme, and the audit allows only that call. Dictionaries, notices, PDF assets and fonts already came
+  from the bundle.
+- **The audit's Swift rules are tested**: `scripts/offline-audit-fixtures/ios` is a planted shell that breaks each
+  rule once (network APIs, a web address, opening a URL, ATS exceptions, a Swift package, a Podfile), and every
+  rule must fire on it; `Quiet.swift` holds allowed code that must not set any off. The audit fails otherwise.
