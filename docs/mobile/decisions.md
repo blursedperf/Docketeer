@@ -286,3 +286,17 @@ Checked on the simulators: the iPhone 17 (402 px) is a phone, compact and touch;
 - **The audit's Swift rules are tested**: `scripts/offline-audit-fixtures/ios` is a planted shell that breaks each
   rule once (network APIs, a web address, opening a URL, ATS exceptions, a Swift package, a Podfile), and every
   rule must fire on it; `Quiet.swift` holds allowed code that must not set any off. The audit fails otherwise.
+
+## 6. Leaving the screen is not quitting (Phase 1; the plan was wrong)
+
+PLAN's lifecycle task said `onBeforeQuit` should run when the scene resigns active or goes to the background, and
+Phase 0 already sent `app:before-quit` on going to the background. But the page's quit handler does more than save:
+it unloads every plugin, because on desktop the window is about to close. On iOS the app usually comes back, and
+would then run without AGLC4 or Tasks until it was restarted.
+
+- **`app.onBackground(cb)`**, new and optional on `HostBridge`: the app is leaving the screen but may come back.
+  The page saves open notes and closes nothing. iOS sends `app:background` when the scene resigns active (Control
+  Centre, the app switcher) and when it enters the background, and waits for the save in a background task.
+- **`app:before-quit`** is sent only when the scene disconnects, which iOS seldom announces; the background save
+  has already happened by then.
+- `app:system-lock` still goes with entering the background (locking, when it is turned on). Desktop is unchanged.

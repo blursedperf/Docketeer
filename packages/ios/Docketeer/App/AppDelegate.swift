@@ -24,6 +24,14 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		self.page = page
 	}
 
+	func sceneWillResignActive(_ scene: UIScene) {
+		page?.resignedActive()
+	}
+
+	func sceneDidDisconnect(_ scene: UIScene) {
+		page?.willTerminate()
+	}
+
 	func sceneWillEnterForeground(_ scene: UIScene) {
 		page?.enteredForeground()
 	}

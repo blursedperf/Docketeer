@@ -119,13 +119,31 @@ final class PageViewController: UIViewController {
 		present(picker, animated: true)
 	}
 
-	/** Lock the homebase if locking is on, and let the page save, in a background task that ends when it has. */
+	/**
+	 * Leaving the screen (inactive: Control Centre, the app switcher): let the page save, in a background task that
+	 * ends when it has. Nothing closes: the app usually comes back.
+	 */
+	func resignedActive() {
+		askToSave("app:background")
+	}
+
+	/** In the background, where iOS may end the app without warning: lock the homebase if locking is on, and save. */
 	func enteredBackground() {
+		webView?.emitQuireEvent("app:system-lock")
+		askToSave("app:background")
+	}
+
+	/** iOS is ending the app (rarely announced): save and close, as desktop does before its window closes. */
+	func willTerminate() {
+		askToSave("app:before-quit")
+	}
+
+	/** Send `event` with a token; the page answers app:quit-ready with it once it has saved. */
+	private func askToSave(_ event: String) {
 		guard let webView else { return }
-		webView.emitQuireEvent("app:system-lock")
 		let token = UUID().uuidString
 		saving[token] = UIApplication.shared.beginBackgroundTask(withName: "Saving notes") { [weak self] in self?.finishSaving(token) }
-		webView.emitQuireEvent("app:before-quit", token)
+		webView.emitQuireEvent(event, token)
 	}
 
 	private func finishSaving(_ token: String) {

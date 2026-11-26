@@ -165,4 +165,19 @@ describe('createHost', () => {
 		await vi.waitFor(() => expect(calls).toContainEqual(['app:quit-ready', ['t2']]));
 		expect(saved).toBe(true);
 	});
+
+	it('leaving the screen saves without quitting; only a real quit runs the quit handler', async () => {
+		const { native, calls } = fakeNative({ 'app:quit-ready': undefined });
+		const events = new NativeEvents();
+		const host = createHost(native, info, events);
+		const ran: string[] = [];
+		host.app.onBackground!(async () => { ran.push('save'); });
+		host.app.onBeforeQuit(async () => { ran.push('quit'); });
+		events.emit('app:background', 'b1');
+		await vi.waitFor(() => expect(calls).toContainEqual(['app:quit-ready', ['b1']]));
+		expect(ran).toEqual(['save']);
+		events.emit('app:before-quit', 'q1');
+		await vi.waitFor(() => expect(calls).toContainEqual(['app:quit-ready', ['q1']]));
+		expect(ran).toEqual(['save', 'quit']);
+	});
 });

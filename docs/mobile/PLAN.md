@@ -303,9 +303,10 @@ that editing feels right, or decides what changes. Stop here and report.
       - `dictionary`, `notices` and `pdfAsset` read from the bundle.
       - `fonts()` returns the bundled fonts only.
       - `showItemInFolder` opens the Files app at that folder where possible; otherwise it does nothing.
-- [ ] Lifecycle:
-      - `onBeforeQuit` runs when the scene resigns active or goes to the background; native waits for the
-        promise using a background task.
+- [x] Lifecycle:
+      - ~~`onBeforeQuit` runs when the scene resigns active or goes to the background~~ — wrong: it unloads the
+        plugins. A new `onBackground` saves instead (decisions.md); native waits for the promise using a
+        background task.
       - `onSystemLock` fires when the app goes to the background.
       - Clipboard uses `UIPasteboard`.
 - [x] Per-device workspace file (§2.6), with a vitest test in `packages/api/test`. (`formFactor` is on

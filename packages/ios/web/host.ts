@@ -109,12 +109,18 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 	const call = <T>(channel: string, ...args: unknown[]) => native(channel, ...args) as Promise<T>;
 
 	let quitHandler: (() => Promise<void>) | null = null;
-	// Native asks before the app goes to the background, and waits (in a background task) for the answer.
-	events.on('app:before-quit', (token) => {
+	let backgroundHandler: (() => Promise<void>) | null = null;
+	// Native waits (in a background task) until the page says it has saved, with the token it sent.
+	const answer = (name: string, handler: () => (() => Promise<void>) | null) => events.on(name, (token) => {
 		const done = () => { void native('app:quit-ready', token).catch(() => undefined); };
-		if (!quitHandler) { done(); return; }
-		quitHandler().then(done, (e: unknown) => { console.error(e); done(); });
+		const h = handler();
+		if (!h) { done(); return; }
+		h().then(done, (e: unknown) => { console.error(e); done(); });
 	});
+	// Leaving the screen (inactive, or the background): save, keep running.
+	answer('app:background', () => backgroundHandler);
+	// Ending (rarely announced on iOS): save and close.
+	answer('app:before-quit', () => quitHandler);
 
 	return {
 		platform: info.platform,
@@ -139,6 +145,7 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 			openVault: (path) => call('app:openVault', path),
 			showItemInFolder: (path) => call('app:showItemInFolder', path),
 			onBeforeQuit: (cb) => { quitHandler = cb; },
+			onBackground: (cb) => { backgroundHandler = cb; },
 			dictionary: (lang) => call('spell:dictionary', lang),
 			notices: () => call('app:notices'),
 			pdfAsset: async (kind, name) => fromBase64(await call<string>('pdf:asset', kind, name)),
