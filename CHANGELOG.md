@@ -16,6 +16,9 @@
   fits the part of the screen the keyboard leaves, so the line you are writing stays in view.
 - **New commands**, in the Docket anywhere: *Make a task, or tick it off*, *Heading level: none, 1, 2, 3*, *Undo*,
   *Redo* and *Open the slash menu*.
+- **iPhone and iPad: touch and hold for a menu**, the one a right-click opens on a computer: on a tab, a view's
+  header, a Docket result or panel row, a PDF, and in a note on a link, a picture or a misspelt word. Elsewhere in
+  a note, holding still moves the cursor and selects words as usual. Menu rows are a finger tall on a touch screen.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

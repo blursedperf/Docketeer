@@ -628,6 +628,10 @@ input.prompt-input:focus { box-shadow: none; }
 }
 .menu-item:hover { background: rgba(var(--doom-blue-rgb), 0.16); color: var(--doom-blue-text); border-left-color: var(--doom-blue); }
 .menu-item.is-disabled { opacity: 0.5; pointer-events: none; }
+/* On a touch screen (a long-press opens it: long-press.ts) rows are a finger tall, and a long menu scrolls. */
+.is-touch .menu { max-height: calc(var(--visible-height, 100vh) - var(--space-4)); overflow-y: auto; }
+.is-touch .menu-item { height: 44px; }
+.is-touch .menu, .is-touch .view-header, .is-touch .workspace-tab-header, .is-touch .docket { -webkit-touch-callout: none; }
 .menu-item.is-warning { color: var(--text-error); }
 .menu-item-icon { display: flex; width: var(--icon-md); color: var(--text-muted); }
 .menu-item:hover .menu-item-icon { color: var(--doom-blue-text); }

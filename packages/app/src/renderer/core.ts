@@ -12,6 +12,7 @@ import {
 import { registerDocket } from './docket';
 import { registerCompact } from './compact';
 import { registerKeyboardToolbar } from './keyboard-toolbar';
+import { registerLongPress } from './long-press';
 import { registerTiling } from './tiling';
 import { registerMedia } from './media';
 import { registerPdf } from './pdf/view';
@@ -794,6 +795,7 @@ export function registerCore(app: App): { reveal(): void } {
 	// Last: it narrows the tiling commands registered above while the window is compact.
 	registerCompact(app);
 	registerKeyboardToolbar(app);
+	registerLongPress();
 	return {
 		reveal: () => { docket.start(); },
 	};

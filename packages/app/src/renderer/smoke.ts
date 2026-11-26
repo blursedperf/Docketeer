@@ -10,6 +10,7 @@ import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { conflictsStore } from './conflicts';
 import { applyKeyboard } from './layout-mode';
+import { HOLD, LongPress, holdOpensMenu } from './long-press';
 import { genericPanels } from './docket/panels-model';
 import { openFileIn } from './docket/providers';
 
@@ -1747,6 +1748,76 @@ export async function runSmoke(app: App): Promise<void> {
 			if (f) await vault.delete(f);
 		}
 		if (document.body.classList.contains('has-keyboard')) problems.push('has-keyboard stays');
+		return problems.length === 0 || problems.join('; ');
+	});
+
+	await check('long-press: a held finger opens the menu a right-click opens; a moving one does not; note text keeps the system\'s hold', async () => {
+		const problems: string[] = [];
+		const menus = () => document.querySelectorAll('.menu .menu-item').length;
+		const clear = async () => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await sleep(30); document.querySelectorAll('.menu').forEach((m) => m.remove()); };
+		const note = vault.getFileByPath('Hold smoke.md') ?? await vault.create('Hold smoke.md', 'Plain words, then [[Welcome]] and more.');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const v = leaf.view as MarkdownView;
+		if (v.getMode() !== 'source') await v.setMode('source');
+		try {
+			const tab = leaf.tabHeaderEl;
+			const r = tab.getBoundingClientRect();
+			const press = new LongPress(window, 30);
+			press.start(tab, r.left + 5, r.top + 5);
+			await sleep(80);
+			if (!menus()) problems.push('holding a tab opened no menu');
+			if (!press.fired) problems.push('the hold did not know it opened a menu');
+			await clear();
+			press.start(tab, r.left + 5, r.top + 5);
+			press.move(r.left + 40, r.top + 5);
+			await sleep(80);
+			if (menus()) problems.push('a finger that moved opened a menu');
+			await clear();
+			press.start(tab, r.left + 5, r.top + 5);
+			press.cancel();
+			await sleep(80);
+			if (menus()) problems.push('a finger that lifted opened a menu');
+			// In the note: plain text is the system's; a link opens the editor's menu.
+			await sleep(100);
+			const text = v.editor.cm.contentDOM.querySelector('.cm-line');
+			if (!text || holdOpensMenu(text)) problems.push('a hold on plain note text would open a menu');
+			const link = v.editor.cm.contentDOM.querySelector('.cm-lp-link, .cm-wikilink, .cm-link, .internal-link');
+			if (!link) problems.push('no link drawn in the note');
+			else if (!holdOpensMenu(link)) problems.push('a hold on a link would not open its menu');
+			const field = document.createElement('input');
+			if (holdOpensMenu(field)) problems.push('a hold in a text field would open a menu');
+			// The page's own listeners, with real touches where the engine makes them (Chromium; WebKit on iOS).
+			let touches = false;
+			try { touches = typeof Touch === 'function' && !!new Touch({ identifier: 1, target: tab, clientX: 1, clientY: 1 }); } catch { touches = false; }
+			if (touches) {
+				const t = new Touch({ identifier: 7, target: tab, clientX: r.left + 5, clientY: r.top + 5 });
+				tab.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [t], targetTouches: [t], changedTouches: [t] }));
+				await sleep(HOLD + 120);
+				if (!menus()) problems.push(`a ${HOLD} ms hold on a tab opened no menu`);
+				const lift = new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [t] });
+				tab.dispatchEvent(lift);
+				if (!lift.defaultPrevented) problems.push('the lift after a menu opened went on to the page');
+				const item = document.querySelector<HTMLElement>('.menu .menu-item');
+				const before = menus();
+				const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+				item?.dispatchEvent(click);
+				if (!click.defaultPrevented || menus() !== before) problems.push('the tap from the lift chose a menu item');
+				await clear();
+				const t2 = new Touch({ identifier: 8, target: tab, clientX: r.left + 5, clientY: r.top + 5 });
+				tab.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [t2], targetTouches: [t2], changedTouches: [t2] }));
+				await sleep(50);
+				tab.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [t2] }));
+				await sleep(HOLD + 50);
+				if (menus()) problems.push('a tap opened a menu');
+			}
+		} finally {
+			await clear();
+			await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+			await sleep(80);
+			const f = vault.getFileByPath('Hold smoke.md');
+			if (f) await vault.delete(f);
+		}
 		return problems.length === 0 || problems.join('; ');
 	});
 

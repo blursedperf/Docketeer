@@ -352,8 +352,10 @@ hidden. Items the iPad also needs (export with Share, the PDF viewer, settings) 
       - `[[` link, bold, task, heading, footnote, AGLC4 cite, slash menu (`slash.ts`), undo, and a button to
         hide the keyboard;
       - each button runs an existing command id.
-- [ ] Touch: long-press opens the menus a right-click opens on desktop. Context menus are in `markdown-view.ts`,
+- [x] Touch: long-press opens the menus a right-click opens on desktop. Context menus are in `markdown-view.ts`,
       `workspace.ts`, `embeds-editor.ts`, `docket/docket.ts`, `docket/panels/common.ts` and `pdf/view.ts`.
+      Done in one place (`long-press.ts`): a still hold sends `contextmenu`; in note text only on a link, an
+      embed or a misspelt word, so the system's cursor and selection hold stays.
 - [ ] Export: AGLC4 Word, HTML and Markdown exports still write into the homebase. Add an optional
       `app.shareFile?(path)` to `HostBridge` that opens the share sheet on iOS, and offer "Share…" after an
       export. Desktop leaves it out and keeps its current behaviour. Export to PDF on iOS: `printToPdf` with
