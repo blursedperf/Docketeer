@@ -96,9 +96,14 @@ export interface PluginManifestData {
 	[key: string]: unknown;
 }
 
+/** What the app runs on: desktop (left out), an iPad, or an iPhone. The layout follows the window's width, not this. */
+export type FormFactor = 'desktop' | 'tablet' | 'phone';
+
 export interface HostBridge {
 	platform: string;
 	appVersion: string;
+	/** Desktop leaves it out ('desktop'). Each kind of device keeps its own pane layout (layoutFiles). */
+	formFactor?: FormFactor;
 	vault: { path: string; name: string } | null;
 	fs: HostFs;
 	onFsEvents(cb: (events: HostFsEvent[]) => void): void;

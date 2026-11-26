@@ -22,6 +22,10 @@
   shows both side by side; keep this device's, the other one, or both (the other saved beside the note as a
   conflict copy). Nothing is removed until you choose. For plugins: a host can list them with
   `HostFs.conflicts()`, `readConflict()` and `resolveConflict()`.
+- **Each kind of device keeps its own pane layout** (in the iPhone and iPad app): an iPad saves its panes in
+  `.quire/workspace.ipad.json` and an iPhone in `workspace.iphone.json`, starting from the desktop's layout the first
+  time, so opening a homebase on the iPad no longer rearranges your panes on the laptop. Settings, units, hotkeys
+  and panels stay shared. For plugins: `HostBridge.formFactor`, and `layoutFiles()` says where the layout is kept.
 
 ## v0.20.0
 

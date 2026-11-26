@@ -10,6 +10,19 @@ import { parseLinktext } from './metadata';
 import { Menu, Notice } from './ui';
 import { debounce } from './util';
 import { EmptyView, FileInfoView, FileView, ItemView, View } from './view';
+import type { FormFactor } from './host';
+
+/**
+ * Where the pane layout is kept: each kind of device has its own (an iPad's panes do not fit an iPhone, nor a
+ * laptop's), and settings, units, hotkeys and panels stay shared. A device with none yet starts from the
+ * desktop's layout. `read` is in the order to try.
+ */
+export function layoutFiles(configDir: string, formFactor: FormFactor = 'desktop'): { save: string; read: string[] } {
+	const desktop = `${configDir}/workspace.json`;
+	if (formFactor === 'desktop') return { save: desktop, read: [desktop] };
+	const own = `${configDir}/workspace.${formFactor === 'tablet' ? 'ipad' : 'iphone'}.json`;
+	return { save: own, read: [own, desktop] };
+}
 
 /** Sources that open beside the note linking to them: recordings and PDFs. */
 function opensBeside(path: string): boolean {
@@ -1356,7 +1369,7 @@ export class Workspace extends Events {
 	private async saveLayout(): Promise<void> {
 		if (!this.layoutReady) return;
 		try {
-			await this.app.vault.adapter.write(`${this.app.vault.configDir}/workspace.json`, JSON.stringify(this.getLayout(), null, '\t'));
+			await this.app.vault.adapter.write(layoutFiles(this.app.vault.configDir, this.app.host.formFactor).save, JSON.stringify(this.getLayout(), null, '\t'));
 		} catch (e) {
 			console.error('Could not save the workspace layout', e);
 		}

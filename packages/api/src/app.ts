@@ -16,7 +16,7 @@ import { SettingsModal } from './settings-modal';
 import { Modal, Notice, topModal } from './ui';
 import { Platform } from './util';
 import { Vault } from './vault';
-import { Workspace, type WorkspaceLeaf } from './workspace';
+import { Workspace, type WorkspaceLeaf, layoutFiles } from './workspace';
 import { CustomCss } from './themes/manager';
 import { Spellchecker } from './spellcheck';
 
@@ -712,8 +712,10 @@ export class App extends Events {
 		await this.plugins.initialize();
 		let layout: unknown = null;
 		try {
-			const path = `${this.vault.configDir}/workspace.json`;
-			if (await this.vault.adapter.exists(path)) layout = JSON.parse(await this.vault.adapter.read(path));
+			// This kind of device's layout, or the desktop's the first time (layoutFiles).
+			for (const path of layoutFiles(this.vault.configDir, this.host.formFactor).read) {
+				if (await this.vault.adapter.exists(path)) { layout = JSON.parse(await this.vault.adapter.read(path)); break; }
+			}
 		} catch (e) {
 			console.error('Could not read the saved layout', e);
 		}

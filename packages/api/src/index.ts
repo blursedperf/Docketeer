@@ -25,7 +25,7 @@ export {
 export { View, ItemView, FileView, EmptyView, type ViewStateResult } from './view';
 export {
 	Workspace, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs, WorkspaceSidedock, WorkspaceItem,
-	type ViewState, type OpenViewState, type ViewCreator, type SplitDirection, type PaneType,
+	type ViewState, type OpenViewState, type ViewCreator, type SplitDirection, type PaneType, layoutFiles,
 } from './workspace';
 export { Editor, editorInfoField, minimalChange, type EditorPosition, type EditorRange, type EditorSelectionRange, type MarkdownFileInfo } from './editor';
 export { MarkdownView, type MarkdownViewModeType } from './markdown-view';
@@ -49,7 +49,7 @@ export { Usage, frecency, type UsageEntry } from './usage';
 export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type DocketPanelUI, type DocketAction, type DocketRowOptions, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
-export { getHost, isConflict, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostConflict, type HostPluginInfo, type PluginManifestData } from './host';
+export { getHost, isConflict, type FormFactor, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostConflict, type HostPluginInfo, type PluginManifestData } from './host';
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
 export { addProperty, editFrontmatter } from './properties-editor';
 export { InputSuggest } from './input-suggest';
