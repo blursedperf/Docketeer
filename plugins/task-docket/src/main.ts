@@ -11,7 +11,7 @@ export default class TaskDocketPlugin extends Plugin {
 	settings: TaskDocketSettings = { ...DEFAULT_SETTINGS };
 	index!: TaskIndex;
 	private statusEl: HTMLElement | null = null;
-	/** What the Tasks panel shows (kept while Quire runs; it starts from the settings' defaults). */
+	/** What the Tasks panel shows (kept while Docketeer runs; it starts from the settings' defaults). */
 	panelState!: PanelState;
 
 	requestRebuild = debounce(() => void this.index.rebuild(), 600, true);

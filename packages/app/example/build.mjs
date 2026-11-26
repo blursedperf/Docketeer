@@ -1,6 +1,6 @@
 /**
  * The example homebase: the notes in ./homebase, plus a sample recording and a sample reading made here, so
- * no audio or PDF is kept in the repository. build.mjs writes it to dist/example-homebase; Quire copies it
+ * no audio or PDF is kept in the repository. build.mjs writes it to dist/example-homebase; Docketeer copies it
  * into the user's Documents when they ask for it (src/main/example.ts).
  */
 import { cp, mkdir, writeFile } from 'node:fs/promises';
@@ -34,7 +34,7 @@ export function lectureWav(seconds = 80, chimes = [20, 45, 65]) {
 /** Text for the sample reading, page by page: an explanation written for the example, not a real report. */
 export const READING = [
 	[
-		'Sample reading for the Quire example homebase',
+		'Sample reading for the Docketeer example homebase',
 		'The neighbour principle',
 		'',
 		'[1] The neighbour principle states a reason for a duty of care rather than a rule',

@@ -1,7 +1,7 @@
-# Theming Quire
+# Theming Docketeer
 
-Everything about how Quire looks is under **Settings → Appearance**, and all of it can be extended with
-files in your homebase. Like the rest of Quire, themes work offline: a theme or snippet that tries to
+Everything about how Docketeer looks is under **Settings → Appearance**, and all of it can be extended with
+files in your homebase. Like the rest of Docketeer, themes work offline: a theme or snippet that tries to
 load anything from outside the app (a web font, `@import`, a remote image) is refused.
 
 ## In the app
@@ -63,14 +63,14 @@ Body classes a theme can target: `theme-dark` / `theme-light`, `density-compact`
 
 ## Contrast
 
-Whatever the palette or accent, Quire checks every pairing of text colour and surface the interface uses
+Whatever the palette or accent, Docketeer checks every pairing of text colour and surface the interface uses
 (listed in `packages/api/src/themes/contrast.ts`) against WCAG AA: 7:1 for note text, 4.5:1 for other
 text. A colour that falls short is moved toward black or white until it passes; palettes that already
 pass are used exactly as designed. CSS themes and snippets are loaded after this and are not adjusted.
 
 ## What a theme cannot do
 
-Quire refuses a theme or snippet that contains `@import`, a `url()` that is not a `data:` URI, a web
+Docketeer refuses a theme or snippet that contains `@import`, a `url()` that is not a `data:` URI, a web
 address, or script in CSS. The app's Content-Security-Policy would block such loads anyway; refusing the
 file says why in Settings instead of failing silently. Fonts must be installed on the computer.
 

@@ -1,4 +1,4 @@
-# Quire
+# Docketeer
 
 A Markdown notes app in the spirit of Obsidian that runs **entirely offline**: a vault is a folder of
 plain `.md` files (a **homebase**), and the app cannot reach the network — every request is blocked by the app itself,
@@ -18,7 +18,7 @@ commands, file trees, note lists and sections ([docs/docket/panels.md](docs/dock
 [docs/docket/shortcuts.md](docs/docket/shortcuts.md) and [docs/docket/walkthrough.md](docs/docket/walkthrough.md). At the moment you can start with a generic homebase
 
 To look around first, choose *Try the example homebase* on the welcome screen (or *Switch homebase* → *Open the
-example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Quire
+example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Docketeer
 example" in your Documents. Its source is in [packages/app/example](packages/app/example).
 
 See [PLAN.md](PLAN.md) for the architecture, the plugin API and the roadmap.
@@ -27,14 +27,14 @@ See [PLAN.md](PLAN.md) for the architecture, the plugin API and the roadmap.
 
 Download from the [releases](../../releases): a `.dmg` for macOS (Apple Silicon or Intel), an AppImage
 for any Linux, a `.pacman` package for Arch/Omarchy or a `.deb` for Debian/Ubuntu. The macOS app is not
-notarised: after copying it to Applications, run `xattr -dr com.apple.quarantine /Applications/Quire.app`
+notarised: after copying it to Applications, run `xattr -dr com.apple.quarantine /Applications/Docketeer.app`
 once.
 
 ## Run from source
 
 ```bash
 npm install
-npm start            # build and open Quire (choose a folder as a homebase)
+npm start            # build and open Docketeer (choose a folder as a homebase)
 ```
 
 Pass `--homebase=/path/to/folder` after `npm start --` to open a folder directly.
@@ -93,5 +93,5 @@ export default class Hello extends Plugin {
 Bundle with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and `@lezer/*` external:
 the app supplies its own instances at run time through an import map. `plugins/aglc4/esbuild.config.mjs`
 is a working example. The API follows the shape of Obsidian's for the parts it covers, so most plugins
-port by changing `from 'obsidian'` to `from '@quire/api'`. Quire calls the folder of notes a *homebase*;
+port by changing `from 'obsidian'` to `from '@quire/api'`. Docketeer calls the folder of notes a *homebase*;
 the API keeps the name `app.vault` (with `app.homebase` as an alias) so existing plugins work unchanged.

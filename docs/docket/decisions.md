@@ -4,7 +4,7 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 
 ## Phase 0
 
-1. **"Vault" is "homebase" in the interface.** The plan's generic "vault" maps onto Quire's homebase (the
+1. **"Vault" is "homebase" in the interface.** The plan's generic "vault" maps onto Docketeer's homebase (the
    folder of notes). The API keeps `app.vault` for plugin compatibility. Whether the Docket's Mod+5 panel is
    called "Vault" or "Homebase" is an open question for Checkpoint 0.
 2. **The command registry extends the existing `Command` interface rather than replacing it.** Plugins use
@@ -38,7 +38,7 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 
 ## Phase 1
 
-13. **Command ids keep Quire's existing form** (`app:new-note`, `editor:toggle-bold`, `<pluginId>:<name>`)
+13. **Command ids keep Docketeer's existing form** (`app:new-note`, `editor:toggle-bold`, `<pluginId>:<name>`)
     rather than the plan's `core.note.new` / `plugin.<id>.<name>`. Renaming would break saved hotkeys in
     `.quire/hotkeys.json` and any plugin calling `executeCommandById`. `source` ("core" or "plugin:<id>") and
     `section` carry the grouping the dotted names were for.
@@ -289,7 +289,7 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
 
 85. **Decided with the user**: notes and folders can be locked; a passphrase plus a recovery key shown once;
     PBKDF2-SHA-256 (600,000 iterations, built in, no new dependency); auto-lock after idle time (15 minutes)
-    and on sleep or screen lock, each can be turned off; always locked after Quire closes (turning that off
+    and on sleep or screen lock, each can be turned off; always locked after Docketeer closes (turning that off
     would need the key on disk, through the system keychain, which was not chosen). Design: `locking.md`.
 86. **A locked note keeps its file name and `.md`**, with a readable header for other apps and the ciphertext
     in a comment (AES-256-GCM, fresh IV per write). Links, folders and Units keep working; names stay visible.
@@ -297,7 +297,7 @@ Where the plan (`docs/docket/PLAN.md`) meets the real codebase, and what was dec
     writes to a locked note (or a note in a locked folder) are sealed. Plugins using the vault get the same.
     Writing straight through `vault.adapter` bypasses it (documented).
 88. **Locking clears memory**: tabs of locked notes are saved and closed, then their text, links, search index
-    entries and usage are dropped. **Unlocking** reads them again. Quire starts locked and does not reopen
+    entries and usage are dropped. **Unlocking** reads them again. Docketeer starts locked and does not reopen
     locked notes' tabs at start.
 89. **While locked**, Units lists locked notes by name with a lock (Enter asks for the passphrase, no actions);
     search, Authorities, links, mentions, embeds and the usage record show nothing of them. Opening one asks

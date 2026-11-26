@@ -60,7 +60,7 @@ export class HistoryManager {
 	register(plugin: Plugin) {
 		const { vault, workspace } = this.app;
 		// A note that is locked loses its history: the versions are readable copies.
-		// (Quire's app has events; Obsidian's and the tests' stand-ins may not.)
+		// (Docketeer's app has events; Obsidian's and the tests' stand-ins may not.)
 		const events = this.app as unknown as { on?: (name: string, cb: (f: TFile) => void) => ReturnType<typeof vault.on> };
 		if (typeof events.on === 'function') plugin.registerEvent(events.on('note-locked', (f: TFile) => { void this.purge(f.path).catch((e) => this.fail(e)); }));
 		plugin.registerEvent(vault.on('modify', (f) => { if (this.enabled && this.tracks(f)) this.schedule(f); }));

@@ -271,7 +271,7 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 		markdown({ base: markdownLanguage, addKeymap: true, extensions: [frontmatter] }),
 		syntaxHighlighting(quireHighlight),
 		EditorView.lineWrapping,
-		// The browser's spellchecker stays off: it would download dictionaries. Quire's own checks offline.
+		// The browser's spellchecker stays off: it would download dictionaries. Docketeer's own checks offline.
 		EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' }),
 		inlineMarks,
 		markdownLinks,

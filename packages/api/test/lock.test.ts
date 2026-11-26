@@ -41,7 +41,7 @@ describe('locking: sealed notes', () => {
 		const a = await seal(key, '# Client: Jane Example\n\nPrivileged.');
 		const b = await seal(key, '# Client: Jane Example\n\nPrivileged.');
 		expect(isSealed(a)).toBe(true);
-		expect(a).toContain('This note is encrypted by Quire');
+		expect(a).toContain('This note is encrypted by Docketeer');
 		expect(a).not.toContain('Jane');
 		expect(a).not.toBe(b);
 		expect(isSealed('# Plain note')).toBe(false);

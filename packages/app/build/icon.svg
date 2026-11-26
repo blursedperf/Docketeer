@@ -1,25 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1a1d23"/>
-      <stop offset="1" stop-color="#090b0e"/>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1b33"/>
+      <stop offset="0.65" stop-color="#1b2f52"/>
+      <stop offset="1" stop-color="#3a2a3c"/>
     </linearGradient>
+    <radialGradient id="glow" cx="512" cy="560" r="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2c76b" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f2c76b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b8862f"/>
+      <stop offset="0.45" stop-color="#f6d98e"/>
+      <stop offset="1" stop-color="#a8751f"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff1c2"/>
+      <stop offset="0.4" stop-color="#f5a93b"/>
+      <stop offset="1" stop-color="#d9482b" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="trail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7e7a1" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#f7e7a1" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="margin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0553f" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#e0553f" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="frame"><rect x="64" y="64" width="896" height="896" rx="200"/></clipPath>
   </defs>
-  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
-  <rect x="64" y="64" width="896" height="896" rx="200" fill="none" stroke="#2f343c" stroke-width="8"/>
-  <!-- stacked pages: a quire -->
-  <rect x="318" y="246" width="420" height="540" rx="36" fill="#23272e" transform="rotate(8 528 516)"/>
-  <rect x="300" y="236" width="420" height="540" rx="36" fill="#2f343c" transform="rotate(3 510 506)"/>
-  <rect x="284" y="226" width="420" height="540" rx="36" fill="#121418" stroke="#60a5fa" stroke-width="14"/>
-  <!-- modeline bar -->
-  <rect x="284" y="226" width="22" height="540" rx="11" fill="#60a5fa"/>
-  <!-- heading and lines in Doom rainbow -->
-  <rect x="360" y="310" width="230" height="34" rx="17" fill="#60a5fa"/>
-  <rect x="360" y="392" width="270" height="22" rx="11" fill="#c9d0d9" opacity="0.55"/>
-  <rect x="360" y="440" width="230" height="22" rx="11" fill="#c9d0d9" opacity="0.55"/>
-  <rect x="360" y="510" width="170" height="28" rx="14" fill="#f472b6"/>
-  <rect x="360" y="576" width="270" height="22" rx="11" fill="#c9d0d9" opacity="0.55"/>
-  <rect x="360" y="624" width="200" height="22" rx="11" fill="#c9d0d9" opacity="0.55"/>
-  <!-- footnote mark -->
-  <circle cx="636" cy="686" r="26" fill="#a78bfa"/>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#sky)"/>
+  <g clip-path="url(#frame)">
+    <g fill="#f2c76b" opacity="0.10"><path d="M512 560 L1412.0 560.0 L1394.7 735.6Z"/><path d="M512 560 L1343.5 904.4 L1260.3 1060.0Z"/><path d="M512 560 L1148.4 1196.4 L1012.0 1308.3Z"/><path d="M512 560 L856.4 1391.5 L687.6 1442.7Z"/><path d="M512 560 L512.0 1460.0 L336.4 1442.7Z"/><path d="M512 560 L167.6 1391.5 L12.0 1308.3Z"/><path d="M512 560 L-124.4 1196.4 L-236.3 1060.0Z"/><path d="M512 560 L-319.5 904.4 L-370.7 735.6Z"/><path d="M512 560 L-388.0 560.0 L-370.7 384.4Z"/><path d="M512 560 L-319.5 215.6 L-236.3 60.0Z"/><path d="M512 560 L-124.4 -76.4 L12.0 -188.3Z"/><path d="M512 560 L167.6 -271.5 L336.4 -322.7Z"/><path d="M512 560 L512.0 -340.0 L687.6 -322.7Z"/><path d="M512 560 L856.4 -271.5 L1012.0 -188.3Z"/><path d="M512 560 L1148.4 -76.4 L1260.3 60.0Z"/><path d="M512 560 L1343.5 215.6 L1394.7 384.4Z"/></g>
+    <circle cx="512" cy="560" r="420" fill="url(#glow)"/>
+    <circle cx="512" cy="540" r="300" fill="none" stroke="#e0b354" stroke-width="10" opacity="0.85"/>
+    <circle cx="512" cy="540" r="276" fill="none" stroke="#e0b354" stroke-width="3" opacity="0.6"/>
+    <g fill="#f6e3b0"><path d="M232 224 Q232 250 258 250 Q232 250 232 276 Q232 250 206 250 Q232 250 232 224Z"/><path d="M800 282 Q800 300 818 300 Q800 300 800 318 Q800 300 782 300 Q800 300 800 282Z"/><path d="M760 798 Q760 820 782 820 Q760 820 760 842 Q760 820 738 820 Q760 820 760 798Z"/><path d="M270 746 Q270 760 284 760 Q270 760 270 774 Q270 760 256 760 Q270 760 270 746Z"/></g>
+    <g transform="translate(14 34) rotate(38 512 520)">
+      <!-- contrail: ruled lines of a note -->
+      <g fill="url(#trail)">
+        <rect x="486" y="730" width="14" height="420" rx="7"/>
+        <rect x="530" y="700" width="14" height="420" rx="7"/>
+        <rect x="574" y="730" width="14" height="420" rx="7"/>
+      </g>
+      <rect x="440" y="700" width="14" height="420" rx="7" fill="url(#margin)"/>
+      <!-- exhaust -->
+      <path d="M440 640 Q512 860 584 640Z" fill="url(#flame)"/>
+      <path d="M476 640 Q512 760 548 640Z" fill="#fff6d8" opacity="0.9"/>
+      <!-- fins -->
+      <path d="M404 540 L318 690 L404 652Z" fill="#c23a2e"/>
+      <path d="M620 540 L706 690 L620 652Z" fill="#c23a2e"/>
+      <path d="M404 540 L318 690 L404 652Z" fill="none" stroke="#7d1f19" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M620 540 L706 690 L620 652Z" fill="none" stroke="#7d1f19" stroke-width="6" stroke-linejoin="round"/>
+      <!-- nib body -->
+      <path d="M512 210 C566 300 622 420 622 520 L622 652 L402 652 L402 520 C402 420 458 300 512 210Z" fill="url(#brass)" stroke="#6b4a14" stroke-width="8" stroke-linejoin="round"/>
+      <!-- deco bands -->
+      <rect x="402" y="566" width="220" height="16" fill="#0d1b33" opacity="0.85"/>
+      <rect x="402" y="598" width="220" height="8" fill="#0d1b33" opacity="0.6"/>
+      <!-- slit and breather -->
+      <path d="M512 232 L512 452" stroke="#2a1d08" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="512" cy="474" r="24" fill="#0d1b33" stroke="#6b4a14" stroke-width="6"/>
+      <!-- highlight -->
+      <path d="M470 330 C452 380 440 440 438 520" stroke="#fff6d8" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.55"/>
+    </g>
+  </g>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="none" stroke="#e0b354" stroke-width="8" opacity="0.7"/>
 </svg>

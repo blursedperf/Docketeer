@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Offline audit for Quire: fails if anything that ships could make a network request, run generated
+ * Offline audit for Docketeer: fails if anything that ships could make a network request, run generated
  * code, or inject raw HTML. Same rules as the AGLC4 plugin's audit, applied to:
  *   - the app's source (packages/api/src, packages/app/src),
  *   - the built app (packages/app/dist: main, preload, renderer bundle, shims, CSS),

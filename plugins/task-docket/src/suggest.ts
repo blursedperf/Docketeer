@@ -22,7 +22,7 @@ export function taskOnLine(editor: Editor, line: number): Task | null {
 /** Is this line inside a code block or the frontmatter? Uses the cached note structure. */
 export function inCodeOrFrontmatter(app: App, file: TFile | null, line: number): boolean {
 	if (!file) return false;
-	// Quire's cache has no sections: the note's own text says whether the line is in properties or a code block.
+	// Docketeer's cache has no sections: the note's own text says whether the line is in properties or a code block.
 	const editor = app.workspace.activeEditor?.editor;
 	if (!editor || app.workspace.getActiveFile() !== file) return false;
 	let fence = false;

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Quire is now Docketeer**, because another app already uses the name Quire. It has a new icon. The first time
+  Docketeer starts, it brings across Quire's recent homebases and app-wide settings, and an example homebase
+  already in "Quire example" in your Documents keeps opening. Homebases are unchanged: their settings stay in
+  `.quire/`, and locked notes, themes and plugins work as before. On Arch and Debian/Ubuntu the `docketeer`
+  package replaces `quire`; on macOS, delete the old Quire.app.
+
 ## v0.20.0
 
 - **Export to PDF**: a note on white A4 pages as it reads in reading view (its properties, headings, lists and tasks,

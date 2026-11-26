@@ -12,7 +12,7 @@
     "dist": "electron-builder --config electron-builder.json --publish never",
     "shots": "electron . --shots"
   },
-  "productName": "Quire",
+  "productName": "Docketeer",
   "description": "Offline Markdown notes, extensible with plugins. Ships with AGLC4 Citations and Task Docket.",
   "author": "blursedperf",
   "license": "MIT",

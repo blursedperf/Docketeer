@@ -1,4 +1,4 @@
-# Quire — plan
+# Docketeer — plan
 
 A local-first Markdown notes app in the spirit of Obsidian: a folder of plain `.md` files (a *vault*),
 a fast editor, links between notes, and a plugin API. It runs entirely offline, and that is

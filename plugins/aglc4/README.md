@@ -1,10 +1,10 @@
-# AGLC4 Citations for Quire
+# AGLC4 Citations for Docketeer
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy_me_a_coffee-lawfair-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/lawfair)
 
 If it saves you some footnote pain, **[buy me a coffee](https://buymeacoffee.com/lawfair)**...or don't, no presh. If you'd rather chip in a third of a coffee every month, I'm on [Patreon](https://patreon.com/Blursedperf) too.
 
-Write footnoted legal work in Quire to the *Australian Guide to Legal Citation* (4th ed). The plugin:
+Write footnoted legal work in Docketeer to the *Australian Guide to Legal Citation* (4th ed). The plugin:
 
 - **underlines incorrect or incomplete citations** as you write, explains the AGLC4 rule on hover and offers a one-click fix;
 - **inserts the AGLC4 form of any kind of source** you choose, from cases and Acts to government, law reform and Productivity Commission reports (interim, draft and final), with Tab between the parts to fill in, and **suggests the next required element** of the citation you are typing;
@@ -41,11 +41,11 @@ See [Privacy](docs/privacy.md) for how this is checked, and how to verify that a
 
 ## About this port
 
-This is the Quire build of [obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0. The citation
+This is the Docketeer build of [obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0. The citation
 engine, footnotes, export, import, page layout, version history and prompts are the same code; only the
-glue imports from `@quire/api` instead of `obsidian`. It ships built in to Quire and is on in new vaults
+glue imports from `@quire/api` instead of `obsidian`. It ships built in to Docketeer and is on in new vaults
 (turn it off under **Settings → Plugins**). The user guide in `docs/` was written for Obsidian; the
-commands and settings are the same in Quire.
+commands and settings are the same in Docketeer.
 
 ## Development
 

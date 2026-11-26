@@ -4,7 +4,7 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
 
 ## What the user sees
 
-- **Set up locking** once: choose a passphrase. Quire shows a **recovery key** once, to print or store
+- **Set up locking** once: choose a passphrase. Docketeer shows a **recovery key** once, to print or store
   safely. Forget the passphrase and lose the recovery key, and locked notes cannot be read by anyone.
 - **Lock a note or a folder** (a subject or topic): its notes are encrypted on disk. New notes made in a
   locked folder are encrypted too. **Remove the lock** decrypts them again.
@@ -13,7 +13,7 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
   appears anywhere: not in search, Authorities, links, mentions, previews, embeds, exports, the usage record
   or logs. Opening one asks for the passphrase.
 - **Auto-lock**: after a set idle time (15 minutes by default) and when the computer sleeps or the screen
-  locks, each can be turned off (Settings → Security). Quire is always locked after it closes: the key is
+  locks, each can be turned off (Settings → Security). Docketeer is always locked after it closes: the key is
   never written to disk.
 
 ## How it works
@@ -32,7 +32,7 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
   ---
   quire-locked: 1
   ---
-  This note is encrypted by Quire. Open it in Quire to read it.
+  This note is encrypted by Docketeer. Open it in Docketeer to read it.
 
   <!-- quire-encrypted v1
   base64(iv ‖ ciphertext and tag)
@@ -51,5 +51,5 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
 ## Not covered
 
 - File and folder names, attachments (pictures, PDFs) and the folder structure are not encrypted.
-- Someone who can run code as you while Quire is unlocked can read what Quire can.
-- Copies made before a note was locked (other backups, sync services) are outside Quire's reach.
+- Someone who can run code as you while Docketeer is unlocked can read what Docketeer can.
+- Copies made before a note was locked (other backups, sync services) are outside Docketeer's reach.

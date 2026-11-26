@@ -1,6 +1,6 @@
 # Polish plan: spacing, alignment and consistency
 
-Based on a screenshot review of Quire 0.1 with theming (`npm run shots` captures every surface below in
+Based on a screenshot review of Docketeer 0.1 with theming (`npm run shots` captures every surface below in
 16 palettes, three densities and two icon sets). The aim is an interface that lines up on a grid, uses a
 small set of sizes, and looks deliberate in every palette.
 

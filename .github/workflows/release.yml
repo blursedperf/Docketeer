@@ -100,14 +100,14 @@ jobs:
 
           | System | File |
           |---|---|
-          | macOS (Apple Silicon) | `Quire-*-mac-arm64.dmg` |
-          | macOS (Intel) | `Quire-*-mac-x64.dmg` |
-          | Linux, any distribution | `Quire-*-linux-x86_64.AppImage` / `…-arm64.AppImage` (make it executable, then run it) |
-          | Arch / Omarchy | `Quire-*-linux-x64.pacman` / `…-aarch64.pacman`: `sudo pacman -U <file>` |
-          | Debian / Ubuntu | `Quire-*-linux-amd64.deb` / `…-arm64.deb`: `sudo apt install ./<file>` |
+          | macOS (Apple Silicon) | `Docketeer-*-mac-arm64.dmg` |
+          | macOS (Intel) | `Docketeer-*-mac-x64.dmg` |
+          | Linux, any distribution | `Docketeer-*-linux-x86_64.AppImage` / `…-arm64.AppImage` (make it executable, then run it) |
+          | Arch / Omarchy | `Docketeer-*-linux-x64.pacman` / `…-aarch64.pacman`: `sudo pacman -U <file>` |
+          | Debian / Ubuntu | `Docketeer-*-linux-amd64.deb` / `…-arm64.deb`: `sudo apt install ./<file>` |
 
-          **macOS:** the app is not notarised by Apple. After dragging Quire to Applications, run
-          `xattr -dr com.apple.quarantine /Applications/Quire.app` once (or right-click → Open).
+          **macOS:** the app is not notarised by Apple. After dragging Docketeer to Applications, run
+          `xattr -dr com.apple.quarantine /Applications/Docketeer.app` once (or right-click → Open).
 
           Verify a download with `SHA256SUMS.txt`.
           NOTES
@@ -117,4 +117,4 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Quire ${GITHUB_REF_NAME#v}" --notes-file notes.md --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Docketeer ${GITHUB_REF_NAME#v}" --notes-file notes.md --verify-tag

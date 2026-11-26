@@ -62,7 +62,7 @@ class AppBinaryData {
 		if (!read) throw new Error('No asset reader');
 		if (kind === 'standardFontDataUrl') return read('standard_fonts', filename);
 		if (kind === 'cMapUrl') return read('cmaps', filename);
-		throw new Error(`Quire does not supply ${kind} data`);
+		throw new Error(`Docketeer does not supply ${kind} data`);
 	}
 }
 

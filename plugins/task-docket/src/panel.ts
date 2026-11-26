@@ -1,5 +1,5 @@
 /**
- * The Tasks panel in Quire's Docket: every task in the homebase, grouped (by when it is due, by default) and
+ * The Tasks panel in the Docket: every task in the homebase, grouped (by when it is due, by default) and
  * sorted (by urgency). Rows move like the Docket's own: ↑↓ choose, Enter opens the task in its note with the caret
  * at the end of its line (Mod+Enter: to the right), Space or a click on its box checks it off, → offers its actions
  * (check off, due today or tomorrow, a date, a priority). The row above the

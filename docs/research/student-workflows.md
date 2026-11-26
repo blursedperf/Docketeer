@@ -1,7 +1,7 @@
-# Student note-taking workflows: what Quire should support next
+# Student note-taking workflows: what Docketeer should support next
 
 Research notes, 2026-11-25. Scope: law scaffolds, essay-question research, PDF and lecture-video embeds.
-Each section says what students do, what Quire (0.7.1) already covers, where the gaps are, and what to build.
+Each section says what students do, what Docketeer (0.7.1) already covers, where the gaps are, and what to build.
 
 ## 1. The weekly cycle of an Australian law student
 
@@ -22,13 +22,13 @@ tutorial prep (problem question)            ─┘                              
   open-book exam), (b) problem answers (IRAC, MIRAT at Monash, ILAC, HIRAC at ANU), (c) research essays
   (thesis → annotated sources → outline → draft, AGLC4).
 - Open-book success is about **finding the rule fast**: "know the rules cold — either memorise them or
-  have them perfectly drafted in your outline." Quire's Docket search, offline guarantee and locking
+  have them perfectly drafted in your outline." The Docket's search, offline guarantee and locking
   already fit this; what is missing is the scaffold itself and links from it back to sources.
 
 ## 2. Law scaffolds
 
 ### What exists
-| Quire today | Where |
+| Docketeer today | Where |
 |---|---|
 | Case-brief detection (`type: case-brief`, tag, or 3 of Facts/Issues/Held/Ratio/Obiter) and "add a missing field" | `packages/api/src/outline-edit.ts:93` |
 | Outline panel: move sections (Alt+↑/↓), change levels | Docket → Outline |
@@ -81,7 +81,7 @@ ratio/held), **Legal Core** (shared authorities store across notes).
    sources × sub-questions).
 5. Draft, keep the thesis in view, manage the word budget, cite (AGLC4), check, export.
 
-### Quire coverage
+### Docketeer coverage
 Step 5 is strong (AGLC4 underlining, Cite panel, prompts, page preview, Word export, history). Steps 1–4
 are unsupported.
 
@@ -102,7 +102,7 @@ are unsupported.
 
 ### Current state (verified in code)
 - Dropping a PDF stores it in `attachments/` and inserts `[[x.pdf]]` (smoke test covers this), but it
-  **cannot be opened in Quire**.
+  **cannot be opened in Docketeer**.
 - `quire://app/vault/…` serves **images only** (`packages/app/src/main/main.ts`, the `parts[0] === 'vault'`
   branch) and `serve()` reads the whole file into memory.
 - CSP: `object-src 'none'`, `frame-src 'none'`, `worker-src 'none'`. Chromium's built-in PDF viewer is
@@ -112,7 +112,7 @@ are unsupported.
 Read a judgment beside its brief ("Brief + Source" preset), highlight, and pull a quote with an **AGLC4
 pinpoint**: for judgments that is the **paragraph number** `[78]`, for books/articles the **printed page**
 (not the PDF page index). Obsidian users do this with PDF++ (links to a selection become highlights; notes
-stay plain Markdown, which matches Quire's plain-files rule).
+stay plain Markdown, which matches Docketeer's plain-files rule).
 
 ### Design
 - **Bundle pdf.js** (Apache-2.0, add to `THIRD_PARTY_NOTICES`) and add a `PdfView` tab: canvas + text
@@ -144,7 +144,7 @@ Remote players (YouTube, Echo360 streams) are impossible by design and should st
 Watch at 1.5–2×, pause while typing, drop a timestamp into the note, jump back from the note, read and
 search the transcript, and link the slide that was on screen. Obsidian plugins in this space (Media
 Extended, Video Notes, Media Marker, Timestamp Notes) converge on the same features; "Video Notes" is an
-offline-only fork of the idea, which confirms demand for exactly Quire's constraints.
+offline-only fork of the idea, which confirms demand for exactly Docketeer's constraints.
 
 ### Design
 - **Protocol**: add `video/mp4`, `video/webm`, `audio/mp4` (m4a), `audio/mpeg`, `audio/ogg`, `text/vtt`;

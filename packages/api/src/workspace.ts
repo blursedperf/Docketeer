@@ -142,7 +142,7 @@ export class WorkspaceSplit extends WorkspaceItem {
 }
 
 /**
- * What plugins written for sidebars find at `workspace.leftSplit` / `rightSplit`. Quire has no sidebars
+ * What plugins written for sidebars find at `workspace.leftSplit` / `rightSplit`. Docketeer has no sidebars
  * (the Docket replaces them): always collapsed, and expanding does nothing. Views such plugins open in a
  * sidebar open as tabs instead (`getRightLeaf`).
  */
@@ -1370,7 +1370,7 @@ export class Workspace extends Events {
 				if (!this.viewCreators.has(st.type) || st.type === 'empty') continue;
 				const file = typeof st.state?.file === 'string' ? st.state.file : null;
 				if (file !== null && !this.app.vault.getAbstractFileByPath(file)) continue;
-				// Locked notes stay closed at start (Quire starts locked; no passphrase prompt on launch).
+				// Locked notes stay closed at start (Docketeer starts locked; no passphrase prompt on launch).
 				const f = file !== null ? this.app.vault.getFileByPath(file) : null;
 				if (f && this.app.isLocked(f)) continue;
 				const leaf = this.createLeafInTabs(tabs, tabs.children.length);

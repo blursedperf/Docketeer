@@ -93,7 +93,7 @@ export interface HostBridge {
 		frameless?: boolean;
 		/** Colour the window buttons drawn over the top bar (Windows and Linux). */
 		setTitleBarColors?(color: string, symbol: string): Promise<void>;
-		/** Restart Quire. */
+		/** Restart Docketeer. */
 		relaunch?(): Promise<void>;
 		/** Benchmark mode (--bench): time the Docket on the open homebase and report. */
 		isBench?: boolean;
@@ -118,6 +118,6 @@ export interface HostBridge {
 
 export function getHost(): HostBridge {
 	const h = (globalThis as { quire?: HostBridge }).quire;
-	if (!h) throw new Error('Quire host bridge is not available');
+	if (!h) throw new Error('Docketeer host bridge is not available');
 	return h;
 }

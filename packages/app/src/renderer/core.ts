@@ -60,7 +60,7 @@ class EditorTab extends SettingTab {
 		new Setting(el).setName('Auto-pair brackets').setDesc('Type the closing bracket or quote with the opening one.')
 			.addToggle((t) => t.setValue(c.autoPairBrackets).onChange((v) => { void this.app.setConfig('autoPairBrackets', v); }));
 		new Setting(el).setName('Spelling').setHeading();
-		new Setting(el).setName('Check spelling').setDesc('Mark misspelled words as you write; right-click one for suggestions, to add it to your dictionary, or to ignore it. The dictionaries ship with Quire and checking happens on this computer.')
+		new Setting(el).setName('Check spelling').setDesc('Mark misspelled words as you write; right-click one for suggestions, to add it to your dictionary, or to ignore it. The dictionaries ship with Docketeer and checking happens on this computer.')
 			.addToggle((t) => t.setValue(c.spellcheck).onChange((v) => { void this.app.setConfig('spellcheck', v); }));
 		new Setting(el).setName('Language')
 			.addDropdown((d) => d.addOptions(SPELL_LANGUAGES).setValue(c.spellcheckLanguage).onChange((v) => { void this.app.setConfig('spellcheckLanguage', v); }));
@@ -159,7 +159,7 @@ class AppearanceTab extends SettingTab {
 
 		new Setting(el).setName('Type and spacing').setHeading();
 		/**
-		 * A font: one that ships with Quire (Inter, JetBrains Mono, Source Serif 4: the same on every computer), the
+		 * A font: one that ships with Docketeer (Inter, JetBrains Mono, Source Serif 4: the same on every computer), the
 		 * system's, one installed on this computer (monospaced ones first for the monospace font), or typed (Other…).
 		 * A line of sample text shows it.
 		 */
@@ -176,7 +176,7 @@ class AppearanceTab extends SettingTab {
 					const current = String(c[key] ?? '');
 					sel.empty();
 					sel.createEl('option', { value: '', text: empty });
-					const shipped = sel.createEl('optgroup', { attr: { label: 'Built into Quire' } });
+					const shipped = sel.createEl('optgroup', { attr: { label: 'Built into Docketeer' } });
 					for (const [value, label] of builtIn) shipped.createEl('option', { value, text: label });
 					const group = (label: string, list: { family: string }[]) => {
 						if (!list.length) return;
@@ -219,11 +219,11 @@ class AppearanceTab extends SettingTab {
 
 		new Setting(el).setName('Window').setHeading();
 		const frame = new Setting(el).setName('Title bar')
-			.setDesc('Hidden: the window buttons sit in Quire\'s top bar, which moves the window, as in Obsidian. System: the title bar your system draws. Applies when Quire restarts.')
+			.setDesc('Hidden: the window buttons sit in Docketeer\'s top bar, which moves the window, as in Obsidian. System: the title bar your system draws. Applies when Docketeer restarts.')
 			.addDropdown((d) => d.addOptions({ hidden: 'Hidden', native: 'System' }).setValue(c.windowFrame ?? 'hidden')
 				.onChange((v) => { void app.setConfig('windowFrame', v as 'hidden' | 'native').then(() => this.display()); }));
 		if ((c.windowFrame !== 'native') !== !!app.host.app.frameless && !app.host.app.isSmoke && app.host.app.relaunch) {
-			frame.addButton((b) => b.setButtonText('Restart').setTooltip('Restart Quire to apply').onClick(() => { void app.host.app.relaunch?.(); }));
+			frame.addButton((b) => b.setButtonText('Restart').setTooltip('Restart Docketeer to apply').onClick(() => { void app.host.app.relaunch?.(); }));
 		}
 		new Setting(el).setName('Docket').setHeading();
 		new Setting(el).setName('Mode')
@@ -441,7 +441,7 @@ class PluginsTab extends SettingTab {
 		new Setting(el).setName('Plugins').setHeading();
 		el.createEl('p', {
 			cls: 'setting-item-description',
-			text: `Plugins run inside Quire with the same offline protections as the app: they cannot reach the network. To add a plugin, put its folder (manifest.json, main.js, styles.css) in ${this.app.vault.configDir}/plugins/ in this homebase, then reopen this page.`,
+			text: `Plugins run inside Docketeer with the same offline protections as the app: they cannot reach the network. To add a plugin, put its folder (manifest.json, main.js, styles.css) in ${this.app.vault.configDir}/plugins/ in this homebase, then reopen this page.`,
 		});
 		const pm = this.app.plugins;
 		const ids = Object.keys(pm.manifests).sort((a, b) => pm.manifests[a]!.name.localeCompare(pm.manifests[b]!.name));
@@ -472,12 +472,12 @@ class AboutTab extends SettingTab {
 	override name = 'About';
 	display(): void {
 		const el = this.containerEl;
-		new Setting(el).setName('Quire').setHeading();
+		new Setting(el).setName('Docketeer').setHeading();
 		new Setting(el).setName('Version').setDesc(this.app.host.appVersion);
 		new Setting(el).setName('Homebase').setDesc(this.app.host.vault?.path ?? '');
-		new Setting(el).setName('Offline').setDesc('Quire makes no network requests. Every request from the app or a plugin is blocked by the app itself, and there are no updates, accounts, telemetry or crash reports.');
+		new Setting(el).setName('Offline').setDesc('Docketeer makes no network requests. Every request from the app or a plugin is blocked by the app itself, and there are no updates, accounts, telemetry or crash reports.');
 		new Setting(el).setName('Developer tools').setDesc('F12 or Ctrl+Shift+I opens the developer tools, for plugin authors.');
-		new Setting(el).setName('Licences').setDesc('Quire is MIT-licensed. It includes libraries, icons and spelling dictionaries under their own licences.')
+		new Setting(el).setName('Licences').setDesc('Docketeer is MIT-licensed. It includes libraries, icons and spelling dictionaries under their own licences.')
 			.addButton((b) => b.setButtonText('Show licences').onClick(() => { void showNotices(this.app); }));
 	}
 }

@@ -35,7 +35,7 @@ class RecoveryKeyModal extends Modal {
 	}
 	override onOpen(): void {
 		const { contentEl } = this;
-		contentEl.createEl('p', { text: 'If you forget your passphrase, this key is the only way to open your locked notes. Write it down or print it, and keep it somewhere safe, away from this computer. Quire will not show it again.' });
+		contentEl.createEl('p', { text: 'If you forget your passphrase, this key is the only way to open your locked notes. Write it down or print it, and keep it somewhere safe, away from this computer. Docketeer will not show it again.' });
 		contentEl.createDiv({ cls: 'lock-recovery-key', text: this.recoveryKey, attr: { 'aria-label': `Recovery key: ${this.recoveryKey.split('').join(' ')}` } });
 		new Setting(contentEl).addButton((b) => b.setButtonText('Copy').onClick(() => { this.app.host.clipboard.writeText(this.recoveryKey); new Notice('Recovery key copied. Paste it somewhere safe, then clear your clipboard.'); }));
 		let kept = false;
@@ -210,7 +210,7 @@ class SecurityTab extends SettingTab {
 			});
 		new Setting(el).setName('When the computer sleeps or its screen locks')
 			.addToggle((t) => t.setValue(this.app.config.lockOnSleep !== false).onChange((v) => { void this.app.setConfig('lockOnSleep', v); }));
-		new Setting(el).setName('When Quire closes').setDesc('Always: the key is never written to disk, so Quire starts locked.');
+		new Setting(el).setName('When Docketeer closes').setDesc('Always: the key is never written to disk, so Docketeer starts locked.');
 	}
 }
 

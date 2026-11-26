@@ -420,7 +420,7 @@ export interface AppConfig {
 	docket: boolean;
 	/** Peek overlays the editor; pinned docks above it. */
 	docketMode: 'peek' | 'pinned';
-	/** The title bar: 'hidden' (window buttons in Quire's top bar) or 'native' (the system's). Applies on restart. */
+	/** The title bar: 'hidden' (window buttons in Docketeer's top bar) or 'native' (the system's). Applies on restart. */
 	windowFrame: 'hidden' | 'native';
 	/** Height as a fraction of the window (0.2–0.6). */
 	docketHeight: number;
@@ -596,7 +596,7 @@ export class App extends Events {
 	/** Locking: setting up, unlocking, locking notes and folders (lock/service.ts). */
 	lock: LockService;
 
-	/** The homebase: the folder of notes Quire has open. (The API calls it `vault`, as plugins expect.) */
+	/** The homebase: the folder of notes Docketeer has open. (The API calls it `vault`, as plugins expect.) */
 	get homebase(): Vault { return this.vault; }
 
 	// ---------------------------------------------------------------------------------------------

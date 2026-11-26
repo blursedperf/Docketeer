@@ -5,7 +5,7 @@ put in another order, and you can add panels of your own, built from **elements*
 
 | Element | Shows |
 |---|---|
-| Commands | A row for each command you choose (Quire's or a plugin's), with its key; Enter runs it |
+| Commands | A row for each command you choose (Docketeer's or a plugin's), with its key; Enter runs it |
 | File tree | A folder and everything in it (or the whole homebase), as in Homebase › Files: N and F make a note or folder |
 | Note list | Notes in a folder, with a tag, recent, pinned, or matching words (as the Docket's search finds them) |
 | Built-in section | What another panel shows: Units, the open note's Outline, Authorities, Layout … |
@@ -30,7 +30,7 @@ another in a panel's list of what it shows, and it takes that place.
 
 Creating a homebase (on the welcome screen, or *Create a new homebase…*) asks which panels it starts with:
 
-- **Legal**: the panels as Quire comes (Authorities, Outline, Units, Cite, Homebase, Layout).
+- **Legal**: the panels as Docketeer comes (Authorities, Outline, Units, Cite, Homebase, Layout).
 - **Generic**: three panels, *Files and Folders* (the whole homebase as a tree), Homebase and Layout. The others are
   hidden, not gone: *Arrange the Docket's panels* shows them again. This is written to `.quire/panels.json` in the
   new homebase (a folder that already has one keeps it). A hidden panel keeps
@@ -38,7 +38,7 @@ working where something opens it directly (the header's subject › topic opens 
 
 ## The file
 
-Panels are kept in `.quire/panels.json` in the homebase, which can also be edited by hand (Quire reads it when the
+Panels are kept in `.quire/panels.json` in the homebase, which can also be edited by hand (Docketeer reads it when the
 homebase opens; anything it does not understand is left out):
 
 ```json

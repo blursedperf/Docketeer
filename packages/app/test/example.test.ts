@@ -4,7 +4,7 @@ import { join, relative } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 // @ts-expect-error: a build script in plain JavaScript
 import { buildExample, lectureWav, readingPdf } from '../example/build.mjs';
-import { EXAMPLE_MARKER, EXAMPLE_NAME, installExample } from '../src/main/example';
+import { EXAMPLE_MARKER, EXAMPLE_NAME, LEGACY_EXAMPLE_NAME, installExample } from '../src/main/example';
 
 const tmp = mkdtempSync(join(tmpdir(), 'quire-example-'));
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
@@ -86,6 +86,17 @@ describe('installExample', () => {
 		expect(dest).toBe(join(docs, `${EXAMPLE_NAME} 2`));
 		expect(readdirSync(join(docs, EXAMPLE_NAME))).toEqual(['mine.md']);
 		expect(existsSync(join(dest, 'Start here.md'))).toBe(true);
+	});
+
+	it('opens a "Quire example" made before the rename, as it is', async () => {
+		const docs = join(tmp, 'docs4');
+		const legacy = join(docs, LEGACY_EXAMPLE_NAME);
+		mkdirSync(join(legacy, '.quire'), { recursive: true });
+		writeFileSync(join(legacy, EXAMPLE_MARKER), '{}');
+		writeFileSync(join(legacy, 'Start here.md'), 'Changed by the user');
+		expect(await installExample(source, docs)).toBe(legacy);
+		expect(existsSync(join(docs, EXAMPLE_NAME))).toBe(false);
+		expect(readFileSync(join(legacy, 'Start here.md'), 'utf8')).toBe('Changed by the user');
 	});
 
 	it('refuses a source that is not the example', async () => {
