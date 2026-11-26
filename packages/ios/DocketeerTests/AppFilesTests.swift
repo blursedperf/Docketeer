@@ -50,6 +50,14 @@ final class AppFilesTests: XCTestCase {
 		}
 	}
 
+	func testTheBuiltPageDoesNotZoomInOnFields() throws {
+		// The page in the app bundle (npm run build -w @quire/ios): iOS zooms in on a tapped field with text under
+		// 16px unless the page says not to, and a zoomed page pans sideways.
+		let page = try XCTUnwrap(Bundle.main.url(forResource: "app", withExtension: nil)?.appendingPathComponent("renderer/index.html"))
+		let html = try String(contentsOf: page, encoding: .utf8)
+		XCTAssertTrue(html.contains(#"<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">"#), html.prefix(300).description)
+	}
+
 	func testIndexIsNotServedWithoutACSP() throws {
 		try "  \n".write(to: root.appendingPathComponent("renderer/csp.txt"), atomically: true, encoding: .utf8)
 		XCTAssertNil(answer("quire://app/index.html").file)

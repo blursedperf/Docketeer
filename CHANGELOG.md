@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
+  left it panning sideways. Text size is set in Settings.
+
 ## v0.21.0
 
 - **Quire is now Docketeer**, because another app already uses the name Quire. It has a new icon. The first time

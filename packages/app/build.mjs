@@ -132,11 +132,14 @@ export async function buildApp({ dist = join(here, 'dist'), target = 'chrome130'
 		"form-action 'none'",
 	].join('; ');
 	await writeFile(join(rendererOut, 'csp.txt'), csp);
+	// iOS: no zooming in on a field when it is tapped (iOS zooms to any text under 16px, and the zoomed page then
+	// pans sideways). Text size is a setting; the desktop page is as before.
+	const viewport = boot ? 'width=device-width, initial-scale=1, maximum-scale=1' : 'width=device-width, initial-scale=1';
 	await writeFile(join(rendererOut, 'index.html'), `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="${viewport}">
 <title>Docketeer</title>
 <script type="importmap">${importMap}</script>
 <link rel="stylesheet" href="/app.css">
