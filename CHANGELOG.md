@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.18.0
 
 - **Renaming any file updates the links to it**: renaming a recording, picture or PDF (from the Docket, the Outline's
   links, a tab or the title) now rewrites `![[clip.mp4]]`, `![[media/clip.mp4|400]]` and `![](media/My%20clip.mp4)`
