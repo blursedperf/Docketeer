@@ -34,6 +34,20 @@ export function row(parent: HTMLElement, docket: Docket, title: string, run: (wh
 	if (o.badge) el.createSpan({ cls: 'docket-badge', text: o.badge });
 	el.addEventListener('click', () => run('current'));
 	el.addEventListener('docket-choose', (e) => run((e as CustomEvent<Where>).detail));
+	// Right-click: the row's actions as a menu; a file's row (data-path) offers opening it first.
+	el.addEventListener('contextmenu', (e) => {
+		const items: ActionItem[] = [];
+		const file = el.dataset.path ? docket.app.vault.getFileByPath(el.dataset.path) : null;
+		if (file) {
+			items.push({ title: 'Open', icon: 'arrow-right', run: () => run('current') });
+			items.push({ title: 'Open to the right', icon: 'separator-vertical', run: () => run('right') });
+			items.push({ title: 'Open below', icon: 'separator-horizontal', run: () => run('below') });
+		}
+		const more = o.actions?.() ?? [];
+		items.push(...more.filter((a) => !(file && /^Open( to the right| below)?$/.test(a.title))));
+		el.focus();
+		docket.showMenu(e, items);
+	});
 	if (o.actions) {
 		el.dataset.docketActions = '';
 		el.setAttribute('aria-description', 'More actions: right arrow');

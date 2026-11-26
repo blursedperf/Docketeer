@@ -1799,6 +1799,41 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.delete(file);
 		return problems.length === 0 || problems.join('; ');
 	});
+	await check('docket: right-click a row or a result for its actions', async () => {
+		const problems: string[] = [];
+		const menuTitles = () => [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
+		const closeMenu = async () => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await sleep(30); document.querySelectorAll('.menu').forEach((m) => m.remove()); };
+		ui()?.open({ query: 'Welcome' });
+		await sleep(200);
+		const result = [...document.querySelectorAll<HTMLElement>('.docket-results .docket-option')].find((o) => o.querySelector('.docket-option-title')?.textContent === 'Welcome');
+		if (!result) problems.push(`no result: ${titles().join('|')}`);
+		else {
+			const r = result.getBoundingClientRect();
+			result.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 10, clientY: r.top + 5 }));
+			const t = menuTitles();
+			for (const want of ['Open', 'Open to the right', 'Open below']) if (!t.includes(want)) problems.push(`result menu lacks ${want}: ${t.join('|')}`);
+			if (t.length < 5) problems.push(`result menu has no note actions: ${t.join('|')}`);
+			if (!ui()?.isOpen) problems.push('the menu closed the Docket');
+			await closeMenu();
+		}
+		// A panel row: Subjects' note row offers opening it and its actions.
+		app.commands.executeCommandById('app:reveal-file');
+		await sleep(200);
+		const row = document.querySelector<HTMLElement>('.docket-panel .docket-item[data-path$=".md"]');
+		if (!row) problems.push('no note row in Subjects');
+		else {
+			const r = row.getBoundingClientRect();
+			row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 10, clientY: r.top + 5 }));
+			const t = menuTitles();
+			if (!t.includes('Open to the right')) problems.push(`row menu: ${t.join('|')}`);
+			[...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent === 'Open')?.click();
+			await sleep(150);
+			if (workspace.getActiveFile()?.path !== row.dataset.path) problems.push(`Open from the menu opened ${workspace.getActiveFile()?.path}`);
+			await closeMenu();
+		}
+		ui()?.close(true);
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('docket: on from the start, with Super+D', async () => {
 		const before = !!document.querySelector('.docket') && commands.hotkeysFor(commands.findCommand('app:command-palette')!).length === 0;
 		ui()?.close(true);
@@ -2586,6 +2621,16 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		spineClose?.click();
 		await sleep(150);
 		if (tabs.children.length !== stackedCount - 1 || tabs.children.includes(lastTab)) problems.push('a spine close button did not close its tab');
+		// Closing spines down to one tab: it fills the pane (no empty space where the closed ones were).
+		for (let k = 0; tabs.children.length > 1 && k < 10; k++) {
+			tabs.children[tabs.children.length - 1]!.containerEl.querySelector<HTMLElement>('.workspace-leaf-spine-close')?.click();
+			await sleep(60);
+		}
+		{
+			const box = tabs.contentEl.getBoundingClientRect().width;
+			const one = tabs.children[0]!.containerEl.getBoundingClientRect().width;
+			if (Math.abs(one - box) > 2) problems.push(`the last stacked tab is ${Math.round(one)}px wide in a ${Math.round(box)}px pane`);
+		}
 		commands.executeCommandById('app:toggle-stacked-tabs');
 		await sleep(100);
 		if (tabs.stacked || tabs.contentEl.querySelector('.workspace-leaf-spine')) problems.push('not unstacked');
@@ -3421,6 +3466,58 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 		app.commands.executeCommandById('app:layout-single');
 		await sleep(100);
 		return (two && files[0] === essay.basename && !!files[1] && one && restored) || `two=${two} files=${files.join('|')} one=${one} restored=${restored}`;
+	});
+
+	await check('tiling commands: split left and up, swap, next pane, pane by number, turn the split, close panes and tabs, saved layouts', async () => {
+		const problems: string[] = [];
+		const run = (id: string) => { if (!app.commands.executeCommandById(id)) problems.push(`${id} did not run`); };
+		await single();
+		const second = vault.getMarkdownFiles().find((f) => f !== essay)!;
+		await workspace.getLeaf(false).openFile(essay);
+		const first = workspace.activeLeaf!;
+		run('app:split-left');
+		await sleep(120);
+		const order = () => workspace.rootTabs().map((t) => t.activeLeaf?.view.getState().file);
+		if (panes() !== 2 || workspace.rootTabs()[0]!.activeLeaf !== workspace.activeLeaf) problems.push(`split left: ${panes()} panes, new one first=${workspace.rootTabs()[0]!.activeLeaf === workspace.activeLeaf}`);
+		await workspace.activeLeaf!.openFile(second);
+		await sleep(80);
+		// The new pane (left, holding `second`) swaps with the one to its right.
+		run('app:swap-pane-right');
+		await sleep(80);
+		if (order()[1] !== second.path || workspace.activeLeaf?.view.getState().file !== second.path) problems.push(`swap: ${order().join(' | ')}`);
+		run('app:next-pane');
+		if (workspace.activeLeaf?.parent !== workspace.rootTabs()[0]) problems.push('next pane did not go round');
+		run('app:focus-pane-2');
+		if (workspace.activeLeaf?.parent !== workspace.rootTabs()[1]) problems.push('pane 2');
+		const split = workspace.activeLeaf!.parent!.parent!;
+		const dir = split.direction;
+		run('app:rotate-split');
+		if (split.direction === dir) problems.push('the split did not turn');
+		run('app:rotate-split');
+		run('app:split-up');
+		await sleep(120);
+		if (panes() !== 3) problems.push(`split up: ${panes()} panes`);
+		run('app:close-pane');
+		await sleep(80);
+		if (panes() !== 2) problems.push(`close pane: ${panes()} panes`);
+		run('app:close-other-panes');
+		await sleep(80);
+		if (panes() !== 1) problems.push(`close other panes: ${panes()} panes`);
+		await workspace.getLeaf('tab').openFile(essay);
+		run('app:close-other-tabs');
+		await sleep(80);
+		if (workspace.rootTabs()[0]!.children.length !== 1) problems.push(`close other tabs: ${workspace.rootTabs().map((t) => t.children.map((l) => `${l.view.getViewType()}${l.pinned ? '(pinned)' : ''}${l === workspace.activeLeaf ? '*' : ''}`).join(',')).join(' / ')}`);
+		// A saved layout is a command of its own (so it can have a hotkey).
+		await app.setConfig('savedLayouts', { ...(app.config.savedLayouts ?? {}), 'Smoke desk': workspace.getMainLayout() });
+		if (!app.commands.findCommand('app:saved-layout-smoke-desk')) problems.push('no command for a saved layout');
+		const rest = { ...app.config.savedLayouts };
+		delete rest['Smoke desk'];
+		await app.setConfig('savedLayouts', rest);
+		if (app.commands.findCommand('app:saved-layout-smoke-desk')) problems.push('a deleted layout kept its command');
+		void first;
+		await single();
+		await workspace.getLeaf(false).openFile(essay);
+		return problems.length === 0 || problems.join('; ');
 	});
 }
 

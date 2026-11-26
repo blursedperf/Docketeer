@@ -622,12 +622,14 @@ export function registerCore(app: App): { reveal(): void } {
 	};
 	add({ id: 'app:next-tab', name: 'Go to next tab', section: 'Layout', hotkeys: [{ modifiers: ['Ctrl'], key: 'Tab' }], checkCallback: cycleTab(1) });
 	add({ id: 'app:previous-tab', name: 'Go to previous tab', section: 'Layout', hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'Tab' }], checkCallback: cycleTab(-1) });
-	const split = (direction: 'vertical' | 'horizontal') => ({
+	const split = (direction: 'vertical' | 'horizontal', before = false) => ({
 		when: (ctx: CommandContext) => !!leafArg(ctx),
-		run: (ctx: CommandContext) => { void workspace.duplicateLeaf(leafArg(ctx)!, direction); },
+		run: (ctx: CommandContext) => { void workspace.duplicateLeaf(leafArg(ctx)!, direction, before); },
 	});
 	add({ id: 'app:split-right', name: 'Split right', icon: 'separator-vertical', section: 'Layout', ...split('vertical') });
 	add({ id: 'app:split-down', name: 'Split down', icon: 'separator-horizontal', section: 'Layout', ...split('horizontal') });
+	add({ id: 'app:split-left', name: 'Split left', icon: 'separator-vertical', section: 'Layout', ...split('vertical', true) });
+	add({ id: 'app:split-up', name: 'Split up', icon: 'separator-horizontal', section: 'Layout', aliases: ['Split above'], ...split('horizontal', true) });
 	add({
 		id: 'app:toggle-reading', name: 'Toggle reading view', icon: 'book-open', section: 'View', hotkeys: [{ modifiers: ['Mod'], key: 'e' }],
 		checkCallback: (checking) => { const v = activeMarkdown(); if (!v) return false; if (!checking) void v.toggleMode(); return true; },

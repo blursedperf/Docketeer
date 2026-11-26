@@ -64,6 +64,23 @@ export function registerTiling(app: App): { applyPreset(p: Preset): Promise<void
 		id: 'app:toggle-stacked-tabs', name: 'Toggle stacked tabs', icon: 'layers', aliases: ['Stack tabs', 'Sliding panes', 'Unstack tabs'],
 		when: () => !!pane()?.parent, run: () => { const t = pane()?.parent; if (t) t.setStacked(!t.stacked); },
 	});
+	// More tiling, without keys of their own: give them one in Settings → Hotkeys.
+	for (const dir of ['left', 'right', 'up', 'down'] as Direction[]) {
+		add({
+			id: `app:swap-pane-${dir}`, name: `Swap this pane with the one ${NAME[dir]}`, icon: 'arrow-left-right', aliases: ['Exchange panes'],
+			when: hasPanes, run: () => { if (!workspace.swapPane(dir)) new Notice(`There is no pane ${NAME[dir]}.`); },
+		});
+	}
+	add({ id: 'app:next-pane', name: 'Go to the next pane', icon: 'arrow-right', aliases: ['Cycle panes'], when: hasPanes, run: () => { workspace.cyclePane(1); } });
+	add({ id: 'app:previous-pane', name: 'Go to the previous pane', icon: 'arrow-left', when: hasPanes, run: () => { workspace.cyclePane(-1); } });
+	for (let n = 1; n <= 9; n++) {
+		add({ id: `app:focus-pane-${n}`, name: `Go to pane ${n}`, icon: 'square', keywords: ['number'], when: () => workspace.rootTabs().length >= n, run: () => { workspace.focusPaneNumber(n); } });
+	}
+	add({ id: 'app:rotate-split', name: 'Turn the split (side by side ↔ one above the other)', icon: 'rotate-cw', aliases: ['Rotate panes', 'Flip split'], when: hasPanes, run: () => { workspace.rotateSplit(); } });
+	add({ id: 'app:close-pane', name: 'Close this pane', icon: 'x-square', aliases: ['Close all tabs in this pane'], when: hasPanes, run: () => { workspace.closePane(); } });
+	add({ id: 'app:close-other-panes', name: 'Close the other panes', icon: 'square', aliases: ['Only this pane'], when: hasPanes, run: () => { workspace.closeOtherPanes(); } });
+	add({ id: 'app:close-other-tabs', name: 'Close the other tabs in this pane', icon: 'x', aliases: ['Close others'], when: () => (pane()?.parent?.children.length ?? 0) > 1, run: () => { workspace.closeOtherTabs(); } });
+	add({ id: 'app:merge-panes', name: 'Put every tab in one pane', icon: 'combine', aliases: ['Merge panes', 'Unsplit'], when: hasPanes, run: () => { workspace.mergeAllPanes(); } });
 	add({ id: 'app:reopen-closed-tab', name: 'Reopen closed tab', icon: 'rotate-ccw', hotkeys: [{ modifiers: ['Mod', 'Shift'], key: 't' }], when: () => workspace.closedTabs.length > 0, run: () => workspace.reopenClosed() });
 	// Split right and down get their planned shortcuts (the commands exist already).
 	const split = (id: string, keys: Hotkey[]) => { const c = app.commands.findCommand(id); if (c) c.hotkeys = keys; };
@@ -115,5 +132,17 @@ export function registerTiling(app: App): { applyPreset(p: Preset): Promise<void
 		const data = app.config.savedLayouts?.[name];
 		if (data) await workspace.setMainLayout(data);
 	};
+	// A command for each saved layout, so each can have a hotkey; they follow the layouts saved and deleted.
+	let savedIds: string[] = [];
+	const savedCommands = () => {
+		for (const id of savedIds) app.commands.removeCommand(id);
+		savedIds = Object.keys(app.config.savedLayouts ?? {}).map((name) => {
+			const id = `app:saved-layout-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'layout'}`;
+			add({ id, name: `Layout: ${name} (saved)`, icon: 'layout-panel-left', run: () => applySaved(name) });
+			return id;
+		});
+	};
+	savedCommands();
+	app.on('config-changed', (key: string) => { if (key === 'savedLayouts') savedCommands(); });
 	return { applyPreset, saveLayout, applySaved };
 }

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **Right-click in the Docket**: a row or a search result has a menu of what → offers for it: a note's Open, Open to
+  the right, Open below, rename, move, copy a link …; an authority's next place, cite or merge; a task's check off,
+  due dates and priorities. The Docket stays open while the menu is.
+- **Stacked tabs fill the pane**: when closing tabs leaves fewer than fill the pane, the ones left grow to share its
+  width, so a single stacked tab takes the whole pane, instead of keeping their reading width with empty space beside.
+- **More tiling commands**, each of which can be given a hotkey in Settings → Hotkeys: *Split left*, *Split up*,
+  *Swap this pane with the one left/right/above/below*, *Go to the next/previous pane*, *Go to pane 1–9*, *Turn the
+  split* (side by side ↔ one above the other), *Close this pane*, *Close the other panes*, *Close the other tabs in
+  this pane* and *Put every tab in one pane*. Each saved layout is now a command too (*Layout: name (saved)*), so a
+  layout can have a key of its own.
+
 ## v0.18.0
 
 - **Renaming any file updates the links to it**: renaming a recording, picture or PDF (from the Docket, the Outline's

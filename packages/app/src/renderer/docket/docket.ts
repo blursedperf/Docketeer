@@ -7,7 +7,7 @@ import type { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import {
 	type App, type DocketPanel, type DocketPanelUI, type OpenWhere, type SearchResult,
-	MarkdownView, Notice, Platform, TFile, clampHeight, contextPanel, formatHotkey, groupResults, mergeResults, parsePrefix, setIcon, topModal,
+	MarkdownView, Menu, Notice, Platform, TFile, clampHeight, contextPanel, formatHotkey, groupResults, mergeResults, parsePrefix, setIcon, topModal,
 } from '@quire/api';
 
 import { noteActions } from './actions';
@@ -64,7 +64,7 @@ export class Docket {
 	private custom: { title: string; items: SearchResult[] } | null = null;
 	private detach: (() => void)[] = [];
 
-	constructor(private app: App) {
+	constructor(readonly app: App) {
 		const container = document.querySelector<HTMLElement>('.app-container')!;
 		this.handleEl = createDiv({ cls: 'docket-handle' });
 		const handleBtn = this.handleEl.createEl('button', { cls: 'docket-handle-button', attr: { type: 'button' } });
@@ -603,6 +603,13 @@ export class Docket {
 		if (hint) opt.createEl('kbd', { cls: 'docket-option-hint', text: hint });
 		opt.addEventListener('mousemove', () => { if (this.selected !== i) this.select(i); });
 		opt.addEventListener('click', (e) => { this.select(i); this.choose(this.whereFor(e)); });
+		// Right-click: a result's actions as a menu (not in a list of actions, which is already one).
+		opt.addEventListener('contextmenu', (e) => {
+			const r = this.actions ? null : this.items[i];
+			if (!r || r.id.startsWith('docket:more:')) { e.preventDefault(); return; }
+			this.select(i, false);
+			this.showMenu(e, this.resultActions(r));
+		});
 		return opt;
 	}
 
@@ -665,6 +672,31 @@ export class Docket {
 	private showActions(): boolean {
 		const r = this.items[this.selected];
 		if (!r || this.actions || r.id.startsWith('docket:more:')) return false;
+		const list = this.resultActions(r);
+		if (!list.length) return false;
+		this.actions = list;
+		this.actionsOf = r;
+		this.renderActions();
+		this.focusZone('input');
+		return true;
+	}
+
+	/**
+	 * A right-click menu of `items` at the mouse: the same actions → offers. The keyboard comes back to the Docket
+	 * when it closes.
+	 */
+	showMenu(e: MouseEvent, items: ActionItem[]): void {
+		e.preventDefault();
+		e.stopPropagation();
+		if (!items.length) return;
+		const menu = new Menu();
+		for (const a of items) menu.addItem((i) => i.setTitle(a.title).setIcon(a.icon ?? null).onClick(() => { void a.run(); }));
+		menu.onHide(() => { if (this.opened && !this.el.contains(document.activeElement)) this.focusZone(this.actions ? 'input' : 'panel'); });
+		menu.showAtMouseEvent(e);
+	}
+
+	/** What can be done with a result: open it here, to the right or below; a note's actions; plugins' actions. */
+	private resultActions(r: SearchResult): ActionItem[] {
 		const list: ActionItem[] = [];
 		if (r.open) {
 			list.push({ title: 'Open', icon: 'arrow-right', run: () => r.open!('current') });
@@ -675,12 +707,7 @@ export class Docket {
 		if (r.file instanceof TFile) list.push(...noteActions(this.app, this, r.file).filter((a) => !/^Open( to the right| below)?$/.test(a.title)));
 		if (r.insert?.()) list.push({ title: 'Insert as a link', icon: 'link', run: () => { const cm = this.saved?.cm; const t = r.insert!(); if (cm && t) { cm.dispatch(cm.state.replaceSelection(t)); cm.focus(); } } });
 		for (const a of this.app.docket.actionsFor(r)) list.push({ title: a.title, icon: a.icon, run: () => a.run(r) });
-		if (!list.length) return false;
-		this.actions = list;
-		this.actionsOf = r;
-		this.renderActions();
-		this.focusZone('input');
-		return true;
+		return list;
 	}
 
 	private renderActions(): void {

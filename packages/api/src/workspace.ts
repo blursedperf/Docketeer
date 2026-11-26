@@ -595,8 +595,8 @@ export class Workspace extends Events {
 		return fresh;
 	}
 
-	async duplicateLeaf(leaf: WorkspaceLeaf, direction: SplitDirection): Promise<WorkspaceLeaf> {
-		const next = this.createLeafBySplit(leaf, direction);
+	async duplicateLeaf(leaf: WorkspaceLeaf, direction: SplitDirection, before = false): Promise<WorkspaceLeaf> {
+		const next = this.createLeafBySplit(leaf, direction, before);
 		await next.setViewState(leaf.getViewState());
 		this.setActiveLeaf(next, { focus: true });
 		return next;
@@ -845,6 +845,96 @@ export class Workspace extends Events {
 		this.onResized();
 		this.trigger('layout-change');
 		this.requestSaveLayout();
+	}
+
+	/** The active pane's tab group, if it is in the main area. */
+	private activePane(): WorkspaceTabs | null {
+		const leaf = this.activeRootLeaf();
+		return leaf?.parent && !leaf.isSidebar() ? leaf.parent : null;
+	}
+
+	/** The main area's panes in reading order (left to right, top to bottom, as the tree holds them). */
+	panesInOrder(): WorkspaceTabs[] { return this.rootTabs(); }
+
+	/** Give the keyboard to the next pane (or the previous one), going round. */
+	cyclePane(step: 1 | -1): boolean {
+		const panes = this.panesInOrder();
+		const at = panes.indexOf(this.activePane()!);
+		if (panes.length < 2) return false;
+		const next = panes[(at + step + panes.length) % panes.length]!;
+		if (next.activeLeaf) this.setActiveLeaf(next.activeLeaf, { focus: true });
+		return true;
+	}
+
+	/** Give the keyboard to pane `n` (from 1, in reading order). */
+	focusPaneNumber(n: number): boolean {
+		const pane = this.panesInOrder()[n - 1];
+		if (!pane?.activeLeaf) return false;
+		this.setActiveLeaf(pane.activeLeaf, { focus: true });
+		return true;
+	}
+
+	/** Swap the active pane's tabs with those of the pane next to it; the keyboard goes with them. */
+	swapPane(dir: Direction): boolean {
+		const from = this.activePane();
+		if (!from) return false;
+		const { tree, panes } = this.layoutTree();
+		const id = [...panes].find(([, t]) => t === from)?.[0];
+		const next = id ? neighbour(tree, id, dir) : null;
+		const to = next ? panes.get(next) : null;
+		if (!to) return false;
+		const active = from.activeLeaf;
+		const mine = [...from.children];
+		const theirs = [...to.children];
+		const theirActive = to.activeLeaf;
+		for (const l of mine) from.removeChild(l);
+		for (const l of theirs) to.removeChild(l);
+		theirs.forEach((l, i) => from.insertChild(i, l));
+		mine.forEach((l, i) => to.insertChild(i, l));
+		if (theirActive) from.selectTab(theirActive);
+		if (active) { to.selectTab(active); this.setActiveLeaf(active, { focus: true }); }
+		this.onResized();
+		this.trigger('layout-change');
+		this.requestSaveLayout();
+		return true;
+	}
+
+	/** Turn the split the active pane is in: side by side becomes one above the other, and back. */
+	rotateSplit(): boolean {
+		const split = this.activePane()?.parent;
+		if (!split || split.children.length < 2) return false;
+		split.setDirection(split.direction === 'vertical' ? 'horizontal' : 'vertical');
+		this.onResized();
+		this.trigger('layout-change');
+		this.requestSaveLayout();
+		return true;
+	}
+
+	/** Close every tab in the active pane (they can be reopened); the pane goes. */
+	closePane(): boolean {
+		const pane = this.activePane();
+		if (!pane || this.panesInOrder().length < 2) return false;
+		for (const l of [...pane.children]) l.detach();
+		return true;
+	}
+
+	/** Close every pane but the active one (their tabs can be reopened). */
+	closeOtherPanes(): boolean {
+		const keep = this.activePane();
+		if (!keep) return false;
+		const others = this.panesInOrder().filter((p) => p !== keep);
+		for (const p of others) for (const l of [...p.children]) l.detach();
+		if (this.zoomed) this.toggleZoom();
+		return others.length > 0;
+	}
+
+	/** Close every tab in the active pane but the active one. */
+	closeOtherTabs(): boolean {
+		const pane = this.activePane();
+		const keep = pane?.activeLeaf;
+		if (!pane || !keep || pane.children.length < 2) return false;
+		for (const l of [...pane.children]) if (l !== keep && !l.pinned) l.detach();
+		return true;
 	}
 
 	// ---------------------------------------------------------------------------------------------

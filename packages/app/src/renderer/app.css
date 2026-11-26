@@ -1079,12 +1079,13 @@ input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: no
 .cm-table-add-row { left: 0; right: var(--space-6); bottom: 0; height: var(--space-4); }
 
 /* Stacked tabs (WorkspaceTabs.stacked): side by side at a reading width, scrolling sideways; each tab sticks after the
-   spines before it and before the spines after it, so tabs fold into spines at either edge. */
+   spines before it and before the spines after it, so tabs fold into spines at either edge. Tabs that do not fill
+   the pane (one or two left after others are closed) grow to share its width, so no empty space is left beside them. */
 .workspace-tabs.mod-stacked { --stack-width: min(44rem, 85%); --spine-width: var(--space-8); }
 .workspace-tabs.mod-stacked .workspace-tab-header-container-inner { display: none; }
 .workspace-tabs.mod-stacked .workspace-tab-container { display: flex; overflow-x: auto; overflow-y: hidden; }
 .workspace-tabs.mod-stacked .workspace-tab-container > .workspace-leaf {
-	display: flex; flex: 0 0 var(--stack-width); flex-direction: row; position: sticky;
+	display: flex; flex: 1 0 var(--stack-width); flex-direction: row; position: sticky;
 	left: calc(var(--stack-before) * var(--spine-width));
 	right: calc(var(--stack-after) * var(--spine-width) - var(--stack-width) + var(--spine-width));
 	background: var(--doom-bg); border-left: var(--border-width) solid var(--doom-border-subtle); box-shadow: -2px 0 6px rgb(0 0 0 / 0.25);
