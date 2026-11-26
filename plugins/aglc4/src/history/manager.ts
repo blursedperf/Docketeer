@@ -113,6 +113,8 @@ export class HistoryManager {
 		try {
 			return await this.snapshot(file.path, await this.app.vault.read(file), opts);
 		} catch (e) {
+			// Deleted while it was being read (closed and deleted at once): nothing to keep, and nothing went wrong.
+			if (!(await this.app.vault.adapter.exists(file.path).catch(() => true))) return false;
 			this.fail(e);
 			return false;
 		}
