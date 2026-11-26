@@ -30,11 +30,13 @@ final class Channels {
 	var chooseFolder: ((@escaping (URL?) -> Void) -> Void)?
 	/** Reloads the page, after another homebase opened (main thread). */
 	var reload: (() -> Void)?
+	/** Opens the Files app at a folder (main thread). */
+	var showInFiles: ((URL) -> Void)?
 
 	/** Channels answered later, on the main thread (they show something first). */
 	static let later: Set<String> = ["app:chooseVault"]
 	/** Channels that change which homebase is open, or touch UIKit: answered on the main thread. */
-	static let mainThread: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready", "app:recent", "app:openVault", "app:forgetVault", "app:openExample"]
+	static let mainThread: Set<String> = ["clipboard:readText", "clipboard:writeText", "app:quit-ready", "app:recent", "app:openVault", "app:forgetVault", "app:openExample", "app:showItemInFolder"]
 	/** The most a new homebase's panels file may hold. */
 	static let maxPanelsJSON = 1_000_000
 
@@ -65,6 +67,13 @@ final class Channels {
 			return true
 		case "app:forgetVault":
 			homebases.forget(location: try arg(args, 0, String.self))
+			return NSNull()
+		case "app:showItemInFolder":
+			// The Files app, at the folder (a note's own folder for a note). Nothing happens where Files cannot go.
+			guard let fs = homebases.fs else { return NSNull() }
+			let url = try fs.resolve(args.first)
+			let folder = HomebaseFS.isFolder(url.path) ? url : url.deletingLastPathComponent()
+			if let files = Self.filesURL(for: folder) { showInFiles?(files) }
 			return NSNull()
 		case "app:openExample":
 			let location = try homebases.openExample()
@@ -137,6 +146,15 @@ final class Channels {
 				reply(.failure(error))
 			}
 		}
+	}
+
+	/** The Files app's address for a folder on this device: shareddocuments:// and its path. */
+	static func filesURL(for folder: URL) -> URL? {
+		var c = URLComponents()
+		c.scheme = "shareddocuments"
+		c.host = "" // shareddocuments:///path, as Files expects
+		c.path = folder.standardizedFileURL.path
+		return c.url
 	}
 
 	/** Another homebase is open: reload the page so it starts again with it (as desktop reloads the window). */

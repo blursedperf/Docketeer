@@ -137,7 +137,7 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 			// Native shows the folder picker; a new Generic homebase gets its panels, written by native as on desktop.
 			chooseVault: (create, layout) => call('app:chooseVault', !!create, layout ?? 'legal', create && layout === 'generic' ? JSON.stringify(genericPanels(), null, '\t') : null),
 			openVault: (path) => call('app:openVault', path),
-			showItemInFolder: async () => undefined,
+			showItemInFolder: (path) => call('app:showItemInFolder', path),
 			onBeforeQuit: (cb) => { quitHandler = cb; },
 			dictionary: (lang) => call('spell:dictionary', lang),
 			notices: () => call('app:notices'),

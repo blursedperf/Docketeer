@@ -61,6 +61,8 @@ final class PageViewController: UIViewController {
 		channels.onQuitReady = { [weak self] token in self?.finishSaving(token) }
 		channels.chooseFolder = { [weak self] done in self?.chooseFolder(done) ?? done(nil) }
 		channels.reload = { [weak self] in self?.webView?.reload() }
+		// Only the Files app, at a folder on this device: never a web address.
+		channels.showInFiles = { url in if url.scheme == "shareddocuments" { UIApplication.shared.open(url) } }
 		let bridge = Bridge(channels: channels)
 		self.bridge = bridge
 

@@ -283,6 +283,23 @@ final class ChannelsTests: XCTestCase {
 		XCTAssertThrowsError(try channels().answer("example:files", []), "Phase 0's in-memory example is gone")
 	}
 
+	func testShowInFolderOpensFilesAtTheFolderOnly() throws {
+		let hb = homebases()
+		let c = channels(hb)
+		var opened: [URL] = []
+		c.showInFiles = { opened.append($0) }
+		_ = try c.answer("app:showItemInFolder", [""]) // nothing open: nothing happens
+		XCTAssertTrue(opened.isEmpty)
+		_ = try c.answer("app:openExample", [])
+		_ = try c.answer("app:showItemInFolder", ["Welcome.md"])
+		_ = try c.answer("app:showItemInFolder", [""])
+		XCTAssertEqual(opened.map(\.scheme), ["shareddocuments", "shareddocuments"])
+		XCTAssertTrue(opened[0].path.hasSuffix("/Documents/Docketeer example"), opened[0].path)
+		XCTAssertEqual(opened[0].path, opened[1].path, "a note's folder")
+		XCTAssertThrowsError(try c.answer("app:showItemInFolder", ["../../.."]))
+		XCTAssertEqual(Channels.filesURL(for: URL(fileURLWithPath: "/var/mobile/My Notes"))?.absoluteString, "shareddocuments:///var/mobile/My%20Notes")
+	}
+
 	func testHostInfo() throws {
 		let info = try channels().answer("host:info", []) as? [String: Any]
 		XCTAssertEqual(info?["platform"] as? String, "ios")
