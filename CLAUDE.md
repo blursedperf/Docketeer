@@ -60,14 +60,15 @@ node scripts/shots-diff.mjs <dir> --platform linux   # compare with test/visual/
    shows what it is for, and commit "Screenshot references: … (from CI run N)". Run CI again until it is green.
    Screens must not depend on the date (use dates relative to today in what they show).
 3. Release commit "Release X.Y.Z: <summary>": bump `version` in `package.json`, `packages/api/package.json`,
-   `packages/app/package.json`, `package-lock.json` (root and both packages) and `apiVersion` in
-   `packages/api/src/index.ts`; turn `## Unreleased` into `## vX.Y.Z`.
+   `packages/app/package.json`, `packages/ios/package.json`, `package-lock.json` (root and the three packages),
+   `apiVersion` in `packages/api/src/index.ts` and both `MARKETING_VERSION`s in
+   `packages/ios/Docketeer/Docketeer.xcodeproj/project.pbxproj`; turn `## Unreleased` into `## vX.Y.Z`.
 4. Fast-forward `master` to the branch. If `master` moved (the owner sometimes edits files on GitHub), rebase the
    branch onto it and `git push --force-with-lease` first.
 5. Tag `vX.Y.Z` (annotated, "Docketeer X.Y.Z: <summary>") and push `master` and the tag. The tag runs
    `.github/workflows/release.yml`: tests, installers for Linux (x64, arm64) and macOS, and the GitHub release.
 
-Latest release: **0.20.0** (Export to PDF). Ask the owner before pushing tags or releasing.
+Latest release: **0.21.0** (the new name, Docketeer). Ask the owner before pushing tags or releasing.
 
 ## Mobile port (iPhone and iPad)
 
@@ -75,13 +76,17 @@ Follow **`docs/mobile/PLAN.md`** in order: it has the rules for agents (§0), th
 `WKWebView` shell, a `quire://` scheme handler, a bridge with the same channel names as `preload.ts`) and the
 phases with checkboxes. Record decisions in `docs/mobile/decisions.md`. Stop and ask where the plan says to.
 
-State on 2026-11-26:
+State on 2026-11-27:
 
-- **Phase 0, rename to Docketeer: done**, on branch `rename-docketeer` (pushed). Not merged into `master` yet.
-- **Phase 0, iOS scaffold: in progress** on a local branch `ios-scaffold` (started from `rename-docketeer`):
-  `packages/ios/` (`web/boot.ts`, `web/host.ts`, an in-memory `HostFs` in `web/memory-fs.ts`, tests, `build.mjs`,
-  `scripts/build-xcode.mjs`) and `packages/app/build.mjs` refactored into `buildApp()` for an iOS target. The
-  Swift shell, the simulator runs and `docs/mobile/spike.md` are not done.
+- **The owner's devices, in order: macOS, then iPhone; the iPad is a distant third** (`docs/mobile/decisions.md` §8).
+  Phase 2 is now the iPhone, with full editing; Phase 3 is the iPad, later and trimmed.
+- **Phases 0 and 1 are done** on branch `ios-scaffold` (pushed): the Swift shell (`packages/ios/Docketeer/`), real
+  homebases from the folder picker, iCloud (change watching, the conflict guard, downloads, conflict versions),
+  streaming media, and the page's smoke checks in WebKit (`npm run test:xcode -w @quire/ios`, about 70 s).
+  Phase 1's exit check (syncing with the Mac both ways, a forced conflict) is waiting for the owner, on the iPhone.
+- `master` is at the 0.21.0 release; `ios-scaffold` has the work since. Fast-forward `master` when the owner asks.
+- Debug builds take `-openExample` (opens the example homebase); temporary `console.warn` lines reach the system
+  log through the console relay, which is how layout was measured on the simulators.
 - The native tasks need **macOS with Xcode**. On Linux, do the TypeScript tasks only and list what is left.
 
 Setting up on a Mac:
@@ -89,7 +94,7 @@ Setting up on a Mac:
 ```bash
 xcode-select --install            # if `xcodebuild -version` fails; also open Xcode once to install components
 gh repo clone blursedperf/Docketeer && cd Docketeer
-git checkout ios-scaffold         # once it has been pushed
+git checkout ios-scaffold
 npm ci && npm test
 claude                            # Claude Code, started in the repo folder
 ```
