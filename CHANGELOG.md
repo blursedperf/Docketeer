@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **Export to PDF**: a note on white A4 pages as it reads in reading view (its properties, headings, lists and tasks,
+  tables, pictures, embedded notes and footnotes), numbered at the foot, saved beside the note as "Note.pdf"; if one
+  is there already, Quire asks whether to replace it or save a new one. Offered in a tab's right-click menu, the
+  editor's, a note's actions and right-click menu in the Docket, and as the command *Export to PDF*. An open note is
+  exported as it is now; a locked one only after a warning that the PDF is not encrypted. The page is printed by a
+  hidden window that runs no scripts and loads nothing from outside Quire.
+- **AGLC4: Export to PDF with AGLC4 footnotes**, beside the Word and HTML exports (in the same menus, and a command):
+  the HTML export's page, with its footnotes and bibliography, printed to PDF and kept in the version history like
+  the others.
+
 ## v0.19.1
 
 - **Tasks are checked off in the Tasks panel**: click a task's box, or press Space on its row; the Docket stays open

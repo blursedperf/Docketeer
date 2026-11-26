@@ -136,6 +136,9 @@ class IssueModal extends SuggestModal<Issue> {
 	}
 }
 
+type ExportFormat = 'docx' | 'html' | 'pdf';
+const FORMAT_NAMES: Record<ExportFormat, string> = { docx: 'Word', html: 'HTML', pdf: 'PDF' };
+
 export default class Aglc4Plugin extends Plugin {
 	settings: Aglc4Settings = DEFAULT_SETTINGS;
 	private statusEl: HTMLElement | null = null;
@@ -154,7 +157,7 @@ export default class Aglc4Plugin extends Plugin {
 			history: this.history,
 			restore: (file, text, label) => this.restoreNote(file, text, label),
 			restoreExport: (path, data, label) => this.restoreExport(path, data, label),
-			exportPaths: (file) => (['docx', 'html'] as const).map((f) => this.exportPath(file, f)),
+			exportPaths: (file) => (['docx', 'html', 'pdf'] as const).map((f) => this.exportPath(file, f)),
 		}));
 		this.addRibbonIcon('history', 'Show version history', () => { void this.openHistory(); });
 		this.addSettingTab(new Aglc4SettingTab(this.app, this));
@@ -212,6 +215,7 @@ export default class Aglc4Plugin extends Plugin {
 			menu.addItem((item) => item.setTitle('Version history').setIcon('history').onClick(() => { void this.openHistory(file); }));
 			menu.addItem((item) => item.setTitle('Export to Word with AGLC4 footnotes').setIcon('file-output').onClick(() => { void this.exportFile(file, 'docx'); }));
 			menu.addItem((item) => item.setTitle('Export to HTML with AGLC4 footnotes').setIcon('file-code').onClick(() => { void this.exportFile(file, 'html'); }));
+			menu.addItem((item) => item.setTitle('Export to PDF with AGLC4 footnotes').setIcon('file-down').onClick(() => { void this.exportFile(file, 'pdf'); }));
 		}));
 		this.registerEvent(this.app.vault.on('delete', (file) => { if (this.customSets.delete(file.path)) this.refreshEditors(); }));
 		this.registerEvent(this.app.vault.on('rename', (file, old) => {
@@ -460,6 +464,16 @@ export default class Aglc4Plugin extends Plugin {
 				const file = this.app.workspace.getActiveFile();
 				if (!this.isMarkdown(file)) return false;
 				if (!checking) void this.exportFile(file, 'docx');
+				return true;
+			},
+		});
+		this.addCommand({
+			id: 'export-pdf',
+			name: 'Export to PDF with AGLC4 footnotes',
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!this.isMarkdown(file)) return false;
+				if (!checking) void this.exportFile(file, 'pdf');
 				return true;
 			},
 		});
@@ -956,7 +970,7 @@ export default class Aglc4Plugin extends Plugin {
 	}
 
 	/** Where a note's export is written. */
-	exportPath(file: TFile, format: 'docx' | 'html'): string {
+	exportPath(file: TFile, format: ExportFormat): string {
 		const folder = this.settings.exportFolder || file.parent?.path || '';
 		return normalizePath(`${folder}/${file.basename}.${format}`);
 	}
@@ -979,10 +993,10 @@ export default class Aglc4Plugin extends Plugin {
 		return !written || written.mtime !== stat.mtime || written.size !== stat.size;
 	}
 
-	private async exportFile(file: TFile, format: 'docx' | 'html', lockedOk = false) {
+	private async exportFile(file: TFile, format: ExportFormat, lockedOk = false) {
 		// A locked (encrypted) note: the export is readable by anyone, so ask first.
 		if (!lockedOk && (this.app as unknown as { isEncrypted?: (f: TFile) => boolean }).isEncrypted?.(file)) {
-			new ChoiceModal(this.app, `${file.basename} is locked`, `The ${format === 'docx' ? 'Word' : 'HTML'} file will not be encrypted: anyone who can open it can read it.`, [
+			new ChoiceModal(this.app, `${file.basename} is locked`, `The ${FORMAT_NAMES[format]} file will not be encrypted: anyone who can open it can read it.`, [
 				{ label: 'Export anyway', cta: true, action: () => { void this.exportFile(file, format, true); } },
 			]).open();
 			return;
@@ -1008,7 +1022,7 @@ export default class Aglc4Plugin extends Plugin {
 		await this.writeExport(file, format, path);
 	}
 
-	private async writeExport(file: TFile, format: 'docx' | 'html', path: string) {
+	private async writeExport(file: TFile, format: ExportFormat, path: string) {
 		const markdown = await this.app.vault.cachedRead(file);
 		const analysis = analyseDocument(markdown, { disabled: new Set(this.settings.disabledRules), showInfo: false });
 		const errors = analysis.issues.filter((i) => i.severity === 'error').length;
@@ -1026,13 +1040,19 @@ export default class Aglc4Plugin extends Plugin {
 				const r = exportHtml(markdown, { ...opts, title: opts.title ?? file.basename });
 				footnotes = r.footnotes;
 				data = r.html;
+				// A PDF: the same page, printed by Quire (on white A4 pages; nothing is fetched).
+				if (format === 'pdf') {
+					const print = (this.app as unknown as { host?: { app?: { printToPdf?: (html: string) => Promise<ArrayBuffer> } } }).host?.app?.printToPdf;
+					if (!print) throw new Error('this version of Quire cannot print to PDF');
+					data = await print(r.html);
+				}
 			}
 			const existing = this.app.vault.getAbstractFileByPath(path);
 			let kept = false;
 			if (existing instanceof TFile) {
 				// Keep the file being replaced. If that fails, do not replace it.
 				if (this.history.enabled) {
-					const old = format === 'docx' ? await this.app.vault.readBinary(existing) : await this.app.vault.read(existing);
+					const old = format === 'html' ? await this.app.vault.read(existing) : await this.app.vault.readBinary(existing);
 					if (!(await this.history.snapshot(path, old, { label: 'Before exporting again' }))) {
 						new Notice(`Export cancelled: a copy of the existing ${path} could not be kept, so it was not replaced.`);
 						return;

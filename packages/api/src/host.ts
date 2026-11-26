@@ -82,6 +82,8 @@ export interface HostBridge {
 		chooseVault(create?: boolean, layout?: 'legal' | 'generic'): Promise<boolean>;
 		openVault(path: string): Promise<boolean>;
 		showItemInFolder(path: string): Promise<void>;
+		/** A whole HTML page printed to PDF (pictures and fonts from quire:// only; no scripts run). */
+		printToPdf?(html: string, options?: { landscape?: boolean; pageSize?: string }): Promise<ArrayBuffer>;
 		/** Smoke-test mode: report results and exit. */
 		smokeReport?(report: unknown): void;
 		isSmoke: boolean;

@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('quire', {
 		smokeReport: (report: unknown) => ipcRenderer.send('smoke:report', report),
 		dictionary: (lang: string) => call('spell:dictionary', lang),
 		notices: () => call('app:notices'),
+		printToPdf: async (html: string, options?: { landscape?: boolean; pageSize?: string }) => toArrayBuffer(await call<Uint8Array>('app:printToPdf', html, options)),
 		fonts: () => call('app:fonts'),
 		pdfAsset: (kind: 'standard_fonts' | 'cmaps', name: string) => call<Uint8Array>('pdf:asset', kind, name),
 		onSystemLock: (cb: () => void) => { ipcRenderer.on('app:system-lock', () => cb()); },

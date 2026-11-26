@@ -319,6 +319,33 @@ function registerIpc() {
 	});
 	// The fonts installed on this computer (read from the font folders once), for the font settings.
 	handle('app:fonts', () => fontsOnce());
+	// Export to PDF: the renderer gives a whole HTML page (the note drawn for print); a hidden window that runs no
+	// scripts lays it out and prints it. Its pictures and fonts come from quire:// like the app's; nothing else loads.
+	handle('app:printToPdf', async (html: string, options?: { landscape?: boolean; pageSize?: string }) => {
+		if (typeof html !== 'string' || html.length > 50_000_000) throw new Error('Nothing to print');
+		const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+		printPages.set(id, html);
+		const page = new BrowserWindow({
+			show: false, width: 900, height: 1200,
+			webPreferences: { sandbox: true, contextIsolation: true, javascript: false, nodeIntegration: false, spellcheck: false },
+		});
+		try {
+			page.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+			page.webContents.on('will-navigate', (e) => e.preventDefault());
+			await page.loadURL(`quire://app/print/${id}.html`);
+			const size = ['A4', 'Letter', 'Legal', 'A3', 'A5'].includes(String(options?.pageSize)) ? String(options!.pageSize) : 'A4';
+			const pdf = await page.webContents.printToPDF({
+				pageSize: size as 'A4', landscape: !!options?.landscape, printBackground: true, preferCSSPageSize: true,
+				margins: { top: 0.75, bottom: 0.75, left: 0.8, right: 0.8 },
+				displayHeaderFooter: true, headerTemplate: '<span></span>',
+				footerTemplate: '<div style="width:100%;font-size:8px;color:#666;text-align:center;font-family:sans-serif"><span class="pageNumber"></span></div>',
+			});
+			return new Uint8Array(pdf);
+		} finally {
+			printPages.delete(id);
+			page.destroy();
+		}
+	});
 	handle('app:notices', () => fsp.readFile(path.join(APP_DIR, 'THIRD_PARTY_NOTICES.txt'), 'utf8').catch(() => ''));
 	ipcMain.on('smoke:report', (_e, report) => { void finishSmoke(report); });
 	// Screenshot mode: the renderer asks for a capture of the window as it is now.
@@ -349,6 +376,8 @@ const MIME: Record<string, string> = {
 };
 
 let csp = '';
+/** Pages being printed to PDF, by id (app:printToPdf). */
+const printPages = new Map<string, string>();
 /** Byte-range answers from the homebase: the smoke test needs at least one (media seeking depends on them). */
 let partialResponses = 0;
 
@@ -370,6 +399,14 @@ function registerProtocol() {
 		if (parts.some((p) => p === '..' || p.includes('\0'))) return new Response('Forbidden', { status: 403 });
 		if (parts.length === 0 || parts[0] === 'index.html') {
 			return serve(path.join(RENDERER_DIR, 'index.html'), { 'content-security-policy': csp });
+		}
+		if (parts[0] === 'print' && parts.length === 2) {
+			const html = printPages.get(parts[1]!.replace(/\.html$/, ''));
+			if (html === undefined) return new Response('Not found', { status: 404 });
+			return new Response(html, { headers: {
+				'content-type': 'text/html; charset=utf-8',
+				'content-security-policy': "default-src 'none'; img-src quire: data: blob:; style-src 'unsafe-inline' quire:; font-src quire: data:; script-src 'none'; form-action 'none'; base-uri 'none'",
+			} });
 		}
 		if (parts[0] === 'plugins' && parts.length === 3) {
 			const [, id, file] = parts as [string, string, string];

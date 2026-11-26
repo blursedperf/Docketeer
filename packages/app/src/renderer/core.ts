@@ -16,6 +16,7 @@ import { registerPdf } from './pdf/view';
 import { registerHomebases } from './homebases';
 import { SLASH_ITEMS, SlashSuggest } from './slash';
 import { registerTemplates, templateSlashItems } from './templates';
+import { registerExportPdf } from './export-pdf';
 import { unitsStore } from './units-store';
 import { registerLocking } from './locking';
 import { NameModal, NewNoteModal, createNote, freePath, notePlaces, promptRename } from './dialogs';
@@ -710,6 +711,7 @@ export function registerCore(app: App): { reveal(): void } {
 	editorCmd('editor:toggle-italics', 'Toggle italics', 'i', '*');
 	editorCmd('editor:insert-wikilink', 'Insert internal link', 'k', '[[', ']]');
 	registerTemplates(app, add);
+	registerExportPdf(app, add);
 	add({
 		id: 'editor:add-property', name: 'Add a property', icon: 'list-plus', section: 'Edit', aliases: ['Add file property', 'Properties'],
 		hotkeys: [{ modifiers: ['Mod'], key: ';' }],

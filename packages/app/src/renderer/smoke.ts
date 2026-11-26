@@ -1073,6 +1073,63 @@ export async function runSmoke(app: App): Promise<void> {
 		return problems.length === 0 || problems.join('; ');
 	});
 
+	await check('Export to PDF: a note (with its picture) printed to a PDF beside it, from the menus; AGLC4 with its footnotes', async () => {
+		const problems: string[] = [];
+		const png = await vault.createBinary('PDF smoke/dot.png', new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 0, 0, 3, 1, 1, 0, 201, 254, 146, 239, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]).buffer);
+		const note = await vault.create('PDF smoke/PDF smoke.md', '---\ncourse: Torts\n---\n\n# Duty of care\n\nSome **bold** text and a [[Welcome]] link.\n\n![[dot.png]]\n\n- [x] done\n- [ ] to do\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		// The menus offer it: the tab's, the editor's, the Docket's note actions.
+		const titles = () => [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
+		const r = leaf.tabHeaderEl.getBoundingClientRect();
+		leaf.tabHeaderEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + 5, clientY: r.top + 5 }));
+		if (!titles().includes('Export to PDF')) problems.push(`tab menu: ${titles().join('|')}`);
+		if (!titles().includes('Export to PDF with AGLC4 footnotes')) problems.push('no AGLC4 PDF export in the tab menu');
+		document.querySelectorAll('.menu').forEach((m) => m.remove());
+		const c = view.editor.cm.coordsAtPos(view.editor.cm.state.doc.length - 2);
+		if (c) view.editor.cm.contentDOM.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: c.left, clientY: c.top + 2 }));
+		if (!titles().includes('Export to PDF')) problems.push(`editor menu: ${titles().join('|')}`);
+		// Exporting from the editor's menu writes "PDF smoke.pdf" beside the note.
+		[...document.querySelectorAll<HTMLElement>('.menu .menu-item')].find((i) => i.textContent === 'Export to PDF')?.click();
+		const pdfPath = 'PDF smoke/PDF smoke.pdf';
+		if (!(await until(() => !!vault.getFileByPath(pdfPath), 15000))) problems.push('no PDF written');
+		else {
+			const bytes = new Uint8Array(await vault.readBinary(vault.getFileByPath(pdfPath)!));
+			const head = String.fromCharCode(...bytes.slice(0, 5));
+			if (head !== '%PDF-' || bytes.length < 2000) problems.push(`not a PDF: ${head} ${bytes.length} bytes`);
+			const latin = new TextDecoder('latin1').decode(bytes);
+			if (!/\/Image|\/XObject/.test(latin)) problems.push('the picture is not in the PDF');
+		}
+		// Again: it asks whether to replace it; "Save as a new file" writes "PDF smoke 2.pdf".
+		app.commands.executeCommandById('app:export-pdf');
+		const save = await until(() => [...document.querySelectorAll<HTMLButtonElement>('.modal button')].some((b) => b.textContent === 'Save as a new file'), 3000);
+		if (!save) problems.push('no question before replacing');
+		else {
+			[...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((b) => b.textContent === 'Save as a new file')!.click();
+			if (!(await until(() => !!vault.getFileByPath('PDF smoke/PDF smoke 2.pdf'), 15000))) problems.push('"Save as a new file" wrote nothing');
+		}
+		// AGLC4: its footnoted page, printed.
+		app.commands.executeCommandById('aglc-citations:export-pdf');
+		const aglcPath = vault.getFileByPath('PDF smoke/PDF smoke.pdf') ? null : 'x';
+		void aglcPath;
+		const replace = await until(() => [...document.querySelectorAll<HTMLButtonElement>('.modal button')].some((b) => /Replace/.test(b.textContent ?? '')), 3000);
+		if (replace) [...document.querySelectorAll<HTMLButtonElement>('.modal button')].find((b) => /Replace/.test(b.textContent ?? ''))!.click();
+		await sleep(3000);
+		const after = vault.getFileByPath(pdfPath);
+		if (!after) problems.push('AGLC4 PDF missing');
+		else {
+			const bytes = new Uint8Array(await vault.readBinary(after));
+			if (String.fromCharCode(...bytes.slice(0, 5)) !== '%PDF-') problems.push('AGLC4 export is not a PDF');
+		}
+		document.querySelectorAll('.menu, .modal-container').forEach((m) => m.remove());
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		for (const p of ['PDF smoke/PDF smoke.pdf', 'PDF smoke/PDF smoke 2.pdf']) { const f = vault.getFileByPath(p); if (f) await vault.delete(f); }
+		await vault.delete(note);
+		await vault.delete(png);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	await check('/ calculator: arithmetic after the slash offers its answer, then its working', async () => {
 		const problems: string[] = [];
 		const note = await vault.create('Calc smoke.md', '');
@@ -1731,6 +1788,17 @@ export async function runShots(app: App): Promise<void> {
 		await sleep(300);
 		await shot('44-docket-tasks');
 		docket.close(true);
+		// The note exported to PDF, opened in Quire's PDF viewer.
+		app.commands.executeCommandById('app:export-pdf', { file: note });
+		if (await until(() => !!app.vault.getFileByPath('Properties and links.pdf'), 15000)) {
+			const pdfLeaf = workspace.getLeaf('tab');
+			await pdfLeaf.openFile(app.vault.getFileByPath('Properties and links.pdf')!);
+			await until(() => document.querySelectorAll('.pdf-page canvas, .pdf-page img').length > 0, 8000);
+			await sleep(800);
+			await shot('45-export-pdf');
+			pdfLeaf.detach();
+			await app.vault.delete(app.vault.getFileByPath('Properties and links.pdf')!);
+		}
 		leaf.detach();
 		await app.vault.delete(note);
 		await app.vault.delete(tasks);
