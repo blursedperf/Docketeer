@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.19.1
 
 - **Tasks are checked off in the Tasks panel**: click a task's box, or press Space on its row; the Docket stays open
   and the next task is selected, so a list can be worked through from the keyboard. Space or a click again (in
