@@ -106,8 +106,14 @@ function dockAtTheBottom(app: App): void {
 	const button = container.createEl('button', { cls: 'compact-docket-button', attr: { type: 'button', 'aria-label': 'Open the Docket: notes, search, commands and panels' } });
 	setIcon(button.createSpan({ cls: 'compact-docket-icon' }), 'search');
 	button.createSpan({ text: 'Docket' });
-	// The tap that opens it may focus its search field, which brings up the keyboard.
-	button.addEventListener('click', () => app.commands.executeCommandById('app:docket'));
+	// On a touch screen it opens without the cursor in its search field, so no keyboard covers the panels (a tap on
+	// the field brings it); with a mouse, the cursor is there as usual.
+	button.addEventListener('click', () => {
+		const ui = (app as unknown as { docketUI?: { isOpen: boolean; open(o?: { focus?: boolean }): void; close(hide?: boolean): void } }).docketUI;
+		if (!ui) return;
+		if (ui.isOpen) ui.close(true);
+		else ui.open({ focus: !document.body.classList.contains('is-touch') });
+	});
 
 	// The sheet stands on the keyboard (--keyboard-inset: layout-mode.ts).
 

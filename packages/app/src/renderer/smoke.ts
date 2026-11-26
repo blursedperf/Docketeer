@@ -10,6 +10,7 @@ import { docketKeyProblem, setDocketKey } from './core';
 import { unitsStore } from './units-store';
 import { conflictsStore } from './conflicts';
 import { applyKeyboard } from './layout-mode';
+import { TabsModal } from './compact';
 import { AFTER_LIFT, HOLD, LongPress, holdOpensMenu } from './long-press';
 import { genericPanels } from './docket/panels-model';
 import { openFileIn } from './docket/providers';
@@ -1708,6 +1709,38 @@ export async function runSmoke(app: App): Promise<void> {
 		return problems.length === 0 || problems.join('; ');
 	});
 
+	await check('a long note name: its title wraps in the note, and Open tabs cuts it short instead of scrolling sideways', async () => {
+		const problems: string[] = [];
+		const long = 'Mabo v Queensland (No 2) native title recognition extinguishment and the limits of the common law revisited';
+		const note = vault.getFileByPath(`${long}.md`) ?? await vault.create(`${long}.md`, 'Text.');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const v = leaf.view as MarkdownView;
+		if (v.getMode() !== 'source') await v.setMode('source');
+		await sleep(150);
+		const title = leaf.view.containerEl.querySelector<HTMLTextAreaElement>('textarea.inline-title');
+		if (!title) problems.push('no title');
+		else {
+			if (title.scrollWidth > title.clientWidth + 1) problems.push('the title runs past its width');
+			const line = parseFloat(getComputedStyle(title).lineHeight) || 30;
+			if (title.clientWidth < 900 && title.getBoundingClientRect().height < line * 1.5) problems.push(`the title is one line (${Math.round(title.getBoundingClientRect().height)}px) at ${title.clientWidth}px wide`);
+			if (title.scrollHeight > title.clientHeight + 1) problems.push('the title is cut off at the foot');
+		}
+		const tabs = new TabsModal(app);
+		tabs.open();
+		await sleep(100);
+		const content = tabs.modalEl.querySelector<HTMLElement>('.modal-content');
+		if (content && content.scrollWidth > content.clientWidth + 1) problems.push(`Open tabs scrolls sideways (${content.scrollWidth} in ${content.clientWidth})`);
+		const row = [...tabs.modalEl.querySelectorAll<HTMLElement>('.open-tabs-title')].find((t) => t.textContent === long);
+		if (!row) problems.push('the note is not in Open tabs');
+		else if (row.getBoundingClientRect().right > tabs.modalEl.getBoundingClientRect().right) problems.push('its name runs out of Open tabs');
+		tabs.close();
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await sleep(80);
+		await vault.delete(note);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	await check('compact layout: no tiling, panel editing, page preview or hotkey editor; touch screens keep a density of their own', async () => {
 		const problems: string[] = [];
 		const cmds = ['app:split-right', 'app:arrange-panels', 'app:new-panel', 'aglc-citations:page-preview'];
@@ -1761,6 +1794,9 @@ export async function runSmoke(app: App): Promise<void> {
 			button?.click();
 			await sleep(250);
 			if (!isOpen()) problems.push('the button did not open the Docket');
+			// A touch screen: no cursor in the search field, so no keyboard covers the panels. A mouse: the cursor is there.
+			const typing = document.activeElement instanceof HTMLInputElement && docketEl.contains(document.activeElement);
+			if (typing !== !document.body.classList.contains('is-touch')) problems.push(typing ? 'the search field took the keyboard on a touch screen' : 'no cursor in the search field with a mouse');
 			const d = docketEl.getBoundingClientRect();
 			if (Math.abs(d.bottom - window.innerHeight) > 2) problems.push(`the sheet ends at ${Math.round(d.bottom)}, not the bottom (${window.innerHeight})`);
 			// Widths against the page's real layout width (the check only pretends the window is narrow).
@@ -4383,7 +4419,7 @@ async function conflictChecks(app: App, check: CheckFn): Promise<void> {
 
 async function titleChecks(app: App, check: CheckFn): Promise<void> {
 	const { vault, workspace } = app;
-	const title = () => [...document.querySelectorAll<HTMLInputElement>('.workspace-leaf.mod-active input.inline-title')].find((e) => e.offsetParent !== null) ?? null;
+	const title = () => [...document.querySelectorAll<HTMLTextAreaElement>('.workspace-leaf.mod-active textarea.inline-title')].find((e) => e.offsetParent !== null) ?? null;
 	const editTitle = async (text: string, key: string) => {
 		const t = title()!;
 		t.focus();
@@ -4424,7 +4460,7 @@ async function titleChecks(app: App, check: CheckFn): Promise<void> {
 		// Reading view has it too.
 		await v.setMode('preview');
 		await sleep(150);
-		const reading = [...document.querySelectorAll<HTMLInputElement>('.markdown-reading-view input.inline-title')].some((e) => e.value === 'Retitled note');
+		const reading = [...document.querySelectorAll<HTMLTextAreaElement>('.markdown-reading-view textarea.inline-title')].some((e) => e.value === 'Retitled note');
 		await v.setMode('source');
 		// Turned off in Settings → Editor: gone.
 		await app.setConfig('inlineTitle', false);

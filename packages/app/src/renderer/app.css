@@ -1094,13 +1094,14 @@ body.is-dragging-tab .workspace-tab-header { cursor: grabbing; }
 
 /* The note's name as a title above its text (editable; renames the note). */
 .inline-title-wrap { padding: 0 0 var(--space-4); }
-input.inline-title {
-	display: block; width: 100%; height: auto; padding: var(--space-1) 0; margin: 0; outline: none; cursor: text;
+textarea.inline-title {
+	display: block; width: 100%; height: auto; min-height: 0; padding: var(--space-1) 0; margin: 0; outline: none; cursor: text;
+	resize: none; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere;
 	font-family: var(--font-text); font-size: var(--h1-size, 1.9em); font-weight: var(--font-bold); line-height: 1.25;
 	color: var(--text-normal); background: transparent; border: none; border-bottom: var(--border-width) solid transparent; border-radius: 0; box-shadow: none;
 }
-input.inline-title:hover { border-bottom-color: var(--doom-border-subtle); }
-input.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: none; }
+textarea.inline-title:hover { border-bottom-color: var(--doom-border-subtle); }
+textarea.inline-title:focus { border-bottom-color: var(--doom-blue); box-shadow: none; }
 
 /* Dragging in the Docket (drag.ts, docket.ts): files and folders onto folders, tabs and list rows into another order. */
 .docket-item.is-dragging, .docket-option.is-dragging, .docket-tab.is-dragging { opacity: 0.5; }
@@ -1213,11 +1214,12 @@ body.is-frameless .welcome::before { content: ""; position: fixed; inset: 0 0 au
 .is-compact .workspace-tabs.mod-stacked .workspace-leaf { width: 100% !important; }
 .is-compact .workspace-tabs.mod-stacked .workspace-leaf:not(.is-stack-active) { display: none !important; }
 
-.open-tabs-list { display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-3); }
+.modal.mod-open-tabs .modal-content { overflow-x: hidden; }
+.open-tabs-list { min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); margin-bottom: var(--space-3); }
 .open-tabs-item { display: flex; align-items: center; gap: var(--space-1); border-radius: var(--radius-s); }
 .open-tabs-item.is-active { background: var(--background-modifier-hover); }
-.open-tabs-go { flex: 1; display: flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-2); text-align: left; background: transparent; border: none; box-shadow: none; }
-.open-tabs-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.open-tabs-go { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-2); text-align: left; background: transparent; border: none; box-shadow: none; }
+.open-tabs-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .open-tabs-close { min-width: 44px; min-height: 44px; }
 .open-tabs-new { width: 100%; min-height: 44px; }
 

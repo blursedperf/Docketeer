@@ -54,7 +54,7 @@ export class Docket {
 	get shownPanelId(): string | null { return this.panelEl.hasAttribute('hidden') ? null : this.shownPanel?.id ?? null; }
 	private panelFocus: string | undefined;
 	private shownPanel: DocketPanel | null = null;
-	private saved: { cm: EditorView | null; selection: EditorSelection | null; el: Element | null } | null = null;
+	private saved: { cm: EditorView | null; selection: EditorSelection | null; el: Element | null; quiet?: boolean } | null = null;
 	private seq = 0;
 	/** "Show all" of one group. */
 	private only: string | null = null;
@@ -183,8 +183,11 @@ export class Docket {
 		else this.close(true);
 	}
 
-	/** Open, with the cursor in the input. Returns how long it took (ms), for the budget check. */
-	open(opts: { panel?: string; query?: string } = {}): number {
+	/**
+	 * Open, with the cursor in the input (unless `focus` is false: a phone's Docket button, so no keyboard rises
+	 * and the panels can be scrolled; tapping the search field brings it). Returns how long it took (ms).
+	 */
+	open(opts: { panel?: string; query?: string; focus?: boolean } = {}): number {
 		const t0 = performance.now();
 		if (this.hintEl) this.dismissHint();
 		if (!this.opened) this.saveFocus();
@@ -211,7 +214,12 @@ export class Docket {
 		this.actionsOf = null;
 		this.renderTabs();
 		void this.update();
-		this.inputEl.focus();
+		if (opts.focus !== false) this.inputEl.focus();
+		else if (this.saved) {
+			// The keyboard goes; the note gets it back on closing only if it was being written in.
+			if (!this.saved.cm?.hasFocus) this.saved.quiet = true;
+			(document.activeElement as HTMLElement | null)?.blur();
+		}
 		this.app.docketOpen = true;
 		this.app.trigger('docket-open');
 		return performance.now() - t0;
@@ -242,6 +250,9 @@ export class Docket {
 	private restoreFocus(): void {
 		const s = this.saved;
 		if (!s) return;
+		// Opened without the cursor (a phone's Docket button) while the note was only being read: focusing it would
+		// bring up the keyboard.
+		if (s.quiet) return;
 		if (s.cm?.dom.isConnected) {
 			const len = s.cm.state.doc.length;
 			if (s.selection && s.selection.ranges.every((r) => r.to <= len)) s.cm.dispatch({ selection: s.selection });

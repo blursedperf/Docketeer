@@ -16,28 +16,46 @@ export interface TitleHandlers {
 /** Set (or clear, with null) the title shown above the text. */
 export const setTitle = StateEffect.define<string | null>();
 
-/** The editable title (also used by the reading view): a one-line text field styled as a title. */
+/**
+ * The editable title (also used by the reading view): a name, styled as a title, that wraps onto more lines as a
+ * heading would (a text area as tall as its text) but is edited as one line: Enter renames, and line breaks
+ * pasted in become spaces.
+ */
 export function titleElement(name: string, h: TitleHandlers): HTMLElement {
 	const wrap = document.createElement('div');
 	wrap.className = 'inline-title-wrap';
-	const el = document.createElement('input');
-	el.type = 'text';
+	const el = document.createElement('textarea');
+	el.rows = 1;
 	el.className = 'inline-title';
 	el.spellcheck = false;
 	el.autocomplete = 'off';
 	el.setAttribute('aria-label', 'Note name: edit to rename the note');
 	el.value = name;
 	wrap.appendChild(el);
+	// As tall as its text, at whatever width it is given.
+	const fit = () => { el.style.height = 'auto'; if (el.scrollHeight) el.style.height = `${el.scrollHeight}px`; };
+	// Again when its width changes (not its height, which fitting changes).
+	let width = 0;
+	new ResizeObserver(() => {
+		const w = el.clientWidth;
+		if (w === width) return;
+		width = w;
+		requestAnimationFrame(fit);
+	}).observe(el);
+	el.addEventListener('input', () => {
+		if (/[\r\n]/.test(el.value)) { const at = el.selectionStart; el.value = el.value.replace(/[\r\n]+/g, ' '); el.setSelectionRange(at, at); }
+		fit();
+	});
 	let committing = false;
 	const current = () => el.value.replace(/\s+/g, ' ').trim();
 	const commit = async () => {
 		if (committing) return;
 		const next = current();
-		if (!next || next === name) { el.value = name; return; }
+		if (!next || next === name) { el.value = name; fit(); return; }
 		committing = true;
 		const ok = await h.rename(next).catch(() => false);
 		committing = false;
-		if (!ok) el.value = name;
+		if (!ok) { el.value = name; fit(); }
 	};
 	el.addEventListener('keydown', (e) => {
 		e.stopPropagation(); // the editor's keys do not apply here
@@ -49,6 +67,7 @@ export function titleElement(name: string, h: TitleHandlers): HTMLElement {
 		} else if (e.key === 'Escape') {
 			e.preventDefault();
 			el.value = name;
+			fit();
 			h.toText();
 		}
 	});
@@ -83,7 +102,7 @@ export function inlineTitle(h: TitleHandlers): Extension {
 		run: (view) => {
 			const sel = view.state.selection.main;
 			if (!sel.empty || view.state.doc.lineAt(sel.head).number !== 1 || view.state.field(field) === null) return false;
-			const el = view.dom.querySelector<HTMLInputElement>('input.inline-title');
+			const el = view.dom.querySelector<HTMLTextAreaElement>('textarea.inline-title');
 			if (!el) return false;
 			el.focus();
 			el.setSelectionRange(el.value.length, el.value.length);

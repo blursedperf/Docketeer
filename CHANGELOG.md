@@ -43,6 +43,10 @@
   description, full width. The Subjects panel's keyboard keys are left out on a phone.
 - **iPhone and iPad: several versions of one note from other devices can each be settled.** Leaving more than one
   unsettled made the older ones impossible to keep or discard.
+- **A long note name wraps** in the title above the note, as a heading does, instead of running off the side. It
+  still renames the note when you edit it and press Enter.
+- **iPhone: the Docket button opens the Docket without the keyboard**, so its panels have the whole sheet and
+  scroll; tap the search field to type. A long name in *Open tabs* is cut short instead of scrolling sideways.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.
