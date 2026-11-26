@@ -78,6 +78,8 @@ struct AppFiles {
 			guard let fs = vault() else { return .error(404) }
 			// The homebase's own checks: nothing outside it, by name or through a symlink.
 			guard let file = try? fs.resolve(rest.joined(separator: "/")) else { return .error(403) }
+			// Not downloaded yet: ask iCloud for it; the page shows it once it arrives.
+			if fs.isPending(file) { fs.startDownload(file); return .error(404) }
 			return serve(file: file, type: type)
 		}
 		return serve(root.appendingPathComponent("renderer"), parts)

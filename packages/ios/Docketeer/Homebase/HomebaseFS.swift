@@ -8,8 +8,14 @@ struct HostStat: Equatable {
 	/** Milliseconds since 1970, rounded, as desktop. */
 	var mtime: Int
 	var ctime: Int
+	/** Not downloaded to this device yet (iCloud). */
+	var pending = false
 
-	var json: [String: Any] { ["type": type, "size": size, "mtime": mtime, "ctime": ctime] }
+	var json: [String: Any] {
+		var j: [String: Any] = ["type": type, "size": size, "mtime": mtime, "ctime": ctime]
+		if pending { j["pending"] = true }
+		return j
+	}
 }
 
 /** An error the page sees; `code` is set for the ones it acts on (`conflict`, from the conflict guard). */
@@ -33,6 +39,8 @@ final class HomebaseFS {
 	/** For the conflict guard: the modification time Docketeer last read or wrote, by homebase path. */
 	private var known: [String: Int] = [:]
 	private let knownLock = NSLock()
+	/** How long reading a file waits for iCloud to download it. */
+	var downloadWait: TimeInterval = 60
 
 	init(root: URL) throws {
 		let root = root.standardizedFileURL
@@ -100,6 +108,43 @@ final class HomebaseFS {
 		if url.path == root.path { throw HomebaseError("Cannot remove the homebase") }
 	}
 
+	// MARK: iCloud downloads
+
+	/** The stand-in iCloud leaves for a file not downloaded: ".Name.md.icloud" beside where it will be. */
+	static func standIn(for url: URL) -> URL {
+		url.deletingLastPathComponent().appendingPathComponent(".\(url.lastPathComponent).icloud")
+	}
+
+	/** The file a stand-in is for ("Name.md" for ".Name.md.icloud"), or nil if the name is not a stand-in. */
+	static func standInTarget(_ name: String) -> String? {
+		guard name.hasPrefix("."), name.hasSuffix(".icloud"), name.count > ".".count + ".icloud".count else { return nil }
+		return String(name.dropFirst().dropLast(".icloud".count))
+	}
+
+	/** True when the file is in iCloud but not on this device: a stand-in, or a file without its contents yet. */
+	func isPending(_ url: URL) -> Bool {
+		if !Self.exists(url.path) { return Self.exists(Self.standIn(for: url).path) }
+		guard let v = try? url.resourceValues(forKeys: [.isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey]),
+			v.isUbiquitousItem == true, let status = v.ubiquitousItemDownloadingStatus else { return false }
+		return status != .current && status != .downloaded
+	}
+
+	/** Ask iCloud to bring the file to this device (nothing happens for a file that is not in iCloud). */
+	func startDownload(_ url: URL) {
+		try? fm.startDownloadingUbiquitousItem(at: url)
+	}
+
+	/** Wait for a file iCloud is still downloading (starting the download), up to `downloadWait`. */
+	private func ensureDownloaded(_ url: URL) throws {
+		guard isPending(url) else { return }
+		startDownload(url)
+		let until = Date().addingTimeInterval(downloadWait)
+		while isPending(url) {
+			if Date() > until { throw HomebaseError("“\(url.lastPathComponent)” is still downloading from iCloud. Try again in a moment.") }
+			Thread.sleep(forTimeInterval: 0.25)
+		}
+	}
+
 	// MARK: The conflict guard
 
 	/**
@@ -163,26 +208,41 @@ final class HomebaseFS {
 	}
 
 	func statOf(_ url: URL) -> HostStat? {
-		guard let a = try? fm.attributesOfItem(atPath: url.resolvingSymlinksInPath().path) else { return nil }
 		let ms = { (d: Any?) in Int(((d as? Date)?.timeIntervalSince1970 ?? 0) * 1000 + 0.5) }
+		guard let a = try? fm.attributesOfItem(atPath: url.resolvingSymlinksInPath().path) else {
+			// Only iCloud's stand-in is here: the file, not downloaded yet.
+			let standIn = Self.standIn(for: url)
+			guard Self.exists(standIn.path), let s = try? fm.attributesOfItem(atPath: standIn.path) else { return nil }
+			return HostStat(type: "file", size: 0, mtime: ms(s[.modificationDate]), ctime: ms(s[.creationDate] ?? s[.modificationDate]), pending: true)
+		}
 		let folder = (a[.type] as? FileAttributeType) == .typeDirectory
-		return HostStat(type: folder ? "folder" : "file", size: (a[.size] as? NSNumber)?.intValue ?? 0, mtime: ms(a[.modificationDate]), ctime: ms(a[.creationDate] ?? a[.modificationDate]))
+		return HostStat(type: folder ? "folder" : "file", size: (a[.size] as? NSNumber)?.intValue ?? 0, mtime: ms(a[.modificationDate]), ctime: ms(a[.creationDate] ?? a[.modificationDate]), pending: !folder && isPending(url))
 	}
 
 	func exists(_ rel: Any?) throws -> Bool {
-		fm.fileExists(atPath: try resolve(rel).path)
+		let url = try resolve(rel)
+		return fm.fileExists(atPath: url.path) || Self.exists(Self.standIn(for: url).path)
 	}
 
-	/** Every file and folder under `rel` (the whole homebase for ""), skipping names that start with "." and symlinks. */
+	/**
+	 * Every file and folder under `rel` (the whole homebase for ""), skipping names that start with "." and symlinks.
+	 * Files iCloud has not downloaded are listed `pending`; notes among them start downloading (other files, such as
+	 * recordings, only when opened).
+	 */
 	func tree(_ rel: Any?) throws -> [(path: String, stat: HostStat)] {
 		let start = try resolve(rel)
 		var out: [(path: String, stat: HostStat)] = []
 		func walk(_ dir: URL) {
 			guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { return }
-			for name in names.sorted() where !name.hasPrefix(".") {
+			let present = Set(names)
+			var listed = names.filter { !$0.hasPrefix(".") }
+			// Stand-ins: list the file they are for, unless it is here already.
+			for name in names { if let target = Self.standInTarget(name), !present.contains(target), !target.hasPrefix(".") { listed.append(target) } }
+			for name in listed.sorted() {
 				let url = dir.appendingPathComponent(name)
 				if Self.isSymlink(url.path) { continue }
 				guard let st = statOf(url) else { continue }
+				if st.pending, url.pathExtension.lowercased() == "md" { startDownload(url) }
 				out.append((relative(url), st))
 				if st.type == "folder" { walk(url) }
 			}
@@ -200,6 +260,7 @@ final class HomebaseFS {
 	func readBinary(_ rel: Any?) throws -> Data {
 		let url = try resolve(rel)
 		let path = relative(url)
+		try ensureDownloaded(url)
 		return try reading(url) { u in
 			let before = statOf(u)
 			let data = try Data(contentsOf: u)

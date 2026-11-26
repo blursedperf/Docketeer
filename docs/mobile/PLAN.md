@@ -286,7 +286,7 @@ that editing feels right, or decides what changes. Stop here and report.
       - `write()` is atomic and creates missing parent folders.
       - `trash()` uses `FileManager.trashItem`. Where that isn't available, it moves the file to
         `<homebase>/.trash/` and returns `true`.
-- [ ] Coordinated reads and writes, iCloud placeholders, and the `pending` flag (§2.6). Update `host.ts`,
+- [x] Coordinated reads and writes, iCloud placeholders, and the `pending` flag (§2.6). Update `host.ts`,
       the Electron host (no-op) and the search index.
 - [x] Folder picker and security-scoped bookmarks, with `chooseVault(create, layout)`, `openVault`,
       `recentVaults` (with `missing` and `current`) and `forgetVault`. `openExample` copies the example into

@@ -104,6 +104,8 @@ final class AppFilesTests: XCTestCase {
 		XCTAssertEqual(answer("quire://app/vault/").status, 403)
 		XCTAssertEqual(answer("quire://app/vault/pics/dog.png").status, 404)
 		XCTAssertEqual(AppFiles(root: root).answer(for: URL(string: "quire://app/vault/pics/cat.png")!).status, 404, "no homebase open")
+		try? "plist".write(to: root.appendingPathComponent("example-homebase/pics/.lecture.mp4.icloud"), atomically: true, encoding: .utf8)
+		XCTAssertEqual(answer("quire://app/vault/pics/lecture.mp4").status, 404, "not downloaded yet")
 	}
 
 	func testPartsAreDecodedOnce() {

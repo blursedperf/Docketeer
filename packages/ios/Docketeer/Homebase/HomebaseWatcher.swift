@@ -16,6 +16,8 @@ final class HomebaseWatcher: NSObject, NSFilePresenter {
 		var type: String
 		var size: Int
 		var mtime: Int
+		/** Not downloaded yet: when it arrives, that is a change even if its time is the same. */
+		var pending: Bool
 	}
 
 	let fs: HomebaseFS
@@ -104,7 +106,7 @@ final class HomebaseWatcher: NSObject, NSFilePresenter {
 		for e in (try? fs.tree("")) ?? [] {
 			// A folder's time changes with what is in it; it is reported only when it appears or goes.
 			let folder = e.stat.type == "folder"
-			out[e.path] = Seen(type: e.stat.type, size: folder ? 0 : e.stat.size, mtime: folder ? 0 : e.stat.mtime)
+			out[e.path] = Seen(type: e.stat.type, size: folder ? 0 : e.stat.size, mtime: folder ? 0 : e.stat.mtime, pending: e.stat.pending)
 		}
 		return out
 	}

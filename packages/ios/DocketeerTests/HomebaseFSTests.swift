@@ -195,6 +195,40 @@ final class HomebaseFSTests: XCTestCase {
 		XCTAssertEqual(try text("Welcome.md"), "mine", "a removed file's time is forgotten")
 	}
 
+	// MARK: iCloud downloads
+
+	func testAStandInIsListedAsTheFileItIsForPending() throws {
+		try "plist".write(to: root.appendingPathComponent("Torts/.Brief.md.icloud"), atomically: true, encoding: .utf8)
+		try "plist".write(to: root.appendingPathComponent(".Hidden.md.icloud"), atomically: true, encoding: .utf8)
+		let entry = try XCTUnwrap(try fs.tree("").first { $0.path == "Torts/Brief.md" })
+		XCTAssertTrue(entry.stat.pending)
+		XCTAssertEqual(entry.stat.json["pending"] as? Bool, true)
+		XCTAssertFalse(try fs.tree("").contains { $0.path.hasSuffix(".icloud") || $0.path == ".Hidden.md" }, "the stand-in itself, and hidden files, are not listed")
+		XCTAssertNil(try fs.tree("").first { $0.path == "Welcome.md" }?.stat.json["pending"], "files that are here have no pending")
+		XCTAssertTrue(try fs.exists("Torts/Brief.md"))
+		XCTAssertEqual(try fs.stat("Torts/Brief.md")?.pending, true)
+		XCTAssertEqual(HomebaseFS.standInTarget(".Brief.md.icloud"), "Brief.md")
+		XCTAssertNil(HomebaseFS.standInTarget(".icloud"))
+		XCTAssertNil(HomebaseFS.standInTarget("Brief.md"))
+	}
+
+	func testReadingWaitsForTheDownloadThenSaysItIsStillComing() throws {
+		let standIn = root.appendingPathComponent("Torts/.Brief.md.icloud")
+		try "plist".write(to: standIn, atomically: true, encoding: .utf8)
+		fs.downloadWait = 0.3
+		XCTAssertThrowsError(try fs.read("Torts/Brief.md")) { e in
+			XCTAssertTrue((e as? HomebaseError)?.message.contains("still downloading from iCloud") == true)
+		}
+		// iCloud brings it while Docketeer waits.
+		fs.downloadWait = 5
+		DispatchQueue.global().asyncAfter(deadline: .now() + 0.3) {
+			try? "# Brief".write(to: self.root.appendingPathComponent("Torts/Brief.md"), atomically: true, encoding: .utf8)
+			try? FileManager.default.removeItem(at: standIn)
+		}
+		XCTAssertEqual(try fs.read("Torts/Brief.md"), "# Brief")
+		XCTAssertFalse(try fs.stat("Torts/Brief.md")!.pending)
+	}
+
 	func testTrashMovesItOutOfTheHomebaseTree() throws {
 		XCTAssertTrue(try fs.trash("Welcome.md"))
 		XCTAssertFalse(try fs.exists("Welcome.md"))
@@ -241,6 +275,19 @@ final class HomebaseWatcherTests: XCTestCase {
 		XCTAssertTrue(events[3]["stat"] is NSNull, "gone")
 		w.rescan()
 		XCTAssertTrue(got.drain().isEmpty, "reported once")
+
+		// A file iCloud had not downloaded arrives: reported, without pending.
+		try "plist".write(to: root.appendingPathComponent(".Brief.md.icloud"), atomically: true, encoding: .utf8)
+		w.rescan()
+		let pending = got.drain()
+		XCTAssertEqual(pending.first?["path"] as? String, "Brief.md")
+		XCTAssertEqual((pending.first?["stat"] as? [String: Any])?["pending"] as? Bool, true)
+		try FileManager.default.removeItem(at: root.appendingPathComponent(".Brief.md.icloud"))
+		try "# Brief".write(to: root.appendingPathComponent("Brief.md"), atomically: true, encoding: .utf8)
+		w.rescan()
+		let arrived = got.drain()
+		XCTAssertEqual(arrived.first?["path"] as? String, "Brief.md")
+		XCTAssertNil((arrived.first?["stat"] as? [String: Any])?["pending"])
 	}
 
 	/** The events emitted (they arrive on the main thread). */

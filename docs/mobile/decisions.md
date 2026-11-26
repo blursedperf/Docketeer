@@ -225,3 +225,15 @@ root, Range answers, conflict detection, a bookmark round trip.
   check says so.
 - **A locked note's conflict copy is locked too** (`VaultCrypt.onCopy`), so your version is never written out
   unencrypted.
+
+**What iCloud downloads settled (Phase 1):**
+
+- **Both kinds of placeholder are handled.** A hidden stand-in (`.Name.md.icloud`) is listed as the file it is
+  for; a file that is there without its contents is found by its iCloud download status. Both are `pending`.
+- **Only notes download by themselves.** The design said every pending file starts downloading. Notes do, as soon
+  as the homebase is listed; pictures, PDFs and recordings download when they are opened (or shown), so a homebase
+  with gigabytes of lecture recordings does not fill the device. Until it arrives, such a file answers 404 from
+  `quire://app/vault/`.
+- **Reading waits.** Opening a note that is still downloading waits up to a minute, then says it is still on its
+  way. The search and link index know pending notes by name only, and take them in when the watcher reports them
+  (an arrival counts as a change even when the file's time is the same).
