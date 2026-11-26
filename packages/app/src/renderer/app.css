@@ -422,7 +422,10 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 .is-readable-line-width .markdown-source-view .cm-content { max-width: calc(var(--file-line-width) + 2 * var(--space-8)); margin: 0 auto; width: 100%; }
 .markdown-source-view .cm-line { padding: 0; }
 .cm-editor .cm-cursor { border-left: 2px solid var(--doom-blue); }
-.cm-editor .cm-selectionBackground, .cm-editor.cm-focused .cm-selectionBackground, .cm-editor .cm-content ::selection { background: var(--text-selection) !important; }
+/* One selection: the one CodeMirror draws. The browser's own (::selection) is painted over it otherwise, and the two
+   see-through layers read as a double highlight. Widgets outside the lines (table cells) keep the browser's. */
+.cm-editor .cm-selectionBackground, .cm-editor.cm-focused .cm-selectionBackground { background: var(--text-selection) !important; }
+.cm-editor .cm-line::selection, .cm-editor .cm-line ::selection { background: transparent !important; }
 .cm-editor .cm-selectionMatch { background: rgba(var(--doom-yellow-rgb), 0.18); }
 
 .cm-header { font-weight: var(--font-bold); line-height: var(--line-height-tight); }

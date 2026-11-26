@@ -3,7 +3,7 @@ import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-mar
 import { HighlightStyle, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-import { EditorState, type Extension, RangeSetBuilder } from '@codemirror/state';
+import { EditorState, type Extension, Prec, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, drawSelection, dropCursor, keymap, rectangularSelection } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import type { MarkdownConfig } from '@lezer/markdown';
@@ -208,6 +208,26 @@ export function linkAt(state: EditorState, pos: number): { type: 'wiki' | 'url';
 	return null;
 }
 
+/**
+ * Enter at the end of a [[link]] being written — just before its "]]", or between the two — steps past
+ * the "]]" instead of breaking the line, so the link is finished and typing goes on after it. (With the
+ * link suggestions open, Enter chooses one instead: those keys come first.)
+ */
+export function exitWikilink(view: EditorView): boolean {
+	const sel = view.state.selection;
+	if (sel.ranges.length !== 1 || !sel.main.empty) return false;
+	const pos = sel.main.head;
+	const line = view.state.doc.lineAt(pos);
+	const before = line.text.slice(0, pos - line.from);
+	const after = line.text.slice(pos - line.from);
+	let skip = 0;
+	if (after.startsWith(']]') && /\[\[[^[\]\n]*$/.test(before)) skip = 2;
+	else if (after.startsWith(']') && /\[\[[^[\]\n]*\]$/.test(before)) skip = 1;
+	if (!skip) return false;
+	view.dispatch({ selection: { anchor: pos + skip }, scrollIntoView: true, userEvent: 'select' });
+	return true;
+}
+
 /** Auto-paired brackets and quotes (its own compartment, so the setting applies to open notes). */
 export function bracketExtensions(on: boolean): Extension {
 	return on ? [closeBrackets(), keymap.of(closeBracketsKeymap)] : [];
@@ -242,6 +262,7 @@ export function baseExtensions(opts: SetupOptions): Extension[] {
 		inlineMarks,
 		markdownLinks,
 		tableKeymap(),
+		Prec.high(keymap.of([{ key: 'Enter', run: exitWikilink }])),
 		keymap.of([
 			...markdownKeymap,
 			...defaultKeymap,

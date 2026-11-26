@@ -763,6 +763,47 @@ export async function runSmoke(app: App): Promise<void> {
 		return problems.length === 0 || problems.join('; ');
 	});
 
+	await check('Enter before a link\'s "]]" finishes the link instead of breaking the line', async () => {
+		const problems: string[] = [];
+		const note = await vault.create('Link enter smoke.md', '');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		cm.focus();
+		const key = async (k: string) => { cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); await sleep(60); };
+		for (const [text, at] of [['See [[Welcome|the welcome]] now', 26], ['See [[Welcome]] now', 13], ['See [[Welcome]] now', 14]] as const) {
+			view.editor.setValue(text);
+			cm.dispatch({ selection: { anchor: at } });
+			await sleep(60);
+			await key('Enter');
+			const end = text.indexOf(']]') + 2;
+			if (view.editor.getValue() !== text) problems.push(`${JSON.stringify(text)}@${at} became ${JSON.stringify(view.editor.getValue())}`);
+			else if (cm.state.selection.main.head !== end) problems.push(`${JSON.stringify(text)}@${at}: cursor at ${cm.state.selection.main.head}, not ${end}`);
+		}
+		// Anywhere else, Enter still breaks the line.
+		view.editor.setValue('Plain line');
+		cm.dispatch({ selection: { anchor: 5 } });
+		await key('Enter');
+		if (view.editor.getValue() !== 'Plain\nline') problems.push(`plain: ${JSON.stringify(view.editor.getValue())}`);
+		view.editor.setValue('');
+		leaf.detach();
+		await vault.delete(note);
+		return problems.length === 0 || problems.join('; ');
+	});
+
+	await check('renaming a recording updates the links and embeds to it in notes', async () => {
+		const wav = await vault.createBinary('attachments/Rename smoke.wav', silentWav(1));
+		const note = await vault.create('Rename smoke.md', 'Play ![[Rename smoke.wav]] or ![[attachments/Rename smoke.wav|300]].\n\n[file](attachments/Rename%20smoke.wav)\n');
+		await until(() => (app.metadataCache.getFileCache(note)?.embeds?.length ?? 0) === 2, 2000);
+		await app.fileManager.renameFile(wav, 'attachments/Renamed smoke.wav');
+		const text = await vault.read(note);
+		const want = 'Play ![[Renamed smoke.wav]] or ![[attachments/Renamed smoke.wav|300]].\n\n[file](attachments/Renamed%20smoke.wav)\n';
+		await vault.delete(note);
+		await vault.delete(wav);
+		return text === want || JSON.stringify(text);
+	});
+
 	// The AGLC4 plugin.
 	const id = 'aglc-citations';
 	await check('AGLC4 plugin loaded', () => !!app.plugins.getPlugin(id) || `errors: ${app.plugins.loadError(id)}; manifests: ${Object.keys(app.plugins.manifests).join(', ')}`);

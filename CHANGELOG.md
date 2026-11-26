@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Renaming any file updates the links to it**: renaming a recording, picture or PDF (from the Docket, the Outline's
+  links, a tab or the title) now rewrites `![[clip.mp4]]`, `![[media/clip.mp4|400]]` and `![](media/My%20clip.mp4)`
+  in every note, as it already did for notes. Moving a file or a folder updates links written as paths, relative
+  ones included, and each link keeps the form it was written in (name or path, ".md" or not, alias, size, heading).
+- **Enter finishes a link**: with the cursor just before a link's `]]` (or between the two brackets), Enter steps out
+  of the link instead of breaking the line, also after an alias (`[[Note|text]]`) where no suggestions are shown.
+- **Selected text has one highlight**: the browser's own selection was painted over the editor's, so selected text
+  showed two overlapping highlights.
+
 ## v0.17.3
 
 - **Stacked tabs can be closed one by one**: stacking hides the tab strip, and its close buttons went with it. Each

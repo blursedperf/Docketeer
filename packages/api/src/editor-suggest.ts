@@ -127,7 +127,8 @@ export abstract class EditorSuggest<T> {
 		switch (key) {
 			case 'ArrowDown': this._select(this._selected + 1); return true;
 			case 'ArrowUp': this._select(this._selected - 1); return true;
-			case 'Enter': this._choose(this._selected, e); return true;
+			// Nothing to choose: Enter is left to the editor.
+			case 'Enter': if (this._items.length === 0) return false; this._choose(this._selected, e); return true;
 			case 'Escape': this.close(); return true;
 			default: return false;
 		}

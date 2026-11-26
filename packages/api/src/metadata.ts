@@ -5,6 +5,7 @@ import type { App } from './app';
 import { attachmentFolder, availablePath, safeFileName } from './attachments';
 import { errorSummary, normalizePath } from './util';
 import { LockedError } from './lock/service';
+import { type LinkEdit, applyLinkEdits, rewriteLink } from './link-rewrite';
 
 export interface Loc { line: number; col: number; offset: number; }
 export interface Pos { start: Loc; end: Loc; }
@@ -379,19 +380,34 @@ export class FileManager {
 	}
 
 	async renameFile(file: TAbstractFile, newPath: string): Promise<void> {
-		const oldPath = file.path;
-		const oldBase = file instanceof TFile ? file.basename : null;
+		const update = this.app.vault.getConfig('alwaysUpdateLinks') !== false;
+		// Before the move, while they still resolve: every link to the file (or to a file in the folder),
+		// of any kind (a note, a recording, a picture), with its old path and the note it is in.
+		const refs: { source: TFile; oldSource: string; target: TFile; oldPath: string; link: ReferenceCache }[] = [];
+		if (update) {
+			const targets = file instanceof TFile ? [file] : file instanceof TFolder ? filesIn(file) : [];
+			for (const target of targets) {
+				for (const [sourcePath, links] of this.app.metadataCache.getBacklinksForFile(target)) {
+					const source = this.app.vault.getFileByPath(sourcePath);
+					if (source) for (const link of links) refs.push({ source, oldSource: sourcePath, target, oldPath: target.path, link });
+				}
+			}
+		}
 		await this.app.vault.rename(file, newPath);
-		if (!(file instanceof TFile) || file.extension !== 'md' || oldBase === null || oldBase === file.basename) return;
-		if (this.app.vault.getConfig('alwaysUpdateLinks') === false) return;
-		// Update [[Old name]] and [[Old name|alias]] links to the renamed note.
-		const re = new RegExp(`(!?\\[\\[)(${oldBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${oldPath.replace(/\.md$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})((?:[#^][^\\]|]*)?(?:\\|[^\\]]*)?\\]\\])`, 'g');
-		for (const f of this.app.vault.getMarkdownFiles()) {
-			const cache = this.app.metadataCache.getFileCache(f);
-			if (!cache?.links?.some((l) => l.link.startsWith(oldBase) || l.link.startsWith(oldPath.replace(/\.md$/, '')))) continue;
+		if (refs.length === 0) return;
+		const bySource = new Map<TFile, LinkEdit[]>();
+		for (const r of refs) {
+			// A link in a note that moved with the folder is written from the note's new place.
+			const insert = rewriteLink(r.link.original, r.oldPath, r.target.path, r.source.path, r.oldSource);
+			if (insert === r.link.original) continue;
+			const edits = bySource.get(r.source) ?? [];
+			edits.push({ from: r.link.position.start.offset, to: r.link.position.end.offset, original: r.link.original, insert });
+			bySource.set(r.source, edits);
+		}
+		for (const [f, edits] of bySource) {
 			const editor = this.app.workspace.editorForFile(f);
 			const text = editor ? editor.getValue() : await this.app.vault.read(f);
-			const next = text.replace(re, (_m, a: string, _b: string, c: string) => `${a}${file.basename}${c}`);
+			const next = applyLinkEdits(text, edits);
 			if (next === text) continue;
 			if (editor) editor.replaceWhole(next);
 			else await this.app.vault.modify(f, next);
@@ -411,4 +427,14 @@ export class FileManager {
 	async trashFile(file: TAbstractFile): Promise<void> {
 		await this.app.vault.trash(file, true);
 	}
+}
+
+/** Every file in a folder, at any depth. */
+function filesIn(folder: TFolder): TFile[] {
+	const out: TFile[] = [];
+	for (const c of folder.children) {
+		if (c instanceof TFile) out.push(c);
+		else if (c instanceof TFolder) out.push(...filesIn(c));
+	}
+	return out;
 }
