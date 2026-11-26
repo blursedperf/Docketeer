@@ -277,7 +277,8 @@ that editing feels right, or decides what changes. Stop here and report.
 
 ### Phase 1: Host and iCloud (3 to 4 weeks)
 
-- [ ] `HomebaseFS` (Swift) implements every `HostFs` method with the same behaviour as desktop:
+- [x] `HomebaseFS` (Swift) implements every `HostFs` method with the same behaviour as desktop (with its
+      XCTests; the page uses it once the folder picker below is in):
       - Paths are relative with forward slashes.
       - Resolve against the root, and refuse `..`, NUL and symlinks that point outside the root.
       - `tree()` skips names starting with `.`.

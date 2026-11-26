@@ -1,0 +1,151 @@
+import XCTest
+@testable import Docketeer
+
+/** The homebase on disk: path checks, hidden files, atomic writes, rename, copy, trash (decisions.md §5). */
+final class HomebaseFSTests: XCTestCase {
+	private var base: URL!
+	private var root: URL!
+	private var outside: URL!
+	private var fs: HomebaseFS!
+
+	override func setUpWithError() throws {
+		base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		root = base.appendingPathComponent("Homebase")
+		outside = base.appendingPathComponent("Outside")
+		for dir in [root!, outside!, root.appendingPathComponent("Torts/Negligence"), root.appendingPathComponent(".quire")] {
+			try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+		}
+		try "# Welcome".write(to: root.appendingPathComponent("Welcome.md"), atomically: true, encoding: .utf8)
+		try "duty".write(to: root.appendingPathComponent("Torts/Negligence/Duty of care.md"), atomically: true, encoding: .utf8)
+		try "{}".write(to: root.appendingPathComponent(".quire/units.json"), atomically: true, encoding: .utf8)
+		try "secret".write(to: outside.appendingPathComponent("secret.md"), atomically: true, encoding: .utf8)
+		try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("Escape"), withDestinationURL: outside)
+		try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("Dangling.md"), withDestinationURL: outside.appendingPathComponent("not-yet.md"))
+		fs = try HomebaseFS(root: root)
+	}
+
+	override func tearDownWithError() throws {
+		try? FileManager.default.removeItem(at: base)
+	}
+
+	private func text(_ rel: String) throws -> String {
+		try String(contentsOf: root.appendingPathComponent(rel), encoding: .utf8)
+	}
+
+	// MARK: Paths
+
+	func testPathsInsideResolve() throws {
+		XCTAssertEqual(try fs.resolve("Welcome.md").path, root.appendingPathComponent("Welcome.md").path)
+		XCTAssertEqual(try fs.resolve("/Torts/./Negligence/../Negligence/Duty of care.md").lastPathComponent, "Duty of care.md")
+		XCTAssertEqual(try fs.resolve("").path, root.path)
+		XCTAssertEqual(try fs.resolve("New folder/New note.md").lastPathComponent, "New note.md", "paths that do not exist yet")
+	}
+
+	func testEscapesAreRefused() {
+		for rel in ["..", "../Outside/secret.md", "Torts/../../Outside/secret.md", "a\0b.md", "Escape/secret.md", "Escape/new.md", "Dangling.md"] {
+			XCTAssertThrowsError(try fs.resolve(rel), rel)
+		}
+		for bad: Any? in [nil, 3, ["Welcome.md"]] {
+			XCTAssertThrowsError(try fs.resolve(bad))
+		}
+		XCTAssertThrowsError(try fs.write("Escape/new.md", Data("x".utf8)))
+		XCTAssertThrowsError(try fs.read("Escape/secret.md"))
+		XCTAssertFalse(FileManager.default.fileExists(atPath: outside.appendingPathComponent("new.md").path))
+	}
+
+	func testTheRootCannotBeRemoved() {
+		XCTAssertThrowsError(try fs.rmdir("", recursive: true))
+		XCTAssertThrowsError(try fs.rmdir("/", recursive: true))
+		XCTAssertThrowsError(try fs.trash(""))
+		XCTAssertThrowsError(try fs.rename("", "Elsewhere"))
+		XCTAssertTrue(FileManager.default.fileExists(atPath: root.path))
+	}
+
+	// MARK: Listing
+
+	func testTreeSkipsHiddenNamesAndSymlinks() throws {
+		let paths = try fs.tree("").map(\.path)
+		XCTAssertEqual(paths, ["Torts", "Torts/Negligence", "Torts/Negligence/Duty of care.md", "Welcome.md"])
+		XCTAssertEqual(try fs.tree("Torts").map(\.path), ["Torts/Negligence", "Torts/Negligence/Duty of care.md"])
+		let welcome = try XCTUnwrap(try fs.tree("").first { $0.path == "Welcome.md" })
+		XCTAssertEqual(welcome.stat.type, "file")
+		XCTAssertEqual(welcome.stat.size, 9)
+		XCTAssertGreaterThan(welcome.stat.mtime, 1_600_000_000_000, "milliseconds")
+	}
+
+	func testListIncludesHiddenNames() throws {
+		let l = try fs.list("")
+		XCTAssertEqual(l.folders, [".quire", "Torts"])
+		XCTAssertEqual(l.files, ["Dangling.md", "Escape", "Welcome.md"], "symlinks are listed, not followed")
+	}
+
+	func testStatAndExists() throws {
+		XCTAssertEqual(try fs.stat("Torts")?.type, "folder")
+		XCTAssertNil(try fs.stat("Missing.md"))
+		XCTAssertTrue(try fs.exists(".quire/units.json"))
+		XCTAssertFalse(try fs.exists("Missing.md"))
+	}
+
+	// MARK: Writing
+
+	func testWriteIsAtomicAndMakesFolders() throws {
+		let st = try fs.write("Contracts/Formation/Offer.md", Data("offer".utf8))
+		XCTAssertEqual(st.type, "file")
+		XCTAssertEqual(st.size, 5)
+		XCTAssertEqual(try text("Contracts/Formation/Offer.md"), "offer")
+		try fs.write("Contracts/Formation/Offer.md", Data("acceptance".utf8))
+		XCTAssertEqual(try fs.read("Contracts/Formation/Offer.md"), "acceptance")
+		let left = try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("Contracts/Formation").path)
+		XCTAssertEqual(left, ["Offer.md"], "no temporary file is left behind")
+		XCTAssertThrowsError(try fs.write("Torts", Data("x".utf8)), "a folder is not replaced by a file")
+	}
+
+	func testBinaryRoundTripAndAppend() throws {
+		let bytes = Data((0..<256).map { UInt8($0) })
+		try fs.write("attachments/blob.bin", bytes)
+		XCTAssertEqual(try fs.readBinary("attachments/blob.bin"), bytes)
+		try fs.append("Log/today.md", Data("a".utf8))
+		let st = try fs.append("Log/today.md", Data("b".utf8))
+		XCTAssertEqual(try fs.read("Log/today.md"), "ab")
+		XCTAssertEqual(st.size, 2)
+	}
+
+	func testRemoveAndRmdir() throws {
+		XCTAssertThrowsError(try fs.remove("Torts"), "remove is for files")
+		try fs.remove("Welcome.md")
+		XCTAssertFalse(try fs.exists("Welcome.md"))
+		XCTAssertThrowsError(try fs.rmdir("Torts", recursive: false), "not empty")
+		try fs.mkdir("Empty")
+		try fs.rmdir("Empty", recursive: false)
+		try fs.rmdir("Torts", recursive: true)
+		XCTAssertFalse(try fs.exists("Torts"))
+	}
+
+	func testRenameMovesAndReplaces() throws {
+		try fs.rename("Welcome.md", "Archive/2026/Start here.md")
+		XCTAssertFalse(try fs.exists("Welcome.md"))
+		XCTAssertEqual(try fs.read("Archive/2026/Start here.md"), "# Welcome")
+		try fs.write("Other.md", Data("other".utf8))
+		try fs.rename("Other.md", "Archive/2026/Start here.md")
+		XCTAssertEqual(try fs.read("Archive/2026/Start here.md"), "other")
+		try fs.rename("Torts", "Law/Torts")
+		XCTAssertTrue(try fs.exists("Law/Torts/Negligence/Duty of care.md"))
+		XCTAssertThrowsError(try fs.rename("Missing.md", "x.md"))
+		XCTAssertThrowsError(try fs.rename("Law", "../Outside/Law"))
+	}
+
+	func testCopyReplacesWhole() throws {
+		try fs.write("B.md", Data("a much longer old text".utf8))
+		try fs.copy("Welcome.md", "B.md")
+		XCTAssertEqual(try fs.read("B.md"), "# Welcome")
+		try fs.copy("Welcome.md", "Copies/Welcome.md")
+		XCTAssertEqual(try fs.read("Copies/Welcome.md"), "# Welcome")
+	}
+
+	func testTrashMovesItOutOfTheHomebaseTree() throws {
+		XCTAssertTrue(try fs.trash("Welcome.md"))
+		XCTAssertFalse(try fs.exists("Welcome.md"))
+		XCTAssertFalse(try fs.tree("").map(\.path).contains("Welcome.md"))
+		XCTAssertFalse(try fs.trash("Missing.md"))
+	}
+}
