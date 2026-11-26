@@ -103,6 +103,9 @@ const cellEl = (wrap: HTMLElement, row: number, col: number) => wrap.querySelect
 const cellPos = (el: HTMLElement) => ({ row: Number(el.dataset.row), col: Number(el.dataset.col) });
 
 /** Put the keyboard in a cell, the caret at its end (or at `offset`). */
+/** Tables being redrawn inside an editor update: their cells' focus must not dispatch until the update is over. */
+const redrawing = new WeakSet<HTMLElement>();
+
 function focusCell(wrap: HTMLElement, row: number, col: number, offset?: number): boolean {
 	const el = cellEl(wrap, row, col);
 	if (!el) return false;
@@ -198,7 +201,12 @@ class TableWidget extends WidgetType {
 			const row = Math.min(at.row, t.rows.length - 1);
 			const col = Math.min(at.col, t.header.length - 1);
 			const el = cellEl(wrap, row, col);
-			if (el) { el.textContent = toTyped(el.dataset.raw ?? ''); focusCell(wrap, row, col, at.offset); }
+			if (el) {
+				el.textContent = toTyped(el.dataset.raw ?? '');
+				// Focusing runs focusin at once in WebKit, inside this update: follow() waits for it to end.
+				redrawing.add(wrap);
+				try { focusCell(wrap, row, col, at.offset); } finally { redrawing.delete(wrap); }
+			}
 		}
 		return true;
 	}
@@ -213,13 +221,18 @@ class TableWidget extends WidgetType {
 			const line = view.state.doc.line(t.from + 1 + (row < 0 ? 0 : row + 2));
 			view.dispatch({ selection: { anchor: line.from + cellStart(line.text, col) }, annotations: fromCell.of(true) });
 		};
+		/** follow(), but after the editor update in progress when the table is being redrawn (updateDOM). */
+		const followSoon = (el: HTMLElement) => {
+			if (redrawing.has(wrap)) queueMicrotask(() => { if (el.isConnected) follow(el); });
+			else follow(el);
+		};
 		wrap.addEventListener('focusin', (e) => {
 			const el = cellOf(e);
 			if (!el) return;
 			wrap.classList.add('is-editing');
 			// The cell's Markdown while it has the cursor (**bold** rather than bold).
 			if (el.dataset.editing !== 'true') { el.dataset.editing = 'true'; el.textContent = toTyped(el.dataset.raw ?? ''); }
-			follow(el);
+			followSoon(el);
 		});
 		wrap.addEventListener('focusout', (e) => {
 			const el = cellOf(e);
