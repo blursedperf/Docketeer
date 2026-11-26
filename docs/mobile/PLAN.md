@@ -241,7 +241,7 @@ the previous exit check has passed. Phases 0, 2 and 3 need a person to try the a
 
 ### Phase 0: Rename and spike (1 to 2 weeks)
 
-- [ ] Rename to Docketeer and replace the icons (§2.8). `npm test` and `npm run smoke` must stay green, and
+- [x] Rename to Docketeer and replace the icons (§2.8). `npm test` and `npm run smoke` must stay green, and
       the screenshot baselines are updated for the new name.
 
 The question this phase answers: does CodeMirror 6 live preview feel right on an iPhone keyboard and an iPad
