@@ -27,6 +27,7 @@ Run commands from the Docket (Super+D: ⌘D on a Mac, Ctrl+P on Windows; type "A
 | **Open page preview** | Shows the pages as Word will print them (also: the book icon) ([page preview](page-preview.md)) |
 | **Export to Word with AGLC4 footnotes** | Writes a `.docx` with real footnotes (also: right-click a note) ([export](export.md)) |
 | **Export to HTML with AGLC4 footnotes** | Writes a standalone web page with the footnotes at the end |
+| **Export to PDF with AGLC4 footnotes** | Prints that web page to a PDF (in Quire): `Note name.pdf`, beside the Word and HTML files |
 | **Insert bibliography of cited sources** | Adds the bibliography at the end of the note, where you can edit it ([bibliography](bibliography.md)) |
 | **Import Word document** | Turns a `.docx` into a note with its footnotes (also: right-click a `.docx`) ([import](import.md)) |
 

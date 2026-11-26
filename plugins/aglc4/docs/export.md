@@ -20,15 +20,17 @@ In the export:
 
 The export is your note as written: problems are not fixed silently. If the note has AGLC4 errors, the export notice says how many.
 
-For a PDF with footnotes at the bottom of each page, export to Word and save as PDF from Word or LibreOffice.
+**Export to PDF with AGLC4 footnotes** (below) puts the footnotes at the end. For a PDF with footnotes at the bottom of each page, export to Word and save as PDF from Word or LibreOffice.
 
 ## HTML
 
 **Export to HTML with AGLC4 footnotes** writes a standalone web page, `Note name.html`, with the footnotes listed at the end and linked both ways.
 
+**Export to PDF with AGLC4 footnotes** (in Quire) prints that same page to `Note name.pdf`: the footnotes listed at the end, the bibliography if the note has one, numbered pages. Like the other exports it is written to the export folder (or beside the note), asks before replacing a PDF changed since it was exported, and keeps the file it replaces in the version history.
+
 ## Exporting again
 
-If the Word or HTML file already exists and has changed since the plugin last wrote it (for example, you added a cover page in Word), the plugin asks whether to:
+If the Word, HTML or PDF file already exists and has changed since the plugin last wrote it (for example, you added a cover page in Word), the plugin asks whether to:
 
 - **Replace it.** The current file is kept in the note's [version history](version-history.md) first, so it can be restored. If it cannot be kept, it is not replaced.
 - **Save as a new file**, such as `Note name 2.docx`.
