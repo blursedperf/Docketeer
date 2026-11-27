@@ -414,7 +414,7 @@ until the owner asks for it.
 
 ### Phase 4: Release (1 to 2 weeks)
 
-- [ ] Prepare the app icon (from `packages/app/build/icon.svg`), the launch screen, the display name and the
+- [ ] Prepare the app icon (from `packages/app/build/icon.svg`: done, `packages/ios/icon.svg`), the launch screen, the display name and the
       bundle id. Ask the user for the bundle id.
 - [ ] `Info.plist`:
       - `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace`, so the app's Documents folder shows

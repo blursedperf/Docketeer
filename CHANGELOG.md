@@ -47,6 +47,7 @@
   still renames the note when you edit it and press Enter.
 - **iPhone: the Docket button opens the Docket without the keyboard**, so its panels have the whole sheet and
   scroll; tap the search field to type. A long name in *Open tabs* is cut short instead of scrolling sideways.
+- **iPhone and iPad: Docketeer has its icon**, the gold pen-rocket of the desktop app, on the Home Screen.
 - **iPhone and iPad: the app keeps clear of the home indicator and the screen's rounded corners** itself.
 - **iPhone and iPad: tapping a field no longer zooms the page in** (the Docket's search, a note's title), which
   left it panning sideways. Text size is set in Settings.

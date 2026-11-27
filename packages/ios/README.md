@@ -31,6 +31,14 @@ npm run shots:ios -w @quire/ios     # macOS: the iPhone's screenshots, compared 
                                     #  Docketeer/build/shots --platform ios --update)
 ```
 
+The app icon is `icon.svg` here: the desktop icon (`packages/app/build/icon.svg`) full-bleed, since iOS rounds the
+corners itself. After changing it, render it and drop the alpha channel (App Store icons must be opaque):
+
+```bash
+qlmanage -t -s 1024 -o /tmp icon.svg && sips -s format jpeg /tmp/icon.svg.png --out /tmp/icon.jpg \
+  && sips -s format png /tmp/icon.jpg --out Docketeer/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+```
+
 To try it, open `Docketeer/Docketeer.xcodeproj` in Xcode after `npm run build -w @quire/ios`, pick a simulator and
 run. For a device, pick a signing team first. In Debug builds the page's console errors reach the system log as
 `[page] …`, and Safari's Web Inspector can attach (Develop menu).
