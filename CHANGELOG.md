@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **The Docket's empty search suggests `~`**: its hint reads “Search, or type > # / @ + ~ ?”, listing the prefixes
+  plugins add (Whole-Tree Search's `~`) as well as the Docket's own.
+
 ## v0.24.0
 
 - **Whole-Tree Search, a third built-in plugin: type `~` in the Docket to search your outlines.** Each match shows the

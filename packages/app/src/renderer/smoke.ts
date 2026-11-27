@@ -2352,7 +2352,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		const clashes = [...cmds.conflicts(defaultDocketKey(Platform), 'app:docket'), ...cmds.conflicts({ modifiers: ['Meta', 'Alt'], key: 'f' }, 'aglc-citations:insert-footnote')].map((c) => c.id);
 		const placeholder = document.querySelector<HTMLInputElement>('.docket-input, .docket input')?.placeholder ?? '';
 		const expectFn = Platform.isMacOS ? '⌥⌘F' : Platform.isWin ? 'Win+Alt+F' : 'Super+Alt+F';
-		return (fnKeys[0] === expectFn && (Platform.isWin || docketKey === (Platform.isMacOS ? '⌘D' : 'Super+D')) && clashes.length === 0 && / \+ /.test(placeholder))
+		return (fnKeys[0] === expectFn && (Platform.isWin || docketKey === (Platform.isMacOS ? '⌘D' : 'Super+D')) && clashes.length === 0 && / \+ /.test(placeholder) && / ~ /.test(placeholder))
 			|| `footnote=${fnKeys.join(',')} docket=${docketKey} clashes=${clashes.join(',')} placeholder="${placeholder}"`;
 	});
 	await check('Task Docket: a Tasks panel in the Docket; tasks checked off and rescheduled from it', async () => {

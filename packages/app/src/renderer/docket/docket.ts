@@ -80,8 +80,7 @@ export class Docket {
 			cls: 'docket-input',
 			attr: {
 				type: 'text', role: 'combobox', 'aria-expanded': 'false', 'aria-controls': 'docket-results', 'aria-autocomplete': 'list',
-				'aria-label': 'Search notes, commands and more. Type > for commands, # for folders and tags, / for headings, ? for shortcuts.',
-				placeholder: 'Search, or type > # / @ + ?', spellcheck: 'false', autocomplete: 'off',
+				spellcheck: 'false', autocomplete: 'off',
 			},
 		});
 		this.modeBtn = head.createEl('button', { cls: 'clickable-icon docket-mode', attr: { type: 'button' } });
@@ -123,7 +122,8 @@ export class Docket {
 		this.resizeEl.addEventListener('mousedown', (e) => this.startResize(e));
 		document.addEventListener('mousedown', this.onOutsideMouseDown, true);
 		this.detach.push(() => document.removeEventListener('mousedown', this.onOutsideMouseDown, true));
-		const ref = app.docket.on('changed', () => { if (this.opened) this.renderTabs(); });
+		this.describePrefixes();
+		const ref = app.docket.on('changed', () => { this.describePrefixes(); if (this.opened) this.renderTabs(); });
 		this.detach.push(() => app.docket.offref(ref));
 		// The Docket key can be changed (Settings → Hotkeys): the handle and hint say the new one.
 		const keys = app.on('hotkeys-changed', (id: string) => {
@@ -567,6 +567,14 @@ export class Docket {
 		}
 		this.selected = 0;
 		this.renderResults(groups, q.prefix);
+	}
+
+	/** The search's placeholder and label: the Docket's prefixes, then those plugins add ("~"). */
+	private describePrefixes(): void {
+		const extra = [...new Set(this.pluginPrefixes())];
+		this.inputEl.placeholder = `Search, or type ${['>', '#', '/', '@', '+', ...extra, '?'].join(' ')}`;
+		const theirs = extra.map((p) => `, ${p} for ${(this.providerFor(p)?.title ?? 'a plugin').toLowerCase()}`).join('');
+		this.inputEl.setAttribute('aria-label', `Search notes, commands and more. Type > for commands, # for folders and tags, / for headings${theirs}, ? for shortcuts.`);
 	}
 
 	/** Prefixes plugins' search providers answer ("~"), besides the Docket's own. */
