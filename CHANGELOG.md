@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.0
 
 - **Pomodoro Flashcards, a fourth built-in plugin: flashcards from your notes, studied beside a focus timer.** Write
   cards in any note (`Question :: Answer`, `Term ::: Definition` both ways, `Q:`/`A:` blocks, `{{c1::cloze}}`
