@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **A new app icon**, on the Mac and the iPhone: a copper pen nib taking off like a rocket, on deep navy, drawn
+  large so it stays clear at small sizes in the Dock and Finder.
+
 ## v0.22.0
 
 - **A narrow window, such as an iPhone, shows one pane at a time**: the note fills the screen, its tabs are behind

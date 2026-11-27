@@ -31,12 +31,12 @@ npm run shots:ios -w @quire/ios     # macOS: the iPhone's screenshots, compared 
                                     #  Docketeer/build/shots --platform ios --update)
 ```
 
-The app icon is `icon.svg` here: the desktop icon (`packages/app/build/icon.svg`) full-bleed, since iOS rounds the
-corners itself. After changing it, render it and drop the alpha channel (App Store icons must be opaque):
+The app icon is rendered from `docs/design/app-icon-source.jpeg`, with the desktop icon, by `scripts/app-icon.swift`:
+full-bleed and opaque here (iOS rounds the corners itself; App Store icons must have no alpha). From the repo root:
 
 ```bash
-qlmanage -t -s 1024 -o /tmp icon.svg && sips -s format jpeg /tmp/icon.svg.png --out /tmp/icon.jpg \
-  && sips -s format png /tmp/icon.jpg --out Docketeer/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+swift scripts/app-icon.swift docs/design/app-icon-source.jpeg \
+  packages/ios/Docketeer/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png packages/app/build/icon.png
 ```
 
 To try it, open `Docketeer/Docketeer.xcodeproj` in Xcode after `npm run build -w @quire/ios`, pick a simulator and

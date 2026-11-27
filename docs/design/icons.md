@@ -66,4 +66,4 @@ does not have.
 
 - Size: Phosphor's regular weight looks lighter than Lucide at 18px. The polish plan sets icon sizes per
   context (16 / 18 / 20) rather than one size everywhere.
-- The app icon (`packages/app/build/icon.svg`) is original artwork and uses no icon set.
+- The app icon (`docs/design/app-icon-source.jpeg`, rendered by `scripts/app-icon.swift`) uses no icon set.

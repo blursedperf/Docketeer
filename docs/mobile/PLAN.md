@@ -212,10 +212,9 @@ the rename as the **first task of Phase 0**, in its own commits, before any iOS 
 
 **Icons:**
 
-- `docs/design/docketeer-icon.svg` (desktop, rounded) replaces `packages/app/build/icon.svg`. Regenerate
-  `icon.png` from it at 1024 px.
-- `docs/design/docketeer-icon-ios.svg` (full-bleed square with no transparency; iOS applies its own mask)
-  becomes the 1024 px App Store icon in the Xcode asset catalogue.
+- Both icons come from `docs/design/app-icon-source.jpeg` (the copper nib-rocket), rendered by
+  `scripts/app-icon.swift`: `packages/app/build/icon.png` (rounded, transparent corners) and the full-bleed,
+  opaque 1024 px App Store icon in the Xcode asset catalogue (iOS applies its own mask).
 
 **Keep for now (internal names a user never sees):** `@quire/api`, the `quire://` scheme, `window.quire`
 and the `.quire/` folder in every homebase. Renaming `.quire/` would cut every existing homebase off from its
@@ -414,7 +413,7 @@ until the owner asks for it.
 
 ### Phase 4: Release (1 to 2 weeks)
 
-- [ ] Prepare the app icon (from `packages/app/build/icon.svg`: done, `packages/ios/icon.svg`), the launch screen, the display name and the
+- [ ] Prepare the app icon (done: `scripts/app-icon.swift`), the launch screen, the display name and the
       bundle id. Ask the user for the bundle id.
 - [ ] `Info.plist`:
       - `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace`, so the app's Documents folder shows
