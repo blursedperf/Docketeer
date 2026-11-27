@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **The status bar says “docketeer”, not “quire”**, at the bottom left when no note is open (the app's old name).
+
 ## v0.22.1
 
 - **A new app icon**, on the Mac and the iPhone: a copper pen nib taking off like a rocket, on deep navy, drawn

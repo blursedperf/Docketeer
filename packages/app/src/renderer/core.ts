@@ -524,9 +524,9 @@ function modeBadge(app: App) {
 	app.statusBarEl.prepend(el);
 	const update = () => {
 		const view = app.workspace.activeLeaf?.view;
-		let mode = 'quire';
+		let mode = 'docketeer';
 		if (view instanceof MarkdownView) mode = view.getMode() === 'preview' ? 'read' : view.vimMode ?? 'edit';
-		else if (view && view.getViewType() !== 'empty') mode = view.getViewType().split('-').pop() ?? 'quire';
+		else if (view && view.getViewType() !== 'empty') mode = view.getViewType().split('-').pop() ?? 'docketeer';
 		el.setText(mode);
 		el.setAttribute('aria-label', `Mode: ${mode}`);
 	};
