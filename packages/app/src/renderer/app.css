@@ -398,6 +398,10 @@ input.color-picker::-webkit-color-swatch { border: none; border-radius: 2px; }
 /* The homebase's name sits by the mode badge at the left; the rest of the items stay at the right. */
 .status-bar-badge:has(+ .mod-homebase) { margin-right: 0; }
 .status-bar-item.mod-homebase { margin-right: auto; border-left: none; color: var(--text-muted); }
+/* The settings gear sits just after the homebase's name, and takes over pushing the other items to the right. */
+.status-bar-item.mod-homebase:has(+ .mod-settings) { margin-right: 0; }
+.status-bar-item.mod-settings { margin-right: auto; border-left: none; padding: 0 var(--space-1); color: var(--text-muted); }
+.status-bar-item.mod-settings:hover { color: var(--text-normal); }
 .status-bar-item.mod-clickable { cursor: var(--cursor); }
 .status-bar-item.mod-clickable:hover { background: var(--doom-base2); color: var(--doom-blue-text); }
 .status-bar-item .svg-icon { width: var(--icon-sm); height: var(--icon-sm); }

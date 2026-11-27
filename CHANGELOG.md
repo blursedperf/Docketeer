@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **A settings gear in the status bar**, just after the homebase's name at the bottom left: click it (or press Enter
+  on it) to open settings, as ⌘, does.
+
 ## v0.24.1
 
 - **The Docket's empty search suggests `~`**: its hint reads “Search, or type > # / @ + ~ ?”, listing the prefixes

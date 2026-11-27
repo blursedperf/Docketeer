@@ -418,6 +418,14 @@ export async function runSmoke(app: App): Promise<void> {
 		if (!bar) return 'no homebase in the status bar';
 		if (!bar.textContent?.includes(app.host.vault!.name)) return `status bar says ${bar.textContent}`;
 		if (!bar.previousElementSibling?.classList.contains('status-bar-badge')) return 'the homebase is not beside the mode badge';
+		// The settings gear comes next, and opens settings.
+		const gear = bar.nextElementSibling as HTMLElement | null;
+		if (!gear?.classList.contains('mod-settings') || !gear.querySelector('svg')) return 'no settings gear after the homebase';
+		gear.click();
+		const opened = await until(() => !!document.querySelector('.modal.mod-settings, .modal-container .mod-settings, .vertical-tab-header'), 2000);
+		app.setting.close();
+		await sleep(80);
+		if (!opened) return 'the gear did not open settings';
 		bar.click();
 		const text = () => document.querySelector('.docket')?.textContent ?? '';
 		const shown = await until(() => app.docketOpen && text().includes('Open the example homebase'), 3000);

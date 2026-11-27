@@ -6,7 +6,7 @@
  * Templates: "Save this homebase's panels as a template…" keeps its Docket panels (`.quire/panels.json`) by name in the
  * app's settings; creating a homebase then offers them after Legal and Generic.
  */
-import { type App, type HostBridge, Notice, type SearchResult, setIcon } from '@quire/api';
+import { type App, type HostBridge, Notice, type SearchResult, formatHotkey, setIcon } from '@quire/api';
 import type { Docket } from './docket/docket';
 import { ConfirmModal, NameModal } from './dialogs';
 import { type HomebaseTemplate, MAX_TEMPLATES, describeTemplate, parsePanelsConfig, parseTemplates, templateFolders, withTemplate } from './docket/panels-model';
@@ -197,4 +197,15 @@ export function registerHomebases(app: App): void {
 	el.createSpan({ text: app.host.vault?.name ?? '' });
 	el.addEventListener('click', () => { void showSwitcher(app); });
 	el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void showSwitcher(app); } });
+
+	// Settings, beside the homebase's name: a gear that opens them (as Mod+, does).
+	const cmd = app.commands.findCommand('app:open-settings');
+	const key = cmd ? app.commands.hotkeysFor(cmd)[0] : undefined;
+	const label = key ? `Settings (${formatHotkey(key)})` : 'Settings';
+	const gear = createDiv({ cls: 'status-bar-item mod-clickable mod-settings', attr: { 'aria-label': label, title: label, role: 'button', tabindex: '0' } });
+	el.after(gear);
+	setIcon(gear.createSpan({ cls: 'status-bar-item-icon' }), 'settings');
+	const open = () => app.setting.open();
+	gear.addEventListener('click', open);
+	gear.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
 }
