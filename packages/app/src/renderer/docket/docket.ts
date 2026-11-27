@@ -925,7 +925,8 @@ export class Docket {
  */
 export function revealInList(list: HTMLElement, el: HTMLElement): void {
 	const r = el.getBoundingClientRect();
-	const margin = r.height;
+	// A row's height of room either side; a tall row (an outline from ~) keeps an ordinary row's worth, not its own.
+	const margin = Math.min(r.height, 48);
 	const group = el.closest<HTMLElement>('.docket-group, .docket-section-wrap');
 	const first = group?.querySelector('.docket-option, [data-docket-item]') === el;
 	const head = group?.querySelector<HTMLElement>(':scope > .docket-group-title, :scope > .docket-section-title');

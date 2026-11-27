@@ -4,6 +4,9 @@
 
 - **A settings gear in the status bar**, just after the homebase's name at the bottom left: click it (or press Enter
   on it) to open settings, as ⌘, does.
+- **Whole-Tree Search shows its outlines in full**: each `~` result grows to fit its heading, parents, the line found
+  and what is nested under it (they were cut to one row). Lines wrap instead of being cut short, and a long line is
+  trimmed around the word found so there is text either side of it.
 
 ## v0.24.1
 

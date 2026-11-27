@@ -2171,6 +2171,23 @@ export async function runShots(app: App): Promise<void> {
 	(docket as unknown as { showAll(type: string): void }).showAll('In notes');
 	await shot('28-docket-full-text');
 	docket.close(true);
+	// Whole-Tree Search (~): outlines with their heading, parents and children; a long line cut around the word found.
+	const outline = await app.vault.create('Torts outline.md', [
+		'# Negligence', '',
+		'- Duty of care',
+		'\t- Donoghue v Stevenson [1932] AC 562: a manufacturer owes a duty to the ultimate consumer; the snail in the bottle. Lord Atkin’s neighbour principle: you must take reasonable care to avoid acts or omissions which you can reasonably foresee would be likely to injure your neighbour, being persons so closely and directly affected by your act.',
+		'\t\t- Neighbour principle',
+		'\t\t- Proximity',
+		'\t- Sullivan v Moody (2001) 207 CLR 562: no duty where it would conflict with another duty',
+		'- Breach',
+		'\t- Wyong Shire Council v Shirt (1980) 146 CLR 40: the risk need only be foreseeable, not probable',
+		'',
+	].join('\n'));
+	await until(() => app.search.index.has(outline.path), 3000);
+	docket.open({ query: '~foresee' });
+	await sleep(300);
+	await shot('46-docket-whole-tree');
+	docket.close(true);
 	type Panels = { showPanel(id: string): void; refreshPanel(i?: number): Promise<void> };
 	const dp = docket as unknown as Panels;
 	if (ecm) { ecm.dispatch({ selection: { anchor: 0 } }); ecm.focus(); }

@@ -1023,13 +1023,6 @@ input.docket-input:focus { box-shadow: none; }
 .docket-foot { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-1) var(--space-3); font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); background: var(--doom-base0); border-top: var(--border-width) solid var(--doom-border-subtle); }
 .docket-resize { position: absolute; left: 0; right: 0; bottom: -3px; height: 6px; cursor: row-resize; z-index: 1; }
 body.is-resizing-docket { cursor: row-resize; user-select: none; }
-/* A result with its outline around it (SearchResult.tree): the row grows to fit its lines. */
-.docket-option.mod-tree { align-items: flex-start; }
-.docket-option.mod-tree .docket-option-icon { padding-top: 2px; }
-.docket-option-tree { display: flex; flex-direction: column; margin-top: 2px; font-size: var(--text-xs); color: var(--text-muted); }
-.docket-tree-line { padding-left: calc(var(--depth, 0) * var(--space-3)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.docket-tree-line.is-match { color: var(--text-normal); }
-.docket-tree-line.is-more { color: var(--text-faint); font-style: italic; }
 .docket-tree-line mark, .docket-option-detail mark { color: var(--doom-yellow, var(--text-normal)); background: transparent; font-weight: var(--font-bold); }
 .docket-option.mod-more .docket-option-title { font-size: var(--text-xs); color: var(--text-muted); }
 .docket-option.mod-more.is-selected .docket-option-title { color: inherit; }
@@ -1203,6 +1196,17 @@ body.is-frameless .welcome::before { content: ""; position: fixed; inset: 0 0 au
 .docket-group.mod-two-line .docket-option:not(.mod-more) { height: calc(var(--docket-row) * 1.6); }
 .docket-group.mod-two-line .docket-option-text { flex-direction: column; align-items: stretch; gap: 0; }
 .docket-group.mod-two-line .docket-option-detail { flex: none; }
+/* A result with its outline around it (SearchResult.tree, Whole-Tree Search's ~): the one kind of row that is not one
+   height. It grows to fit its lines, which wrap rather than being cut short: the line found in full (a long one cut
+   around the words found, so they have text either side), the lines around it up to three lines each. */
+.docket-option.mod-tree { height: auto; align-items: flex-start; padding-top: var(--space-1); padding-bottom: var(--space-2); }
+.docket-option.mod-tree .docket-option-icon { padding-top: 2px; }
+.docket-option.mod-tree .docket-option-text { flex-direction: column; align-items: stretch; gap: 0; }
+.docket-option-tree { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; font-size: var(--text-sm); line-height: 1.35; color: var(--text-muted); }
+.docket-tree-line { padding-left: calc(var(--depth, 0) * var(--space-4)); white-space: normal; overflow-wrap: anywhere; }
+.docket-tree-line:not(.is-match) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.docket-tree-line.is-match { color: var(--text-normal); }
+.docket-tree-line.is-more { color: var(--text-faint); font-style: italic; }
 .docket-group-title, .docket-section-title {
 	position: sticky; top: calc(-1 * var(--space-1)); z-index: 1;
 	align-items: center; height: var(--docket-title-h); padding-top: 0; padding-bottom: 0; background: var(--doom-bg-alt);

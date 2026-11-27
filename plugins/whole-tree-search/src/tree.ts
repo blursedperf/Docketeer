@@ -57,6 +57,28 @@ function rangesIn(text: string, patterns: RegExp[]): [number, number][] {
 	return out.filter((r, i) => i === 0 || r[0] >= out[i - 1]![1]);
 }
 
+/** The longest a line is shown; a longer one is cut to this around its first matched word. */
+export const MAX_LINE = 240;
+
+/**
+ * A long line cut to MAX_LINE around its first highlight, a third of the room before it, so the words found have
+ * text on both sides; "…" marks what was cut. Ranges move with the text.
+ */
+export function windowLine(text: string, ranges: [number, number][]): { text: string; ranges: [number, number][] } {
+	if (text.length <= MAX_LINE) return { text, ranges };
+	const at = ranges[0]?.[0] ?? 0;
+	let from = Math.max(0, Math.min(at - Math.floor(MAX_LINE / 3), text.length - MAX_LINE));
+	// Start at a word where one is near.
+	if (from > 0) { const sp = text.indexOf(" ", from); if (sp >= 0 && sp < at && sp - from < 20) from = sp + 1; }
+	const to = Math.min(text.length, from + MAX_LINE);
+	const lead = from > 0 ? "…" : "";
+	const shift = lead.length - from;
+	return {
+		text: `${lead}${text.slice(from, to)}${to < text.length ? "…" : ""}`,
+		ranges: ranges.filter(([a, b]) => a >= from && b <= to).map(([a, b]) => [a + shift, b + shift] as [number, number]),
+	};
+}
+
 /** Ancestors of line `i` (indices, outermost first), up to `levels`, by the parser's indentation rules. */
 function ancestorsOf(lines: string[], i: number, levels: number, opts: TreeMatchOptions): number[] {
 	const out: number[] = [];
@@ -138,8 +160,7 @@ function build(lines: string[], i: number, whole: boolean, heading: number, patt
 	const showHeading = opts.showHeading && heading >= 0 && heading !== i && !ancestors.includes(heading);
 	const off = showHeading ? 1 : 0;
 	const line = (index: number, depth: number, match = false): TreeLine => {
-		const text = displayLine(lines[index]!);
-		const ranges = rangesIn(text, patterns);
+		const { text, ranges } = windowLine(displayLine(lines[index]!), rangesIn(displayLine(lines[index]!), patterns));
 		return { text, depth, ...(match ? { match } : {}), ...(ranges.length ? { ranges } : {}) };
 	};
 	const out: TreeLine[] = [];

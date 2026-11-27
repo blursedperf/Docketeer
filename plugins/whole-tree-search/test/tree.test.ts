@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { displayLine, queryWords, searchTree } from "../src/tree";
+import { MAX_LINE, displayLine, queryWords, searchTree, windowLine } from "../src/tree";
 
 const notes = [
 	"# Negligence",
@@ -74,4 +74,16 @@ assert.strictEqual(searchTree(notes, "duty wyong").length, 0);
 {
 	const [m] = searchTree("# Real\n```\n# not a heading\n```\n- item", "item");
 	assert.strictEqual(m!.lines[0]!.text, "Real");
+}
+
+// A long line is cut around the word found, with text either side and its highlight moved with it.
+{
+	const long = `${"word ".repeat(100)}foreseeable ${"tail ".repeat(100)}`.trim();
+	const [m] = searchTree(`- ${long}`, "foresee");
+	const line = m!.lines.find((l) => l.match)!;
+	assert.ok(line.text.startsWith("…") && line.text.endsWith("…") && line.text.length <= MAX_LINE + 2, line.text);
+	const [a, b] = line.ranges![0]!;
+	assert.strictEqual(line.text.slice(a, b), "foresee");
+	assert.ok(a > 40 && line.text.length - b > 100, `${a} ${b}`);
+	assert.deepStrictEqual(windowLine("short line", [[0, 5]]), { text: "short line", ranges: [[0, 5]] });
 }
