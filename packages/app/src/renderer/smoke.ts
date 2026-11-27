@@ -2218,6 +2218,20 @@ export async function runShots(app: App): Promise<void> {
 	await sleep(300);
 	await shot('46-docket-whole-tree');
 	docket.close(true);
+	// Pomodoro Flashcards: the Study panel, then the study view on a case brief's cards.
+	await app.vault.create('Donoghue v Stevenson brief.md', '---\ntype: case-brief\n---\n# Donoghue v Stevenson\n\n## Facts\n\nA snail in a bottle of ginger beer.\n\n## Held\n\nFor the pursuer, by a majority.\n\n## Ratio\n\nA manufacturer owes a duty of care to the ultimate consumer.\n');
+	await app.vault.create('Torts cards.md', '---\ndeck: Torts\n---\nWhat are the elements of negligence? :: Duty, breach, damage.\n\nNegligence needs {{c1::a duty of care}}, {{c2::breach}} and {{c3::damage}}.\n');
+	const pf = app.plugins.getPlugin('pomodoro-flashcards') as unknown as { cards: unknown[]; studyDeck(d: string, m: string): Promise<void> } | null;
+	if (pf) {
+		await until(() => pf.cards.length >= 6, 4000);
+		docket.open({ panel: 'pomodoro-flashcards:study' });
+		await sleep(250);
+		await shot('47-docket-study');
+		docket.close(true);
+		await pf.studyDeck('ALL', 'due');
+		await sleep(400);
+		await shot('48-study-view');
+	}
 	type Panels = { showPanel(id: string): void; refreshPanel(i?: number): Promise<void> };
 	const dp = docket as unknown as Panels;
 	if (ecm) { ecm.dispatch({ selection: { anchor: 0 } }); ecm.focus(); }
@@ -2513,6 +2527,26 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(80);
 		await vault.delete(file);
 		await vault.delete(other);
+		return problems.length === 0 || problems.join('; ');
+	});
+	await check('Pomodoro Flashcards: a case brief makes cards; the Study panel lists decks with what is due; the status bar has icons', async () => {
+		const problems: string[] = [];
+		type Fc = { cards: { question: string; deck: string }[] };
+		const fc = app.plugins.getPlugin('pomodoro-flashcards') as unknown as Fc | null;
+		if (!fc) return `not loaded: ${app.plugins.loadError('pomodoro-flashcards')}`;
+		const brief = await vault.create('Smoke v Brief.md', '---\ntype: case-brief\n---\n# Smoke v Brief\n\n## Facts\n\nSmoke facts.\n\n## Ratio\n\nSmoke ratio.\n');
+		const deck = await vault.create('Smoke deck.md', '---\ndeck: Smoke deck\n---\nSmoke question :: smoke answer\n');
+		const qs = () => fc.cards.map((c) => c.question);
+		if (!(await until(() => qs().includes('What is the ratio of *Smoke v Brief*?') && qs().includes('Smoke question'), 4000))) problems.push(`cards: ${qs().join(' | ')}`);
+		ui()?.open({ panel: 'pomodoro-flashcards:study' });
+		await sleep(200);
+		const rows = [...document.querySelectorAll<HTMLElement>('.pomo-fc-panel [data-docket-item]')].map((r) => r.textContent ?? '');
+		if (!rows.some((r) => r.startsWith('Focus')) || !rows.some((r) => r.startsWith('Smoke deck') && r.includes('1 due')) || !rows.some((r) => r.startsWith('All decks'))) problems.push(`panel: ${rows.join(' | ')}`);
+		ui()?.close(true);
+		const bar = document.querySelector<HTMLElement>('.status-bar .pomo-fc-statusbar');
+		if (bar && (!bar.querySelector('svg') || /[\u{1F345}\u{1F5C2}\u{23F8}\u{2615}]/u.test(bar.textContent ?? ''))) problems.push(`status bar: ${bar.textContent}`);
+		await vault.delete(brief);
+		await vault.delete(deck);
 		return problems.length === 0 || problems.join('; ');
 	});
 	await check('docket: right-click a row or a result for its actions', async () => {
@@ -3733,7 +3767,8 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 			input.focus();
 			input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
 			if (document.activeElement !== rows[0]) problems.push(`${p.title}: ↓ from the search went to row ${rows.indexOf(document.activeElement as HTMLElement)}`);
-			const rowH = rows[0]!.getBoundingClientRect().height;
+			// A row's height from an ordinary row: the chips above a panel's rows (Tasks, Study) are smaller.
+			const rowH = (rows.find((r) => !r.classList.contains('docket-chip')) ?? rows[0]!).getBoundingClientRect().height;
 			const titleH = list.querySelector<HTMLElement>('.docket-section-title')?.offsetHeight ?? 24;
 			const step = (key: 'ArrowDown' | 'ArrowUp') => {
 				const old = document.activeElement as HTMLElement;
@@ -4413,6 +4448,29 @@ async function lockingChecks(app: App, check: CheckFn): Promise<void> {
 		// Back to the first passphrase for the rest of the checks.
 		await app.lock.changePassphrase(NEW, PASS);
 		return (ok && oldFails && newWorks) || `recovered=${ok} oldFails=${oldFails} newWorks=${newWorks}`;
+	});
+
+	await check('Pomodoro Flashcards: a locked note\'s cards go when it locks and come back when it unlocks', async () => {
+		type Fc = { cards: { question: string }[] };
+		const fc = app.plugins.getPlugin('pomodoro-flashcards') as unknown as Fc | null;
+		if (!fc) return `not loaded: ${app.plugins.loadError('pomodoro-flashcards')}`;
+		const has = () => fc.cards.some((c) => c.question === 'Locked smoke question');
+		const note = await vault.create('Locked cards.md', 'Locked smoke question :: locked smoke answer\n');
+		let found = false, gone = false, unlocked = false, back = false;
+		try {
+			found = await until(has, 4000);
+			await app.lock.lockNote(note);
+			await app.lock.lock();
+			gone = await until(() => !has(), 4000);
+			unlocked = await app.lock.unlock(PASS);
+			back = await until(has, 4000);
+		} finally {
+			// Whatever happened, leave the homebase unlocked and the note gone, or every later check waits on a lock.
+			if (!app.lock.isUnlocked) await app.lock.unlock(PASS);
+			if (app.lock.isUnlocked) await app.lock.removeNoteLock(note).catch(() => undefined);
+			await vault.trash(note, true).catch(() => undefined);
+		}
+		return (found && gone && unlocked && back) || `found=${found} goneWhenLocked=${gone} unlocked=${unlocked} backWhenUnlocked=${back}`;
 	});
 
 	await check('locking: sleep locks it (setting on); removing a lock decrypts the note on disk', async () => {

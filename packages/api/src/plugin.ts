@@ -69,8 +69,9 @@ export interface Command {
 	mobileOnly?: boolean;
 	callback?: () => unknown;
 	checkCallback?: (checking: boolean) => boolean | void;
-	editorCallback?: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => unknown;
-	editorCheckCallback?: (checking: boolean, editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => boolean | void;
+	// Method syntax, as Obsidian declares them, so a plugin may take `view: MarkdownView` (the context is one here).
+	editorCallback?(editor: Editor, ctx: MarkdownView | MarkdownFileInfo): unknown;
+	editorCheckCallback?(checking: boolean, editor: Editor, ctx: MarkdownView | MarkdownFileInfo): boolean | void;
 }
 
 /** Base class of a plugin. `main.js` exports a subclass as its default export. */

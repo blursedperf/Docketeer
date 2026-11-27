@@ -43,6 +43,7 @@ export const LUCIDE_TO_PHOSPHOR: Record<string, string> = {
 	'share-2': 'share-network', shield: 'shield', 'shield-check': 'shield-check', sidebar: 'sidebar-simple', sliders: 'sliders',
 	sparkles: 'sparkle', 'square-pen': 'note-pencil', 'square': 'square', star: 'star', 'sticky-note': 'note', strikethrough: 'text-strikethrough',
 	sun: 'sun', table: 'table', tag: 'tag', tags: 'tag', target: 'target', terminal: 'terminal-window', 'text-cursor': 'cursor-text',
+	layers: 'stack', 'party-popper': 'confetti', 'plus-with-circle': 'plus-circle',
 	timer: 'timer', 'toggle-left': 'toggle-left', 'toggle-right': 'toggle-right', 'trash': 'trash', 'trash-2': 'trash', type: 'text-t',
 	underline: 'text-underline', undo: 'arrow-counter-clockwise', 'undo-2': 'arrow-u-up-left', upload: 'upload-simple', user: 'user',
 	users: 'users', wand: 'magic-wand', 'wand-2': 'magic-wand', x: 'x', 'x-circle': 'x-circle', zap: 'lightning',

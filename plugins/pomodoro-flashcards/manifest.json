@@ -1,0 +1,10 @@
+{
+	"id": "pomodoro-flashcards",
+	"name": "Pomodoro Flashcards",
+	"version": "1.1.0",
+	"minAppVersion": "0.25.0",
+	"description": "Flashcards written in your notes (Question :: Answer, clozes, Q:/A: blocks, and your case briefs' Facts, Held and Ratio), studied with SM-2 spaced repetition beside a Pomodoro focus timer. The Study panel in the Docket shows the timer and what is due in each deck.",
+	"author": "blursedperf",
+	"authorUrl": "https://github.com/blursedperf",
+	"isDesktopOnly": false
+}

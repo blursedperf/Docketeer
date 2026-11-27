@@ -34,7 +34,7 @@ export { EditorSuggest, type EditorSuggestContext, type EditorSuggestTriggerInfo
 export {
 	Notice, Modal, topModal, SuggestModal, FuzzySuggestModal, Menu, MenuItem, Setting, SettingTab, PluginSettingTab,
 	ButtonComponent, ExtraButtonComponent, ToggleComponent, TextComponent, SearchComponent, TextAreaComponent, SliderComponent, DropdownComponent, ColorComponent,
-	type FuzzyMatch, type Instruction, type SettingDefinitionItem,
+	type FuzzyMatch, type Instruction, type SettingDefinitionItem, type SettingDefinition, type SettingDefinitionGroup, type SettingDefinitionControl,
 } from './ui';
 export { Plugin, type Command, type CommandContext, type Hotkey, type Modifier, type PluginManifest } from './plugin';
 export { type KeyContext, hotkeyString, eventString, parseHotkey, physicalKey, reservedFor, defaultDocketKey, defaultDocketModeKey } from './keymap';

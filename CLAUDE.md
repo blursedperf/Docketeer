@@ -16,6 +16,7 @@ Read `PLAN.md` for the design and its *Offline guarantees*; read **`docs/mobile/
 | `packages/ios` | iOS shell, in progress (see *Mobile port* below) |
 | `plugins/aglc4` | Built-in plugin: AGLC4 citations (footnotes, checks, Word/HTML/PDF export) |
 | `plugins/task-docket` | Built-in plugin: the Tasks panel in the Docket |
+| `plugins/pomodoro-flashcards` | Built-in plugin: flashcards in notes and case briefs, SM-2 review, a Pomodoro timer, the Study panel in the Docket |
 | `plugins/whole-tree-search` | Built-in plugin: `~` in the Docket searches outlines (`src/parser.ts` is the Obsidian plugin's, as it was) |
 | `scripts/offline-audit.mjs` | Fails the build on any network API in shipped code |
 | `test/visual/linux/` | Screenshot references compared by CI |

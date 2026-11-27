@@ -1,0 +1,1049 @@
+/* ==========================================================================
+   Pomodoro Flashcards — Obsidian Plugin Styles
+   ========================================================================== */
+
+.pomo-fc-view-root {
+	--pomo-phase-accent: var(--interactive-accent);
+	--pomo-rate-again: var(--color-red, #e05252);
+	--pomo-rate-hard: var(--color-orange, #d9822b);
+	--pomo-rate-good: var(--color-green, #2ea043);
+	--pomo-rate-easy: var(--color-blue, #388bfd);
+
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 16px 20px;
+	gap: 14px;
+	box-sizing: border-box;
+}
+
+.pomo-fc-view-root[data-phase="short-break"] {
+	--pomo-phase-accent: var(--color-green, #2ea043);
+}
+
+.pomo-fc-view-root[data-phase="long-break"] {
+	--pomo-phase-accent: var(--color-blue, #388bfd);
+}
+
+/* --------------------------------------------------------------------------
+   1. Integrated Pomodoro Banner
+   -------------------------------------------------------------------------- */
+
+.pomo-fc-banner {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px 16px;
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-left: 4px solid var(--pomo-phase-accent);
+	border-radius: 10px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+	transition: padding 0.2s ease, gap 0.2s ease;
+}
+
+.pomo-fc-banner-main-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	width: 100%;
+}
+
+.pomo-fc-banner-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.pomo-fc-ring-wrapper {
+	width: 54px;
+	height: 54px;
+	flex-shrink: 0;
+}
+
+.pomo-fc-ring-svg {
+	width: 100%;
+	height: 100%;
+	transform: rotate(-90deg);
+}
+
+.pomo-fc-ring-bg {
+	fill: none;
+	stroke: var(--background-modifier-border);
+	stroke-width: 5;
+}
+
+.pomo-fc-ring-fg {
+	fill: none;
+	stroke: var(--pomo-phase-accent);
+	stroke-width: 5;
+	stroke-linecap: round;
+	transition: stroke-dashoffset 0.35s ease, stroke 0.3s ease;
+}
+
+.pomo-fc-time-info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.pomo-fc-phase-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: nowrap;
+	white-space: nowrap;
+}
+
+.pomo-fc-phase-badge {
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--pomo-phase-accent);
+}
+
+.pomo-fc-dots {
+	font-size: 0.78rem;
+	color: var(--text-muted);
+	letter-spacing: 1px;
+}
+
+.pomo-fc-clock-digits {
+	font-size: 1.65rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	line-height: 1.1;
+	color: var(--text-normal);
+}
+
+.pomo-fc-banner-controls {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.pomo-fc-banner-toggle-btn {
+	padding: 6px 8px;
+	color: var(--text-muted);
+}
+
+.pomo-fc-banner-expandable {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 10px;
+	width: 100%;
+	padding-top: 10px;
+	border-top: 1px solid var(--background-modifier-border);
+	animation: pomoFcFadeIn 0.2s ease-out;
+}
+
+.pomo-fc-banner.is-collapsed .pomo-fc-banner-expandable {
+	display: none;
+}
+
+.pomo-fc-banner-center {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.pomo-fc-phase-pills {
+	display: flex;
+	gap: 4px;
+	background: var(--background-primary);
+	padding: 3px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.pomo-fc-phase-pill {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	font-size: 0.78rem;
+	padding: 4px 10px;
+	border-radius: 6px;
+	cursor: pointer;
+	color: var(--text-muted);
+	height: auto;
+}
+
+.pomo-fc-phase-pill:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.pomo-fc-phase-pill.is-active {
+	background: var(--pomo-phase-accent);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+.pomo-fc-reset-pill {
+	margin-left: 2px;
+}
+
+.pomo-fc-session-stats {
+	font-size: 0.78rem;
+	color: var(--text-muted);
+}
+
+.pomo-fc-btn {
+	cursor: pointer;
+	padding: 6px 12px;
+	border-radius: 6px;
+	font-size: 0.85rem;
+	font-weight: 500;
+	transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+/* Buttons and pills that carry an Obsidian icon line the icon up with their label. */
+.pomo-fc-has-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+}
+
+.pomo-fc-btn-icon {
+	display: inline-flex;
+	--icon-size: var(--icon-s, 16px);
+	--icon-stroke: var(--icon-s-stroke-width, 2px);
+}
+
+.pomo-fc-phase-pill .pomo-fc-btn-icon {
+	--icon-size: var(--icon-xs, 14px);
+}
+
+.pomo-fc-btn:active {
+	transform: scale(0.97);
+}
+
+/* button.pomo-fc-btn.pomo-fc-btn-primary (0,2,1) outranks core button / button:hover rules */
+button.pomo-fc-btn.pomo-fc-btn-primary {
+	background-color: var(--pomo-phase-accent);
+	color: var(--text-on-accent);
+	border-color: transparent;
+}
+
+.pomo-fc-btn-primary:hover {
+	filter: brightness(1.08);
+}
+
+/* --------------------------------------------------------------------------
+   2. Deck & Study Mode Toolbar
+   -------------------------------------------------------------------------- */
+
+.pomo-fc-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 8px 12px;
+	background-color: var(--background-secondary-alt, var(--background-secondary));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+}
+
+.pomo-fc-toolbar-group {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.pomo-fc-filter-group {
+	flex: 1;
+	min-width: 0;
+}
+
+.pomo-fc-deck-select,
+.pomo-fc-mode-select {
+	flex: 1;
+	min-width: 0;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.pomo-fc-actions-group {
+	flex-shrink: 0;
+	gap: 6px;
+}
+
+.pomo-fc-toolbar-label {
+	font-size: 0.82rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   3. Flashcard Stage & Card Component
+   -------------------------------------------------------------------------- */
+
+.pomo-fc-stage {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-height: 280px;
+}
+
+.pomo-fc-card {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	background-color: var(--background-primary-alt, var(--background-secondary));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 14px;
+	padding: 16px 20px;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+	gap: 12px;
+	touch-action: pan-y;
+	overflow: hidden;
+	box-sizing: border-box;
+}
+
+.pomo-fc-card-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	flex-shrink: 0;
+}
+
+.pomo-fc-card-meta-left,
+.pomo-fc-card-meta-right {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.pomo-fc-deck-badge {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-accent);
+	font-size: 0.74rem;
+	font-weight: 600;
+	padding: 3px 8px;
+	border-radius: 999px;
+	border: 1px solid var(--background-modifier-border);
+	max-width: 160px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pomo-fc-queue-pos,
+.pomo-fc-srs-pill {
+	font-size: 0.76rem;
+	color: var(--text-muted);
+}
+
+.pomo-fc-source-link {
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	font-size: 0.74rem;
+	padding: 2px 7px;
+	border-radius: 5px;
+	cursor: pointer;
+	height: auto;
+	max-width: 180px;
+	/* A block box, so a long path ellipsises at its end instead of being centred and cut at both. */
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pomo-fc-source-link:hover {
+	color: var(--text-normal);
+	border-color: var(--interactive-accent);
+}
+
+/* Content is centred with auto margins rather than justify-content: centre, which pushed the top of
+   a long question/answer above the scroll area where it could not be scrolled to. */
+.pomo-fc-card-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	display: flex;
+	flex-direction: column;
+	padding: 8px 4px;
+	gap: 12px;
+}
+
+.pomo-fc-card-body > :first-child {
+	margin-top: auto;
+}
+
+.pomo-fc-card-body > :last-child {
+	margin-bottom: auto;
+}
+
+.pomo-fc-card-section {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 6px 4px;
+}
+
+.pomo-fc-answer-section {
+	border-top: 2px dashed var(--background-modifier-border);
+	padding-top: 14px;
+	animation: pomoFcFadeIn 0.2s ease-out;
+}
+
+@keyframes pomoFcFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.pomo-fc-side-label {
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: var(--text-faint);
+	margin-bottom: 6px;
+}
+
+.pomo-fc-markdown-body {
+	font-size: 1.12rem;
+	line-height: 1.6;
+	color: var(--text-normal);
+	overflow-wrap: break-word;
+}
+
+.pomo-fc-markdown-body p:first-child {
+	margin-top: 0;
+}
+
+.pomo-fc-markdown-body p:last-child {
+	margin-bottom: 0;
+}
+
+.pomo-fc-card-footer {
+	margin-top: auto;
+	padding-top: 10px;
+	border-top: 1px solid var(--background-modifier-border);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	flex-shrink: 0;
+	width: 100%;
+}
+
+.pomo-fc-show-answer-btn {
+	width: 100%;
+	max-width: 320px;
+	padding: 10px 20px;
+	font-size: 0.95rem;
+	font-weight: 600;
+	height: auto;
+	min-height: 44px;
+}
+
+/* --------------------------------------------------------------------------
+   4. SM-2 Rating Buttons
+   -------------------------------------------------------------------------- */
+
+.pomo-fc-rating-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 8px;
+	width: 100%;
+}
+
+.pomo-fc-rate-btn {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	padding: 8px 10px;
+	height: auto;
+	min-height: 44px;
+	border-radius: 8px;
+	cursor: pointer;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	transition: transform 0.08s ease, border-color 0.15s ease;
+}
+
+.pomo-fc-rate-btn:active {
+	transform: scale(0.96);
+}
+
+.pomo-fc-rate-interval {
+	font-size: 0.74rem;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.pomo-fc-rate-label-row {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.pomo-fc-rate-label {
+	font-size: 0.88rem;
+	font-weight: 600;
+}
+
+.pomo-fc-rate-key {
+	font-size: 0.72rem;
+	color: var(--text-faint);
+}
+
+.pomo-fc-rate-again {
+	border-bottom: 3px solid var(--pomo-rate-again);
+}
+.pomo-fc-rate-again .pomo-fc-rate-label {
+	color: var(--pomo-rate-again);
+}
+
+.pomo-fc-rate-hard {
+	border-bottom: 3px solid var(--pomo-rate-hard);
+}
+.pomo-fc-rate-hard .pomo-fc-rate-label {
+	color: var(--pomo-rate-hard);
+}
+
+.pomo-fc-rate-good {
+	border-bottom: 3px solid var(--pomo-rate-good);
+}
+.pomo-fc-rate-good .pomo-fc-rate-label {
+	color: var(--pomo-rate-good);
+}
+
+.pomo-fc-rate-easy {
+	border-bottom: 3px solid var(--pomo-rate-easy);
+}
+.pomo-fc-rate-easy .pomo-fc-rate-label {
+	color: var(--pomo-rate-easy);
+}
+
+/* --------------------------------------------------------------------------
+   5. Empty State & Break Lock Screen
+   -------------------------------------------------------------------------- */
+
+.pomo-fc-empty-card,
+.pomo-fc-break-card {
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: 28px 20px;
+}
+
+.pomo-fc-empty-icon,
+.pomo-fc-break-icon {
+	display: inline-flex;
+	margin-bottom: 4px;
+	color: var(--pomo-phase-accent, var(--text-accent));
+	--icon-size: 40px;
+	--icon-stroke: 1.5px;
+}
+
+.pomo-fc-break-desc {
+	max-width: 440px;
+	color: var(--text-muted);
+	margin: 4px 0 8px;
+}
+
+.pomo-fc-break-countdown {
+	font-size: 2.4rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--pomo-phase-accent);
+	margin: 6px 0 12px;
+}
+
+.pomo-fc-empty-actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	justify-content: center;
+	margin-top: 8px;
+	width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   6. Create Flashcard Modal & Status Bar
+   -------------------------------------------------------------------------- */
+
+.pomo-fc-modal {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0;
+	overflow: hidden;
+}
+
+/* Desktop: a plain title like other Obsidian dialogs. Phones turn it into a Cancel / title / Save bar. */
+.pomo-fc-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 4px 18px 10px;
+	flex-shrink: 0;
+}
+
+.pomo-fc-modal-title {
+	margin: 0;
+	font-size: 1.12rem;
+	font-weight: 600;
+}
+
+.pomo-fc-header-save-btn {
+	padding: 4px 14px;
+	font-size: 0.85rem;
+	font-weight: 600;
+	height: auto;
+	min-height: 32px;
+	border-radius: 6px;
+}
+
+.pomo-fc-modal-scroll-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior: contain;
+	/* The dialog already pads its content; the 2px keeps focus rings clear of the scroll edge. */
+	padding: 2px 2px 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	box-sizing: border-box;
+}
+
+.pomo-fc-modal-meta-box {
+	background: var(--background-secondary-alt, var(--background-secondary));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	overflow: hidden;
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+}
+
+.pomo-fc-modal-meta-toggle {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 8px 12px;
+	cursor: pointer;
+	font-size: 0.82rem;
+	color: var(--text-muted);
+	height: auto;
+}
+
+.pomo-fc-modal-meta-toggle:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.pomo-fc-modal-meta-summary {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	font-weight: 500;
+	text-align: left;
+}
+
+.pomo-fc-meta-icon {
+	display: inline-flex;
+	flex-shrink: 0;
+	--icon-size: var(--icon-xs, 14px);
+}
+
+.pomo-fc-meta-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.pomo-fc-meta-text + .pomo-fc-meta-icon {
+	margin-inline-start: 8px;
+}
+
+.pomo-fc-modal-meta-chevron {
+	display: inline-flex;
+	margin-left: 8px;
+	flex-shrink: 0;
+	--icon-size: var(--icon-xs, 14px);
+}
+
+/* Target note and deck rows are standard setting rows: give the first one room below the toggle. */
+.pomo-fc-modal-meta-drawer {
+	padding: 8px 12px 4px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.pomo-fc-modal-meta-box.is-collapsed .pomo-fc-modal-meta-drawer {
+	display: none;
+}
+
+.pomo-fc-modal .pomo-fc-field-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.pomo-fc-modal .pomo-fc-field-label {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.pomo-fc-modal .pomo-fc-textarea {
+	width: 100%;
+	resize: vertical;
+	font-family: var(--font-text);
+	padding: 8px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	box-sizing: border-box;
+}
+
+.pomo-fc-modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 10px;
+	padding-top: 12px;
+	border-top: 1px solid var(--background-modifier-border);
+	flex-shrink: 0;
+}
+
+.pomo-fc-statusbar {
+	cursor: pointer;
+	font-variant-numeric: tabular-nums;
+}
+
+.pomo-fc-question-section.is-tappable {
+	cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   7. Mobile & Touch Ergonomics
+   -------------------------------------------------------------------------- */
+
+/* Bottom padding clears Obsidian's floating navigation bar (--view-bottom-spacing covers the bar and
+   the safe area), which otherwise covered the Show answer and rating buttons on phones. */
+.is-mobile .pomo-fc-view-root {
+	padding: 8px 10px calc(12px + var(--view-bottom-spacing, env(safe-area-inset-bottom, 0px))) 10px;
+	gap: 8px;
+	overflow: hidden;
+}
+
+/* Phones: the screen is too short for the banner, toolbar and a revealed answer at once, which left
+   the question and answer in a few lines of inner scroll. Let the whole view scroll instead and the
+   card grow with its content. */
+.is-phone .pomo-fc-view-root {
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.is-phone .pomo-fc-stage,
+.is-phone .pomo-fc-card,
+.is-phone .pomo-fc-card-body {
+	flex: 1 0 auto;
+	overflow: visible;
+}
+
+.is-mobile .pomo-fc-banner {
+	padding: 8px 12px;
+	gap: 8px;
+}
+
+.is-mobile .pomo-fc-ring-wrapper {
+	width: 44px;
+	height: 44px;
+}
+
+.is-mobile .pomo-fc-clock-digits {
+	font-size: 1.35rem;
+}
+
+.is-mobile .pomo-fc-phase-badge {
+	font-size: 0.7rem;
+}
+
+.is-mobile .pomo-fc-btn,
+.is-mobile .pomo-fc-rate-btn,
+.is-mobile .pomo-fc-phase-pill {
+	min-height: 42px;
+}
+
+.is-mobile .pomo-fc-rate-key {
+	display: none;
+}
+
+.is-mobile .pomo-fc-show-answer-btn {
+	min-height: 48px;
+	font-size: 0.95rem;
+}
+
+/* Modal mobile ergonomics & keyboard resilience */
+/* Selectors are scoped under the modal's own classes so they outrank
+   Obsidian's .is-phone .modal / .modal-content / button rules
+   without needing to force priority */
+.is-mobile .modal-container.pomo-fc-modal-container {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: var(--keyboard-height, 0px);
+	height: calc(100vh - var(--keyboard-height, 0px));
+	max-height: calc(100vh - var(--keyboard-height, 0px));
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
+	z-index: var(--layer-modal, 100);
+}
+
+.is-mobile .modal-container .modal.pomo-fc-modal-dialog {
+	width: 100vw;
+	max-width: 100vw;
+	height: 100%;
+	max-height: 100%;
+	margin: 0;
+	border-radius: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding: 0;
+	box-shadow: none;
+	background-color: var(--modal-background);
+	border: none;
+	position: relative;
+	top: 0;
+	transform: none;
+}
+
+/* The dialog has its own Cancel / Save bar; hide Obsidian's close control and empty header
+   (.modal-header-button in Obsidian 1.15, .modal-close-button before). */
+.is-mobile .modal-container .modal.pomo-fc-modal-dialog :is(.modal-close-button, .modal-header-button),
+.is-mobile .modal-container .modal.pomo-fc-modal-dialog > .modal-header.pomo-fc-empty-header {
+	display: none;
+}
+
+.is-mobile .pomo-fc-modal-dialog .pomo-fc-modal {
+	height: 100%;
+	max-height: 100%;
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	overflow: hidden;
+}
+
+.is-mobile .pomo-fc-modal-dialog .pomo-fc-modal-header {
+	padding: max(var(--safe-area-inset-top, 0px), 8px) 12px 10px 12px;
+	min-height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-shrink: 0;
+	background-color: var(--background-secondary-alt, var(--background-secondary));
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.is-mobile .pomo-fc-modal-dialog button.pomo-fc-header-cancel-btn {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--text-muted);
+	font-size: 0.9rem;
+	font-weight: 500;
+	padding: 6px 10px;
+	height: auto;
+	cursor: pointer;
+}
+
+.is-mobile .pomo-fc-modal-dialog button.pomo-fc-header-cancel-btn:hover {
+	color: var(--text-normal);
+}
+
+.is-mobile .pomo-fc-modal-dialog .pomo-fc-modal-title {
+	font-size: 1rem;
+	font-weight: 600;
+	text-align: center;
+	flex: 1;
+	margin: 0 8px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.is-mobile .pomo-fc-modal-dialog button.pomo-fc-header-save-btn {
+	padding: 6px 14px;
+	font-size: 0.88rem;
+	font-weight: 600;
+	height: auto;
+	min-height: 32px;
+	border-radius: 6px;
+	flex-shrink: 0;
+}
+
+.is-mobile .pomo-fc-modal-dialog .pomo-fc-modal-scroll-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	height: 100%;
+	overflow-y: scroll;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior-y: contain;
+	padding: 12px 14px 40px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	box-sizing: border-box;
+}
+
+.is-mobile .pomo-fc-modal-dialog .pomo-fc-modal .pomo-fc-textarea {
+	font-size: 16px; /* Prevents unwanted iOS Safari viewport auto-zoom */
+	min-height: 64px;
+	line-height: 1.4;
+}
+
+.is-mobile .pomo-fc-modal-footer {
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 8px;
+	padding-top: 12px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.is-mobile .pomo-fc-modal-footer button {
+	width: 100%;
+	min-height: 44px;
+	font-size: 0.95rem;
+}
+
+/* --------------------------------------------------------------------------
+   8. Narrow Screen Breakpoints (Phones & Narrow Panes)
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 600px) {
+	/* Banner: timer on the first row, controls on their own full-width row */
+	.pomo-fc-banner-main-row {
+		flex-wrap: wrap;
+	}
+
+	.pomo-fc-banner-controls {
+		width: 100%;
+	}
+
+	.pomo-fc-banner-controls .pomo-fc-btn:not(.pomo-fc-banner-toggle-btn) {
+		flex: 1;
+	}
+
+	/* Toolbar: the two selects share a row, the actions share the next */
+	.pomo-fc-toolbar-group {
+		width: 100%;
+	}
+
+	.pomo-fc-actions-group .pomo-fc-btn {
+		flex: 1;
+	}
+
+	.pomo-fc-rating-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 6px;
+	}
+
+	.pomo-fc-banner-expandable {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.pomo-fc-banner-center {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
+	}
+
+	.pomo-fc-phase-pills {
+		justify-content: stretch;
+	}
+
+	.pomo-fc-phase-pill {
+		flex: 1;
+		text-align: center;
+	}
+
+	.pomo-fc-empty-actions {
+		flex-direction: column;
+	}
+
+	.pomo-fc-empty-actions .pomo-fc-btn {
+		width: 100%;
+		min-height: 44px;
+	}
+
+	.pomo-fc-deck-badge {
+		max-width: 110px;
+	}
+
+	.pomo-fc-source-link {
+		max-width: 120px;
+	}
+}
+
+/* Cloze deletions: the blank on the question side and the revealed text on the answer side */
+.pomo-fc-cloze-blank,
+.pomo-fc-cloze-answer {
+	color: var(--text-accent);
+	font-weight: var(--font-semibold);
+	border-radius: var(--radius-s);
+	padding: 0 0.25em;
+}
+
+.pomo-fc-cloze-blank {
+	background-color: var(--background-modifier-hover);
+	border: 1px dashed var(--text-accent);
+}
+
+.pomo-fc-cloze-answer {
+	color: var(--text-normal);
+	background-color: var(--text-highlight-bg);
+	box-shadow: inset 0 -2px 0 var(--text-accent);
+}

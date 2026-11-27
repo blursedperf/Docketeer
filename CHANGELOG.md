@@ -2,8 +2,21 @@
 
 ## Unreleased
 
+- **Pomodoro Flashcards, a fourth built-in plugin: flashcards from your notes, studied beside a focus timer.** Write
+  cards in any note (`Question :: Answer`, `Term ::: Definition` both ways, `Q:`/`A:` blocks, `{{c1::cloze}}`
+  deletions) and review them with spaced repetition: Again, Hard, Good or Easy after each card, each showing when you
+  will see it next. **Your case briefs become cards too**: the text under a brief's *Facts*, *Issues*, *Held* and
+  *Ratio* asks "What is the ratio of *Donoghue v Stevenson*?" and so on (and which case established a ratio). The new
+  **Study panel** in the Docket starts and pauses the focus timer, lists every deck with how many cards are due
+  (Enter studies it; → to cram every card), and keeps your streak; the status bar shows the timer and what is due.
+  Cards in a locked note are never read: they go when it locks and come back when you unlock. A port of the Obsidian
+  plugin of the same name; in homebases made before this version it is turned on once.
 - **Fixed: closing and deleting a note at once no longer logs an error.** AGLC4 tidies a note's footnotes as you
   leave it, and tried to read one that had just been deleted.
+- For plugins: Obsidian's DOM helpers `el.doc`, `el.win`, `createSvg`, `activeDocument` and `activeWindow`; the
+  declarative settings types `SettingDefinition`, `SettingDefinitionGroup` and `SettingDefinitionControl`
+  (`SettingDefinitionItem` is now generic over the settings key); `editorCallback` may take `view: MarkdownView`, as
+  in Obsidian. The icon names `layers`, `party-popper` and `plus-with-circle` draw in Phosphor.
 
 ## v0.24.2
 

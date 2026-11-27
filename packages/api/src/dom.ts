@@ -27,6 +27,10 @@ declare global {
 		createDiv(o?: DomElementInfo | string, callback?: Callback<HTMLDivElement>): HTMLDivElement;
 		createSpan(o?: DomElementInfo | string, callback?: Callback<HTMLSpanElement>): HTMLSpanElement;
 		appendText(text: string): void;
+		/** The document and window this node is in (Obsidian's names, for its pop-out windows; here always the one). */
+		readonly doc: Document;
+		readonly win: Window;
+		createSvg<K extends keyof SVGElementTagNameMap>(tag: K, o?: SvgElementInfo | string, callback?: Callback<SVGElementTagNameMap[K]>): SVGElementTagNameMap[K];
 	}
 	interface Element {
 		setText(text: string | DocumentFragment): void;
@@ -54,6 +58,29 @@ declare global {
 	function createDiv(o?: DomElementInfo | string, callback?: Callback<HTMLDivElement>): HTMLDivElement;
 	function createSpan(o?: DomElementInfo | string, callback?: Callback<HTMLSpanElement>): HTMLSpanElement;
 	function createFragment(callback?: Callback<DocumentFragment>): DocumentFragment;
+	function createSvg<K extends keyof SVGElementTagNameMap>(tag: K, o?: SvgElementInfo | string, callback?: Callback<SVGElementTagNameMap[K]>): SVGElementTagNameMap[K];
+	/** The document and window in front (Obsidian's names; Docketeer has one window). */
+	var activeDocument: Document;
+	var activeWindow: Window;
+}
+
+/** Like DomElementInfo, for SVG elements: classes and attributes (no text). */
+export interface SvgElementInfo {
+	cls?: string | string[];
+	attr?: Record<string, string | number | boolean | null>;
+	parent?: Node;
+	prepend?: boolean;
+}
+
+function makeSvg<K extends keyof SVGElementTagNameMap>(parent: Node | null, tag: K, o?: SvgElementInfo | string, cb?: Callback<SVGElementTagNameMap[K]>): SVGElementTagNameMap[K] {
+	const el = document.createElementNS('http://www.w3.org/2000/svg', tag) as SVGElementTagNameMap[K];
+	const info: SvgElementInfo = typeof o === 'string' ? { cls: o } : (o ?? {});
+	if (info.cls) el.classList.add(...(Array.isArray(info.cls) ? info.cls : info.cls.split(/\s+/)).filter(Boolean));
+	for (const [k, v] of Object.entries(info.attr ?? {})) if (v !== null && v !== false) el.setAttribute(k, v === true ? '' : String(v));
+	const host = info.parent ?? parent;
+	if (host) { if (info.prepend) host.insertBefore(el, host.firstChild); else host.appendChild(el); }
+	cb?.(el);
+	return el;
 }
 
 function applyInfo(el: HTMLElement, o: DomElementInfo | string | undefined) {
@@ -104,6 +131,9 @@ export function installDomHelpers(): void {
 	def(N, 'createEl', function (this: Node, tag: keyof HTMLElementTagNameMap, o?: DomElementInfo | string, cb?: Callback<HTMLElement>) { return make(this, tag, o, cb); });
 	def(N, 'createDiv', function (this: Node, o?: DomElementInfo | string, cb?: Callback<HTMLDivElement>) { return make(this, 'div', o, cb); });
 	def(N, 'createSpan', function (this: Node, o?: DomElementInfo | string, cb?: Callback<HTMLSpanElement>) { return make(this, 'span', o, cb); });
+	def(N, 'createSvg', function (this: Node, tag: keyof SVGElementTagNameMap, o?: SvgElementInfo | string, cb?: Callback<SVGElement>) { return makeSvg(this, tag, o, cb); });
+	Object.defineProperty(N, 'doc', { configurable: true, get(this: Node) { return this.ownerDocument ?? document; } });
+	Object.defineProperty(N, 'win', { configurable: true, get(this: Node) { return (this.ownerDocument ?? document).defaultView ?? window; } });
 
 	def(E, 'setText', function (this: Element, text: string | DocumentFragment) {
 		if (typeof text === 'string') this.textContent = text;
@@ -140,6 +170,9 @@ export function installDomHelpers(): void {
 	g.createEl = (tag: keyof HTMLElementTagNameMap, o?: DomElementInfo | string, cb?: Callback<HTMLElement>) => make(null, tag, o, cb);
 	g.createDiv = (o?: DomElementInfo | string, cb?: Callback<HTMLDivElement>) => make(null, 'div', o, cb);
 	g.createSpan = (o?: DomElementInfo | string, cb?: Callback<HTMLSpanElement>) => make(null, 'span', o, cb);
+	g.createSvg = (tag: keyof SVGElementTagNameMap, o?: SvgElementInfo | string, cb?: Callback<SVGElement>) => makeSvg(null, tag, o, cb);
+	g.activeDocument = document;
+	g.activeWindow = window;
 	g.createFragment = (cb?: Callback<DocumentFragment>) => {
 		const f = document.createDocumentFragment();
 		cb?.(f);

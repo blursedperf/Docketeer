@@ -614,16 +614,35 @@ export abstract class PluginSettingTab extends SettingTab {
 }
 
 /**
- * A settings page described as data (the declarative form). Not rendered by API v0: plugins also define
- * `display()`, which is used.
+ * A settings page described as data (the declarative form, as Obsidian 1.13 has it): groups of settings, each with
+ * a control bound to a settings key. Docketeer does not draw these itself: plugins also define `display()`, which is
+ * used, and the settings search finds what `display()` draws.
  */
-export interface SettingDefinitionItem {
-	type?: string;
-	heading?: string;
-	name?: string;
-	desc?: string;
-	items?: SettingDefinitionItem[];
+/** A setting's control, bound to the settings key it reads and writes; `validate` answers a problem, or nothing. */
+export type SettingDefinitionControl<K extends string = string> =
+	| { type: 'toggle'; key: K }
+	| { type: 'text'; key: K; placeholder?: string; validate?: (value: string) => string | void }
+	| { type: 'textarea'; key: K; placeholder?: string; rows?: number; validate?: (value: string) => string | void }
+	| { type: 'number'; key: K; placeholder?: string; min?: number; max?: number; step?: number; validate?: (value: number) => string | void }
+	| { type: 'slider'; key: K; min: number; max: number; step?: number }
+	| { type: 'dropdown'; key: K; options: Record<string, string> };
+
+/** One setting: its name, description, and a control, an action button, or a row it draws itself. */
+export interface SettingDefinition<K extends string = string> {
+	name: string;
+	desc?: string | DocumentFragment;
+	/** Other words the settings search should find it by. */
+	aliases?: string[];
+	control?: SettingDefinitionControl<K>;
 	action?: () => unknown;
-	control?: Record<string, unknown>;
-	[key: string]: unknown;
+	render?: (setting: Setting, group: unknown) => unknown;
 }
+
+/** A heading and the settings under it. */
+export interface SettingDefinitionGroup<K extends string = string> {
+	type: 'group' | 'page';
+	heading?: string;
+	items?: SettingDefinitionItem<K>[];
+}
+
+export type SettingDefinitionItem<K extends string = string> = SettingDefinition<K> | SettingDefinitionGroup<K>;
