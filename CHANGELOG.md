@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Pomodoro Flashcards follows your density setting.** The study view and the New card dialog now use the app's
+  sizes, so Compact, Comfortable and Spacious (Settings → Appearance) tighten or open up their padding, buttons and
+  line spacing like the rest of the app, and they match its corners and type. On iPhone and iPad they now use the
+  phone layout as intended: the view scrolls as one page, and New card fills the screen with a Cancel / Save bar.
+
 ## v0.25.0
 
 - **Pomodoro Flashcards, a fourth built-in plugin: flashcards from your notes, studied beside a focus timer.** Write

@@ -45,6 +45,8 @@ export class CreateFlashcardModal extends Modal {
 
 	onOpen(): void {
 		this.containerEl.addClass("pomo-fc-modal-container");
+		// Phones and tablets: the dialog fills the screen above the keyboard, with a Cancel / Save bar (styles.css).
+		if (Platform.isMobile) this.containerEl.addClass("mod-mobile");
 		this.modalEl.addClass("pomo-fc-modal-dialog");
 
 		// Desktop uses Obsidian's own dialog title, so it lines up with every other dialog.

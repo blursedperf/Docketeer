@@ -115,6 +115,17 @@ export class FlashcardStudyView extends ItemView {
 		this.registerDomEvent(this.containerEl.win, "keydown", (evt: KeyboardEvent) =>
 			this.handleKeyDown(evt)
 		);
+
+		// A density (or theme) change: restyle the view. WebKit (iPhone, iPad) does not restyle an element whose own
+		// rules did not change, so the view kept the old density's spacing; hiding and showing it again makes it
+		// take the new sizes, and keeps the card and answer where they were.
+		this.registerEvent(this.app.workspace.on("css-change", () => {
+			const root = this.rootContainerEl;
+			if (!root) return;
+			root.style.display = "none";
+			void root.offsetHeight;
+			root.style.display = "";
+		}));
 	}
 
 	async onClose(): Promise<void> {

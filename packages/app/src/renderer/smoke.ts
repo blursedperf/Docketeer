@@ -2549,6 +2549,39 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.delete(deck);
 		return problems.length === 0 || problems.join('; ');
 	});
+	await check('Pomodoro Flashcards: the study view follows the density setting', async () => {
+		const fc = app.plugins.getPlugin('pomodoro-flashcards') as unknown as { studyDeck(d: string, m: string): Promise<void> } | null;
+		if (!fc) return 'not loaded';
+		const note = await vault.create('Smoke density deck.md', '---\ndeck: Smoke density\n---\nDensity question :: density answer\n');
+		const type = 'pomodoro-flashcards-study-view';
+		// The density this screen uses (a touch screen has its own); put back as it was.
+		const key = app.densityKey();
+		const was = app.config[key];
+		const sizes: Record<string, string> = {};
+		try {
+			await until(async () => { await fc.studyDeck('Smoke density', 'cram'); return !!document.querySelector('.pomo-fc-view-root .pomo-fc-card'); }, 4000);
+			for (const d of ['compact', 'spacious'] as const) {
+				await app.setConfig(key, d);
+				await until(() => document.body.classList.contains(`density-${d}`), 2000);
+				await new Promise((r) => requestAnimationFrame(r));
+				const root = document.querySelector<HTMLElement>('.pomo-fc-view-root');
+				const card = document.querySelector<HTMLElement>('.pomo-fc-card');
+				if (!root || !card) return 'no study view';
+				const r = getComputedStyle(root), c = getComputedStyle(card);
+				sizes[d] = `${r.paddingTop} ${r.rowGap} ${c.paddingTop} ${c.rowGap}`;
+				sizes[`${d}-vars`] = `--setting-pad ${r.getPropertyValue('--setting-pad')} in the view, ${getComputedStyle(document.body).getPropertyValue('--setting-pad')} in the page`;
+			}
+		} finally {
+			await app.setConfig(key, was ?? (key === 'density' ? 'comfortable' : undefined));
+			workspace.detachLeavesOfType(type);
+			await until(() => !workspace.getLeavesOfType(type).length, 2000);
+			await sleep(80);
+			await vault.delete(note);
+		}
+		// Every padding and gap is bigger when spacious than when compact.
+		const [a, b] = [sizes.compact!.split(' ').map(parseFloat), sizes.spacious!.split(' ').map(parseFloat)];
+		return a.every((v, i) => v < b[i]!) || `compact ${sizes.compact} (${sizes['compact-vars']}), spacious ${sizes.spacious} (${sizes['spacious-vars']})`;
+	});
 	await check('docket: right-click a row or a result for its actions', async () => {
 		const problems: string[] = [];
 		const menuTitles = () => [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
