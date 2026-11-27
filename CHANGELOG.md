@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **Search: `-word` leaves notes out, and `"quoted words"` must appear as written.** A word with a minus in front was
+  treated as one that must appear, the opposite of what it means, and quotes stopped the whole phrase being found.
+  Now `negligence -contract` leaves out notes mentioning contracts, and `"duty of care"` finds only those words in
+  that order. `-"some words"` leaves out a phrase.
+
 ## v0.23.0
 
 - **Save a homebase's panels as a template, and start new homebases from it**: *Save this homebase's panels as a

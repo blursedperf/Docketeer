@@ -43,6 +43,34 @@ export function tokenize(text: string): string[] {
 	return out;
 }
 
+/**
+ * A full-text query: plain words (matched as prefixes, anywhere in the note), "quoted phrases" (must appear as
+ * written, case ignored; a quote still open while typing counts to the end) and -excluded words or -"phrases" (no
+ * note containing one is shown). `words` are every positive word, plain and quoted, for the index to narrow by.
+ */
+export interface TextQuery { words: string[]; phrases: string[]; exclude: string[]; plain: string }
+
+export function parseTextQuery(query: string): TextQuery {
+	const phrases: string[] = [];
+	const exclude: string[] = [];
+	const plain: string[] = [];
+	for (const m of query.matchAll(/(?<![^\s])(-?)"([^"]*)"?|(\S+)/g)) {
+		const neg = m[1] === '-';
+		if (m[2] !== undefined) {
+			const p = m[2].toLowerCase().trim().replace(/\s+/g, ' ');
+			if (!tokenize(p).length) continue;
+			(neg ? exclude : phrases).push(p);
+		} else if (m[3]!.startsWith('-') && m[3]!.length > 1) {
+			const w = m[3]!.slice(1).toLowerCase();
+			if (tokenize(w).length) exclude.push(w);
+		} else plain.push(m[3]!);
+	}
+	const words = [...new Set([...tokenize(plain.join(' ')), ...phrases.flatMap(tokenize)])];
+	return { words, phrases, exclude, plain: plain.join(' ').toLowerCase().replace(/\s+/g, ' ').trim() };
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 function unitOf(path: string): { unit: string; folder: string } {
 	const parts = path.split('/');
 	parts.pop();
@@ -231,13 +259,18 @@ export class SearchIndex {
 	/**
 	 * Notes containing every word of `query` (the words as prefixes), best first, each with the line of the
 	 * first match. Score: the whole phrase present, a match near the top, the name matching too, and context.
+	 * "Quoted phrases" must appear as written and -words or -"phrases" leave a note out (parseTextQuery).
 	 */
 	searchText(query: string, limit = 50, ctx: RankContext = {}): { hits: TextHit[]; total: number } {
-		const words = [...new Set(tokenize(query))];
+		const q = parseTextQuery(query);
+		const { words } = q;
 		if (!words.length) return { hits: [], total: 0 };
 		const require = this.markAll(words);
 		if (require === 0) return { hits: [], total: 0 };
-		const phrase = query.trim().toLowerCase().replace(/\s+/g, ' ');
+		// An excluded word or phrase counts where a word starts ("-tort" leaves out notes with "torts" too).
+		const excluded = q.exclude.map((x) => new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(x)}`, 'u'));
+		const wanted = (d: Doc) => q.phrases.every((p) => d.lower.includes(p)) && !excluded.some((re) => re.test(d.lower));
+		const phrase = q.phrases[0] ?? q.plain;
 		const first = words[words.length - 1]!;
 		// Two passes: a cheap score (use, unit, the name matching) for every match, then the costly checks
 		// (the whole phrase, how near the top) for the best few hundred. With thousands of matches the rest
@@ -246,20 +279,21 @@ export class SearchIndex {
 		let total = 0;
 		for (let id = 0; id < this.docs.length; id++) {
 			if (this.marks[id] !== require) continue;
-			total++;
 			const d = this.docs[id]!;
+			if ((q.phrases.length || excluded.length) && !wanted(d)) continue;
+			total++;
 			let score = 10 + this.context(d, ctx);
 			if (words.every((w) => d.lowerName.includes(w))) score += 8;
 			top.push(id, score);
 		}
 		const deep = top.ids.map((id, i) => ({ d: this.docs[id]!, score: top.scores[i]! }));
 		for (const s of deep) {
-			if (words.length > 1 && s.d.lower.includes(phrase)) s.score += 20;
+			if (!q.phrases.length && words.length > 1 && phrase && s.d.lower.includes(phrase)) s.score += 20;
 			const at = s.d.lower.indexOf(first);
 			if (at >= 0) s.score += 5 * (1 - Math.min(at, 5000) / 5000);
 		}
 		deep.sort((a, b) => b.score - a.score);
-		const hits = deep.slice(0, limit).map(({ d, score }) => ({ path: d.path, score, ...snippet(d, words, phrase) }));
+		const hits = deep.slice(0, limit).map(({ d, score }) => ({ path: d.path, score, ...snippet(d, words, phrase, q.phrases.length > 0) }));
 		return { hits, total };
 	}
 
@@ -331,8 +365,8 @@ function fuzzyLower(q: string, t: string): number | null {
 }
 
 /** The line with the first match (the phrase, else the first word), trimmed around it, with highlights. */
-function snippet(d: Doc, words: string[], phrase: string): { line: number; snippet: string; ranges: [number, number][] } {
-	let at = words.length > 1 ? d.lower.indexOf(phrase) : -1;
+function snippet(d: Doc, words: string[], phrase: string, quoted = false): { line: number; snippet: string; ranges: [number, number][] } {
+	let at = words.length > 1 || quoted ? d.lower.indexOf(phrase) : -1;
 	if (at < 0) {
 		// Prefer a match at the start of a word.
 		for (const w of words) {

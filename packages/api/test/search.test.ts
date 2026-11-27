@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SearchIndex, tokenize } from '../src/search-index';
+import { SearchIndex, parseTextQuery, tokenize } from '../src/search-index';
 import { Usage, frecency } from '../src/usage';
 // @ts-expect-error: plain JS module shared with the benchmark script
 import { makeFixture } from '../../../scripts/fixture.mjs';
@@ -66,6 +66,35 @@ describe('search index', () => {
 		expect(idx.size).toBe(500);
 		expect(idx.searchText('common').total).toBe(500);
 		expect(idx.searchText('word3').total).toBe(50);
+	});
+});
+
+describe('phrases and exclusions', () => {
+	const idx = new SearchIndex();
+	idx.set('Torts/Duty.md', 'The duty of care in negligence.\nDonoghue v Stevenson.');
+	idx.set('Torts/Breach.md', 'Breach of duty: the standard of care.');
+	idx.set('Contracts/Offer.md', 'An offer and a duty to negotiate.');
+	const paths = (q: string) => idx.searchText(q).hits.map((h) => h.path).sort();
+
+	it('reads words, "phrases" and -exclusions', () => {
+		expect(parseTextQuery('duty "of care" -contract -"standard of"')).toEqual({ words: ['duty', 'of', 'care'], phrases: ['of care'], exclude: ['contract', 'standard of'], plain: 'duty' });
+		expect(parseTextQuery('case-law -')).toEqual({ words: ['case', 'law'], phrases: [], exclude: [], plain: 'case-law -' });
+		expect(parseTextQuery('"duty of').phrases).toEqual(['duty of']);
+	});
+	it('a -word leaves notes out instead of being required', () => {
+		expect(paths('duty')).toEqual(['Contracts/Offer.md', 'Torts/Breach.md', 'Torts/Duty.md']);
+		expect(paths('duty -negligence')).toEqual(['Contracts/Offer.md', 'Torts/Breach.md']);
+		expect(paths('duty -neglig -"an offer"')).toEqual(['Torts/Breach.md']);
+		expect(idx.searchText('duty -negligence').total).toBe(2);
+	});
+	it('a "phrase" must appear as written, and its line is the one shown', () => {
+		expect(paths('"duty of care"')).toEqual(['Torts/Duty.md']);
+		expect(paths('"of duty"')).toEqual(['Torts/Breach.md']);
+		expect(paths('"care duty"')).toEqual([]);
+		expect(idx.searchText('"donoghue v"').hits[0]!.line).toBe(1);
+	});
+	it('exclusions alone find nothing', () => {
+		expect(paths('-duty')).toEqual([]);
 	});
 });
 
