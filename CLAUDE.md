@@ -69,7 +69,7 @@ node scripts/shots-diff.mjs <dir> --platform linux   # compare with test/visual/
 5. Tag `vX.Y.Z` (annotated, "Docketeer X.Y.Z: <summary>") and push `master` and the tag. The tag runs
    `.github/workflows/release.yml`: tests, installers for Linux (x64, arm64) and macOS, and the GitHub release.
 
-Latest release: **0.24.0** (Whole-Tree Search: `~` in the Docket searches outlines; `-word` and "phrases" in search). Ask the owner before pushing tags or releasing.
+Latest release: **0.24.1** (Whole-Tree Search: `~` in the Docket searches outlines; `-word` and "phrases" in search; the empty search suggests `~`). Ask the owner before pushing tags or releasing.
 
 ## Mobile port (iPhone and iPad)
 

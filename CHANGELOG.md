@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.24.1
 
 - **The Docket's empty search suggests `~`**: its hint reads “Search, or type > # / @ + ~ ?”, listing the prefixes
   plugins add (Whole-Tree Search's `~`) as well as the Docket's own.
