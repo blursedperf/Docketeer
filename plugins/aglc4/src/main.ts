@@ -734,10 +734,16 @@ export default class Aglc4Plugin extends Plugin {
 		} else {
 			// Not open anywhere: the change cannot be undone in an editor, so it is only made once the
 			// text before it is safely in the version history (or history is off).
-			const before = await this.app.vault.read(previous);
-			if (tidy(before) === before) return;
-			if (this.history.enabled && !(await this.history.snapshot(previous.path, before, { label: 'Before tidying footnotes' }))) return;
-			await this.app.vault.process(previous, tidy);
+			try {
+				const before = await this.app.vault.read(previous);
+				if (tidy(before) === before) return;
+				if (this.history.enabled && !(await this.history.snapshot(previous.path, before, { label: 'Before tidying footnotes' }))) return;
+				await this.app.vault.process(previous, tidy);
+			} catch (e) {
+				// Deleted as it was left (closed and deleted at once): nothing to tidy, and nothing went wrong.
+				if (!this.app.vault.getAbstractFileByPath(previous.path) || !(await this.app.vault.adapter.exists(previous.path).catch(() => true))) return;
+				throw e;
+			}
 		}
 	}
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Fixed: closing and deleting a note at once no longer logs an error.** AGLC4 tidies a note's footnotes as you
+  leave it, and tried to read one that had just been deleted.
+
 ## v0.24.2
 
 - **A settings gear in the status bar**, just after the homebase's name at the bottom left: click it (or press Enter

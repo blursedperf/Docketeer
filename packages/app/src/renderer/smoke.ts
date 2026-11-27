@@ -19,7 +19,8 @@ import { openFileIn } from './docket/providers';
 const splitCells = (line: string) => line.trim().replace(/^\||\|$/g, '').split('|');
 import { revealInUnits } from './docket/panels/units';
 
-interface Check { name: string; ok: boolean; detail?: string; skipped?: string }
+/** A check's result; `ms` is how long it took, so a slow or stuck one can be found. */
+interface Check { name: string; ok: boolean; detail?: string; skipped?: string; ms?: number }
 
 /**
  * What a check returns: true when it passes, text saying what went wrong, or `{ skip }` when it tests a host feature
@@ -55,6 +56,16 @@ function sameJSON(a: unknown, b: unknown): boolean {
 	const norm = (v: unknown): unknown => Array.isArray(v) ? v.map(norm)
 		: v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, norm((v as Record<string, unknown>)[k])])) : v;
 	return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
+}
+
+/**
+ * Put any on-screen keyboard away and wait until it has gone. A check that leaves a field or the editor focused
+ * can bring up the simulator's real keyboard, which covers the bottom of a phone-sized page: checks of what sits at
+ * the bottom (the Docket button, the sheet, the keyboard toolbar) start with this.
+ */
+async function keyboardAway(): Promise<void> {
+	(document.activeElement as HTMLElement | null)?.blur();
+	await until(() => !document.body.classList.contains('has-keyboard'), 3000);
 }
 
 async function until(cond: () => boolean | Promise<boolean>, ms = 5000): Promise<boolean> {
@@ -106,12 +117,14 @@ export async function runSmoke(app: App): Promise<void> {
 		// On a narrow window (an iPhone) what needs a wide one is not offered: those checks say so and are skipped.
 		const wide = document.body.classList.contains('is-compact') ? WIDE_ONLY.find(([prefix]) => name.startsWith(prefix)) : undefined;
 		if (wide) { checks.push({ name, ok: true, skipped: `needs a wide window: ${wide[1]}` }); return; }
+		const t0 = performance.now();
+		const ms = () => Math.round(performance.now() - t0);
 		try {
 			const r = await fn();
-			if (typeof r === 'object') { checks.push({ name, ok: true, skipped: r.skip }); return; }
-			checks.push({ name, ok: r === true, detail: typeof r === 'string' ? r : undefined });
+			if (typeof r === 'object') { checks.push({ name, ok: true, skipped: r.skip, ms: ms() }); return; }
+			checks.push({ name, ok: r === true, detail: typeof r === 'string' ? r : undefined, ms: ms() });
 		} catch (e) {
-			checks.push({ name, ok: false, detail: e instanceof Error ? `${e.message}\n${e.stack}` : String(e) });
+			checks.push({ name, ok: false, detail: e instanceof Error ? `${e.message}\n${e.stack}` : String(e), ms: ms() });
 		}
 	};
 	const { vault, workspace, metadataCache, commands } = app;
@@ -237,16 +250,19 @@ export async function runSmoke(app: App): Promise<void> {
 		if (typeof a === 'string') return `audio did not load: ${a}`;
 		const duration = Math.round(a.duration);
 		const seekable = a.seekable.length ? Math.round(a.seekable.end(0)) : 0;
-		const seeked = await new Promise<boolean>((resolve) => {
-			a.onseeked = () => resolve(true);
-			window.setTimeout(() => resolve(false), 5000);
-			a.currentTime = 25;
-		});
+		// Seeked: the event, or the position settled there (WebKit does not always send the event for audio that
+		// has only its metadata loaded).
+		let seekEvent = false;
+		a.onseeked = () => { seekEvent = true; };
+		a.currentTime = 25;
+		const seeked = await until(() => seekEvent || (!a.seeking && Math.round(a.currentTime) === 25 && a.seekable.length > 0), 5000);
 		const at = Math.round(a.currentTime);
 		a.removeAttribute('src');
 		a.load();
+		// A note never loads as media. The answer itself (403) is checked natively (AppFilesTests on iOS); WebKit
+		// does not always pass that failure to an audio element in time, so not loading at all counts as refused.
 		const note = await media(`quire://app/vault/${encodeURIComponent('Welcome.md')}`);
-		const refused = typeof note === 'string' && note !== 'timeout';
+		const refused = typeof note === 'string';
 		await vault.delete(file);
 		return (duration === seconds && seekable === seconds && seeked && at === 25 && refused)
 			|| `duration=${duration} seekable=${seekable} seeked=${seeked} at=${at} noteRefused=${refused} (${typeof note === 'string' ? note : 'loaded'})`;
@@ -1048,11 +1064,11 @@ export async function runSmoke(app: App): Promise<void> {
 		const note = vault.getMarkdownFiles()[0]!;
 		const before = vault.getFiles().length;
 		cmds.executeCommandById('app:copy-file', { file: note });
-		await sleep(100);
-		const copied = vault.getFiles().length === before + 1;
+		// The copy is written through the host (the native bridge on an iPhone): wait for it rather than a set time.
+		const copied = await until(() => vault.getFiles().length === before + 1, 3000);
 		const copy = vault.getFiles().find((f) => f.path !== note.path && f.basename.startsWith(note.basename) && f.extension === 'md');
 		cmds.executeCommandById('app:delete-file', { file: copy });
-		await sleep(50);
+		await until(() => !!topModal(), 2000);
 		const asked = !!topModal() && vault.getFiles().length === before + 1;
 		topModal()?.close();
 		if (copy) await vault.trash(copy, true);
@@ -1419,38 +1435,47 @@ export async function runSmoke(app: App): Promise<void> {
 		if (!essay) return 'no essay open';
 		workspace.setActiveLeaf(essay, { focus: true });
 		commands.executeCommandById(`${id}:show-version-history`);
-		await sleep(300);
+		// Each step waits for what it does, not a set time: on an iPhone every save goes through the native bridge.
+		await until(() => !!workspace.getLeavesOfType('aglc4-version-history')[0]?.view.containerEl.querySelector('.aglc-hist-list'), 3000);
 		const leaf = workspace.getLeavesOfType('aglc4-version-history')[0];
 		if (!leaf) return 'no history tab';
 		const root = leaf.view.containerEl;
-		const save = () => root.querySelector<HTMLElement>('.aglc-hist-buttons button[aria-label="Save a version now"]')?.click();
-		const ed = (essay.view as MarkdownView).editor;
-		save(); await sleep(250);
-		ed.replaceRange('Version two. ', { line: ed.lineCount() - 1, ch: 0 });
-		save(); await sleep(250);
-		const list = root.querySelector<HTMLElement>('.aglc-hist-list');
 		const rows = () => [...root.querySelectorAll<HTMLElement>('.aglc-hist-row[data-version]')];
+		const save = async () => {
+			const n = rows().length;
+			root.querySelector<HTMLElement>('.aglc-hist-buttons button[aria-label="Save a version now"]')?.click();
+			await until(() => rows().length > n, 4000);
+		};
+		const ed = (essay.view as MarkdownView).editor;
+		await save();
+		ed.replaceRange('Version two. ', { line: ed.lineCount() - 1, ch: 0 });
+		await save();
+		const list = root.querySelector<HTMLElement>('.aglc-hist-list');
 		if (!list || rows().length < 2) { leaf.detach(); return `versions: ${rows().length}`; }
 		const problems: string[] = [];
 		list.focus();
-		const key = async (k: string) => { list.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true })); await sleep(250); };
 		const chosen = () => rows().findIndex((r) => r.getAttribute('aria-selected') === 'true');
 		// What restoring that version would change: differs between a version with the edit and one without.
 		const summary = () => root.querySelector('.aglc-hist-detail-stats')?.textContent ?? '';
-		await key('ArrowDown');
+		// A key, then wait until the selection is `want` and its changes are drawn (they are worked out after).
+		const key = async (k: string, want: number, before = '') => {
+			list.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+			await until(() => chosen() === want && !!summary() && summary() !== before, 3000);
+		};
+		await key('ArrowDown', 0);
 		if (chosen() !== 0) problems.push(`↓ chose ${chosen()}`);
 		const first = summary();
-		await key('ArrowDown');
+		await key('ArrowDown', 1, first);
 		if (chosen() !== 1) problems.push(`↓↓ chose ${chosen()}`);
 		if (!summary() || summary() === first) problems.push(`the changes did not follow the selection (${first} / ${summary()})`);
-		await key('ArrowUp');
+		await key('ArrowUp', 0, summary());
 		if (chosen() !== 0) problems.push(`↑ chose ${chosen()}`);
 		if (document.activeElement !== list) problems.push('the list lost the keyboard');
-		await key('Enter');
-		if (!(document.activeElement as HTMLElement | null)?.closest('.aglc-hist-actions')) problems.push('Enter did not go to the actions');
+		list.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+		const inActions = () => !!(document.activeElement as HTMLElement | null)?.closest('.aglc-hist-actions');
+		if (!(await until(inActions, 3000))) problems.push('Enter did not go to the actions');
 		document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-		await sleep(50);
-		if (document.activeElement !== list) problems.push('Esc did not come back to the list');
+		if (!(await until(() => document.activeElement === list, 2000))) problems.push('Esc did not come back to the list');
 		leaf.detach();
 		workspace.setActiveLeaf(essay, { focus: true });
 		return problems.length === 0 || problems.join('; ');
@@ -1814,6 +1839,7 @@ export async function runSmoke(app: App): Promise<void> {
 
 	await check('compact layout: the Docket opens from a button at the bottom, as a sheet; a swipe down closes it', async () => {
 		const problems: string[] = [];
+		await keyboardAway();
 		const real = Object.getOwnPropertyDescriptor(window, 'innerWidth');
 		const width = (w: number) => { Object.defineProperty(window, 'innerWidth', { value: w, configurable: true }); window.dispatchEvent(new Event('resize')); };
 		const ui = (app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI;
@@ -1873,6 +1899,7 @@ export async function runSmoke(app: App): Promise<void> {
 
 	await check('keyboard toolbar: above the on-screen keyboard while a note is edited; each button does its edit and keeps the keyboard', async () => {
 		const problems: string[] = [];
+		await keyboardAway();
 		const note = vault.getFileByPath('Toolbar smoke.md') ?? await vault.create('Toolbar smoke.md', 'Duty of care');
 		await workspace.getLeaf(false).openFile(note);
 		const v = workspace.getActiveViewOfType(MarkdownView)!;
@@ -1893,7 +1920,8 @@ export async function runSmoke(app: App): Promise<void> {
 			cm.focus();
 			cm.dispatch({ selection: { anchor: 0, head: 4 } });
 			await sleep(50);
-			if (bar?.offsetParent) problems.push('the toolbar shows with no keyboard');
+			// (Focusing the note can bring up the simulator's real keyboard; then the toolbar rightly shows.)
+			if (bar?.offsetParent && !document.body.classList.contains('has-keyboard')) problems.push('the toolbar shows with no keyboard');
 			applyKeyboard(document.body, 300, window.innerHeight - 300);
 			await sleep(50);
 			if (!bar?.offsetParent) problems.push('the toolbar does not show with the keyboard up');
@@ -1934,6 +1962,7 @@ export async function runSmoke(app: App): Promise<void> {
 
 	await check('long-press: a held finger opens the menu a right-click opens; a moving one does not; note text keeps the system\'s hold', async () => {
 		const problems: string[] = [];
+		await keyboardAway();
 		const menus = () => document.querySelectorAll('.menu .menu-item').length;
 		const clear = async () => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await sleep(30); document.querySelectorAll('.menu').forEach((m) => m.remove()); };
 		const note = vault.getFileByPath('Hold smoke.md') ?? await vault.create('Hold smoke.md', 'Plain words, then [[Welcome]] and more.');
@@ -1996,6 +2025,7 @@ export async function runSmoke(app: App): Promise<void> {
 			const had = [...document.body.classList];
 			document.body.classList.add('is-compact', 'is-touch');
 			try {
+				await keyboardAway(); // a sheet rightly stands on a keyboard that is up: measure it with none
 				const far = new LongPress(window, 30);
 				far.start(tab, r.left + 5, r.top + 5);
 				await sleep(300); // (it rises into place)
@@ -3238,13 +3268,14 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		if (!view.editor.getValue().startsWith('Top line\n\n| Case')) problems.push('the lines before the table were changed');
 		// Escape leaves the table for the line after it; ArrowDown from the line above goes into its first cell.
 		focusIn(cellAt(0, 0)); await sleep(50);
-		key('Escape'); await sleep(80);
+		key('Escape');
 		const tableEnd = view.editor.getValue().split('\n').map((l) => l.startsWith('|')).lastIndexOf(true);
+		await until(() => view.editor.getCursor().line === tableEnd + 1, 2000);
 		if (view.editor.getCursor().line !== tableEnd + 1) problems.push(`Escape put the cursor on line ${view.editor.getCursor().line}, the table ends on ${tableEnd}`);
 		view.editor.setCursor({ line: 1, ch: 0 });
 		view.editor.cm.focus();
 		view.editor.cm.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
-		await sleep(80);
+		await until(() => (document.activeElement as HTMLElement | null)?.dataset.row === '-1', 2000);
 		if ((document.activeElement as HTMLElement | null)?.dataset.row !== '-1') problems.push('ArrowDown above the table did not go into it');
 		// Away from the table, Tab indents as before.
 		view.editor.setCursor({ line: 0, ch: 0 });
@@ -3253,7 +3284,9 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		if (!view.editor.getLine(0).startsWith('\t') && !view.editor.getLine(0).startsWith('  ')) problems.push('Tab outside a table no longer indents');
 		await view.save();
 		workspace.getLeavesOfType('markdown').find((l) => (l.view as MarkdownView).file === note)?.detach();
-		await sleep(80); // closing a tab is asynchronous: delete the note once it has closed
+		// Closing a tab is asynchronous: delete the note once it has closed.
+		await until(() => !workspace.getLeavesOfType('markdown').some((l) => (l.view as MarkdownView).file === note), 2000);
+		await sleep(80);
 		await vault.delete(note);
 		return problems.length === 0 || problems.join('; ');
 	});
