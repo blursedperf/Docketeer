@@ -38,15 +38,15 @@ export {
 } from './ui';
 export { Plugin, type Command, type CommandContext, type Hotkey, type Modifier, type PluginManifest } from './plugin';
 export { type KeyContext, hotkeyString, eventString, parseHotkey, physicalKey, reservedFor, defaultDocketKey, defaultDocketModeKey } from './keymap';
-export { parsePrefix, caseNameAt, inFootnote, contextPanel, groupResults, mergeResults, clampHeight, DOCKET_PREFIXES } from './docket-logic';
-export { SearchIndex, tokenize, type TextHit, type NameHit, type HeadingHit, type RankContext, type IndexedHeading } from './search-index';
+export { parsePrefix, isPluginPrefix, caseNameAt, inFootnote, contextPanel, groupResults, mergeResults, clampHeight, DOCKET_PREFIXES } from './docket-logic';
+export { SearchIndex, tokenize, parseTextQuery, type TextQuery, type TextHit, type NameHit, type HeadingHit, type RankContext, type IndexedHeading } from './search-index';
 export { SearchService } from './search-service';
 export { findAuthorities, nextOccurrence, normaliseName, JURISDICTIONS, type Authority, type AuthorityKind, type AuthorityDecisions, type Jurisdiction, type Occurrence } from './authorities';
 export { outlineHeadings, moveSection, shiftLevel, isCaseBrief, addBriefField, BRIEF_FIELDS, type OutlineHeading } from './outline-edit';
 export { PRESETS, neighbour, paneRects, resizePane, equalise, zoomChain, type LayoutNode, type Direction, type Preset } from './layout-tree';
 export { CITATION_STYLES, AGLC4, planCitation, footnoteChanges, noteFootnotes, type CitationStyle, type FieldDef, type Source, type SourceKind, type SourceKindDef } from './cite';
 export { Usage, frecency, type UsageEntry } from './usage';
-export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type DocketPanelUI, type DocketAction, type DocketRowOptions, type SearchProvider, type SearchResult, type SearchResults, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
+export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel, type DocketPanelUI, type DocketAction, type DocketRowOptions, type SearchProvider, type SearchResult, type SearchResults, type SearchResultLine, type SearchQuery, type ResultAction, type OpenWhere } from './docket-registry';
 export { canShare, shareFile, exportedNotice } from './share';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';

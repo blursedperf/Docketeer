@@ -87,6 +87,7 @@ export function registerDocket(app: App): { start(): void; get(): Docket | null 
 	};
 	// A plugin asking to show its panel.
 	app.docket.on('show-panel', (id: string) => { if (!docket) return; docket.showPanel(id); });
+	app.docket.on('search', (text: string) => { docket?.open({ query: text }); });
 	app.docket.on('refresh-panel', (id: string) => { if (docket?.isOpen && docket.shownPanelId === id) void docket.refreshPanel(); });
 	// Unit tags changed (a folder marked or unmarked): what the Docket shows follows.
 	app.workspace.on('units-changed', () => { if (docket?.isOpen) void docket.refreshPanel(); });

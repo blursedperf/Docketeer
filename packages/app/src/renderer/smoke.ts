@@ -2408,6 +2408,58 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.delete(file);
 		return problems.length === 0 || problems.join('; ');
 	});
+	await check('Whole-Tree Search: ~ in the Docket finds outlines with their heading, parents and children; -words and "phrases" in the search', async () => {
+		const problems: string[] = [];
+		if (!app.plugins.getPlugin('whole-tree-search')) return `not loaded: ${app.plugins.loadError('whole-tree-search')}`;
+		const file = await vault.create('Outline smoke.md', '# Smoke torts\n\n- Smoke duty of care\n\t- Smokedonoghue v Stevenson\n\t\t- snail in the bottle\n- Smoke breach\n\t- standard of care\n');
+		const other = await vault.create('Outline smoke other.md', '- Smoke duty to negotiate\n');
+		await until(() => app.search.index.has(file.path) && app.search.index.has(other.path), 3000);
+		const prefix = () => document.querySelector('.docket-prefix')?.textContent ?? '';
+		// The command opens the Docket with ~ typed.
+		app.commands.executeCommandById('whole-tree-search:open');
+		await sleep(150);
+		if (input().value !== '~' || !ui()?.isOpen) problems.push(`command: "${input().value}"`);
+		if (!(document.querySelector('.docket-empty')?.textContent ?? '').startsWith('Type words')) problems.push(`empty: ${document.querySelector('.docket-empty')?.textContent}`);
+		await type('~smokedonoghue');
+		await until(() => document.querySelectorAll('.docket-option.mod-tree').length > 0, 2000);
+		if (prefix() !== 'Whole-tree search') problems.push(`label: ${prefix()}`);
+		const lines = [...document.querySelectorAll<HTMLElement>('.docket-option.mod-tree .docket-tree-line')].map((l) => `${l.style.getPropertyValue('--depth')}${l.classList.contains('is-match') ? '*' : ''}${l.textContent}`);
+		if (lines.join('|') !== '0Smoke torts|1Smoke duty of care|2*Smokedonoghue v Stevenson|3snail in the bottle') problems.push(`tree: ${lines.join('|')}`);
+		if (!document.querySelector('.docket-option.mod-tree mark')) problems.push('no highlight');
+		// Spread down a branch: "torts" in the heading, "standard" in a child.
+		await type('~smoke standard');
+		await sleep(150);
+		const spread = [...document.querySelectorAll('.docket-option.mod-tree .docket-tree-line.is-match')].map((e) => e.textContent);
+		if (spread.join('|') !== 'standard of care') problems.push(`spread: ${spread.join('|')}`);
+		// Enter opens the note at the line found.
+		await type('~smokedonoghue');
+		await sleep(150);
+		input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+		await until(() => workspace.getActiveFile() === file, 2000);
+		await sleep(100);
+		const at = workspace.activeEditor?.editor?.getCursor().line;
+		if (at !== 3) problems.push(`opened at line ${at}`);
+		// The cheat sheet lists ~.
+		ui()?.open({ query: '?whole' });
+		await sleep(150);
+		if (!titles().includes('Whole-tree search')) problems.push(`cheat sheet: ${titles().join('|')}`);
+		// The Docket's own full-text search: -word leaves notes out; a "phrase" must appear as written.
+		const inNotes = async (q: string) => {
+			ui()?.open({ query: q });
+			await sleep(200);
+			return [...document.querySelectorAll<HTMLElement>('.docket-group[aria-label="In notes"] .docket-option-title')].map((e) => e.textContent ?? '').filter((t) => t.startsWith('Outline smoke')).sort();
+		};
+		const plain = await inNotes('smoke duty');
+		const without = await inNotes('smoke duty -negotiate');
+		const phrase = await inNotes('"duty to negotiate"');
+		if (plain.length !== 2 || without.join() !== 'Outline smoke' || phrase.join() !== 'Outline smoke other') problems.push(`full text: ${plain.join('+')} / ${without.join('+')} / ${phrase.join('+')}`);
+		ui()?.close(true);
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await sleep(80);
+		await vault.delete(file);
+		await vault.delete(other);
+		return problems.length === 0 || problems.join('; ');
+	});
 	await check('docket: right-click a row or a result for its actions', async () => {
 		const problems: string[] = [];
 		const menuTitles = () => [...document.querySelectorAll<HTMLElement>('.menu .menu-item')].map((i) => i.textContent ?? '');
@@ -3843,12 +3895,13 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await app.setConfig('docketPanel', 'core:outline');
 		const gone = !document.querySelector('.docket') && !ui();
 		const palette = !commands.isAvailable(commands.findCommand('app:command-palette')!); // nothing to open without the Docket
-		// The core's own go; plugins' panels (Tasks) are theirs to keep.
+		// The core's own go; plugins' panels (Tasks) and search providers (~ outlines) are theirs to keep.
 		const core = () => [...app.docket.panels.values()].filter((p) => !p.source?.startsWith('plugin:')).length;
-		const noProviders = app.docket.providers.size === 0 && core() === 0;
+		const coreProviders = () => [...app.docket.providers.values()].filter((p) => !p.source?.startsWith('plugin:')).length;
+		const noProviders = coreProviders() === 0 && core() === 0;
 		await app.setConfig('docket', true);
 		const back = !!ui() && core() === 6;
-		return (gone && palette && noProviders && back) || `gone=${gone} palette=${palette} providers=${app.docket.providers.size} back=${back}`;
+		return (gone && palette && noProviders && back) || `gone=${gone} palette=${palette} providers=${coreProviders()} back=${back}`;
 	});
 }
 

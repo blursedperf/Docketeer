@@ -22,7 +22,11 @@ Mod is Ctrl on Linux and Windows, ⌘ on macOS. All can be changed in Settings �
 ## Prefixes
 
 `>` commands · `#` folders and tags · `/` headings in this note · `?` shortcuts · `@` authorities (Phase 4) ·
-`+` new note (`+Smith v Jones brief`, Enter; → to choose where it goes)
+`+` new note (`+Smith v Jones brief`, Enter; → to choose where it goes) · `~` outlines, with the lines around each
+match (Whole-Tree Search, a built-in plugin)
+
+In the plain search, `"quoted words"` must appear as written and `-word` (or `-"some words"`) leaves out every note
+containing it: `negligence -contract`, `"duty of care" -"no duty"`.
 
 ## Tiling (Phase 5)
 

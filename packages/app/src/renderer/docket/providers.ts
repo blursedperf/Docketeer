@@ -4,7 +4,7 @@
  */
 import {
 	type App, type Command, type OpenWhere, type SearchResult, MarkdownView, Platform, TFile,
-	formatHotkey, fuzzyScore, getAllTags, wordMatch, FileView, type WorkspaceLeaf,
+	formatHotkey, fuzzyScore, getAllTags, isPluginPrefix, wordMatch, FileView, type WorkspaceLeaf,
 } from '@quire/api';
 import type { Docket } from './docket';
 import { countNotes, revealInUnits } from './panels/units';
@@ -355,6 +355,8 @@ export function registerCoreProviders(app: App, ui: Docket): () => void {
 					['Prefixes', '?', 'This cheat sheet'],
 					['Prefixes', '+', 'New note: type its name, Enter'],
 				];
+				// Prefixes plugins add ("~"), under the provider's title.
+				for (const p of docket.providers.values()) for (const pre of p.prefixes.filter(isPluginPrefix)) fixed.push(['Prefixes', pre, p.title]);
 				fixed.forEach(([type, keys, title], i) => {
 					const s = text ? best(text, [title, keys]) : 1000 - i;
 					if (s !== null) out.push({ id: `fixed:${i}`, type, title, icon: 'keyboard', score: s, hint: keys });

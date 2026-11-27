@@ -2,10 +2,21 @@
 
 ## Unreleased
 
+- **Whole-Tree Search, a third built-in plugin: type `~` in the Docket to search your outlines.** Each match shows the
+  heading above it, its parent item and everything nested under it, with the words marked; Enter opens the note at
+  that line (Ctrl+Enter to the right, Shift+Enter inserts a link). Words can be spread down one branch: `~causation
+  breach` finds "breach" under a heading or item that says "causation". Only notes containing every word are read,
+  so it stays quick in a big homebase, and locked notes are never searched. *Whole-tree search…* in the commands
+  opens it; *Settings → Whole-Tree Search* sets how many parent and nested levels show, excluded folders and more. A
+  port of the Obsidian plugin of the same name. In homebases made before this version it is turned on once.
 - **Search: `-word` leaves notes out, and `"quoted words"` must appear as written.** A word with a minus in front was
   treated as one that must appear, the opposite of what it means, and quotes stopped the whole phrase being found.
   Now `negligence -contract` leaves out notes mentioning contracts, and `"duty of care"` finds only those words in
   that order. `-"some words"` leaves out a phrase.
+- For plugins: a search provider can answer its own prefix (one character such as `~`; it is listed in the cheat
+  sheet), say what to show when nothing matches (`empty`), and give results an outline of lines under the title
+  (`SearchResult.tree`). `app.docket.search(text)` opens the Docket with text typed. `parseTextQuery` reads a
+  full-text query.
 
 ## v0.23.0
 

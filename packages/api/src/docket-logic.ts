@@ -6,10 +6,13 @@ import type { SearchResult } from './docket-registry';
 
 export const DOCKET_PREFIXES = ['>', '@', '#', '/', '?', '+'] as const;
 
-/** "> new note" → { prefix: '>', text: 'new note' }. */
-export function parsePrefix(input: string): { prefix: string; text: string } {
+/** A plugin's own prefix: one character that is not a letter, digit or space, and not one of the Docket's. */
+export const isPluginPrefix = (p: string): boolean => p.length === 1 && !/[\p{L}\p{N}\s]/u.test(p) && !(DOCKET_PREFIXES as readonly string[]).includes(p);
+
+/** "> new note" → { prefix: '>', text: 'new note' }. `extra`: prefixes plugins' search providers answer. */
+export function parsePrefix(input: string, extra: readonly string[] = []): { prefix: string; text: string } {
 	const first = input.charAt(0);
-	if ((DOCKET_PREFIXES as readonly string[]).includes(first)) return { prefix: first, text: input.slice(1).trim() };
+	if ((DOCKET_PREFIXES as readonly string[]).includes(first) || (isPluginPrefix(first) && extra.includes(first))) return { prefix: first, text: input.slice(1).trim() };
 	return { prefix: '', text: input.trim() };
 }
 

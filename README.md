@@ -6,10 +6,12 @@ whatever a plugin tries. Plugins add commands, views, CodeMirror 6 editor extens
 
 You can create a generic homebase or an Australian law student friendly homebase at the moment.
 
-Two plugins ship built in: **AGLC4 Citations** (`plugins/aglc4`), a port of
-[obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0, and **Task Docket** (`plugins/task-docket`),
+Three plugins ship built in: **AGLC4 Citations** (`plugins/aglc4`), a port of
+[obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0; **Task Docket** (`plugins/task-docket`),
 a port of [obsidian-task-docket](https://github.com/blursedperf/obsidian-task-docket) 1.1.0 that shows every task in
-the homebase in a Tasks panel in the Docket.
+the homebase in a Tasks panel in the Docket; and **Whole-Tree Search** (`plugins/whole-tree-search`), a port of
+[obsidian-whole-tree-search](https://github.com/blursedperf/obsidian-whole-tree-search) 1.2.3: type `~` in the Docket
+to find words in your outlines, each match with the heading above it, its parents and what is nested under it.
 
 I love Obsidian but I'm always using my laptop and the side bar solution takes up too much realestate and I wanted a keyboard first solution that would allowing me to barely have to take my hands of the keyboard while creating and placing notes, editing, searching etc. Everything is reached from the keyboard through **the Docket**, a tray that drops from the top of the window
 (**Super+D**: ⌘D on macOS, Ctrl+P on Windows): search across notes, commands, and panels for authorities, the outline, units
@@ -66,6 +68,7 @@ choose where.
 | `packages/app` | Electron shell: `src/main` (main process, preload), `src/renderer` (core UI, theme, smoke test) |
 | `plugins/aglc4` | AGLC4 Citations |
 | `plugins/task-docket` | Task Docket: the Tasks panel |
+| `plugins/whole-tree-search` | Whole-Tree Search: `~` in the Docket searches outlines |
 | `scripts/offline-audit.mjs` | fails the build if anything shipped could reach the network or run generated code |
 
 ## Themes

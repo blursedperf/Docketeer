@@ -1019,7 +1019,14 @@ input.docket-input:focus { box-shadow: none; }
 .docket-foot { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-1) var(--space-3); font-family: var(--font-chrome); font-size: var(--text-xs); color: var(--text-faint); background: var(--doom-base0); border-top: var(--border-width) solid var(--doom-border-subtle); }
 .docket-resize { position: absolute; left: 0; right: 0; bottom: -3px; height: 6px; cursor: row-resize; z-index: 1; }
 body.is-resizing-docket { cursor: row-resize; user-select: none; }
-.docket-option-detail mark { color: var(--doom-yellow, var(--text-normal)); background: transparent; font-weight: var(--font-bold); }
+/* A result with its outline around it (SearchResult.tree): the row grows to fit its lines. */
+.docket-option.mod-tree { align-items: flex-start; }
+.docket-option.mod-tree .docket-option-icon { padding-top: 2px; }
+.docket-option-tree { display: flex; flex-direction: column; margin-top: 2px; font-size: var(--text-xs); color: var(--text-muted); }
+.docket-tree-line { padding-left: calc(var(--depth, 0) * var(--space-3)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.docket-tree-line.is-match { color: var(--text-normal); }
+.docket-tree-line.is-more { color: var(--text-faint); font-style: italic; }
+.docket-tree-line mark, .docket-option-detail mark { color: var(--doom-yellow, var(--text-normal)); background: transparent; font-weight: var(--font-bold); }
 .docket-option.mod-more .docket-option-title { font-size: var(--text-xs); color: var(--text-muted); }
 .docket-option.mod-more.is-selected .docket-option-title { color: inherit; }
 

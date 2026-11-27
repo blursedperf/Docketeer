@@ -7,7 +7,7 @@ import type { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import {
 	type App, type DocketPanel, type DocketPanelUI, type OpenWhere, type SearchResult,
-	MarkdownView, Menu, Notice, Platform, TFile, clampHeight, contextPanel, formatHotkey, groupResults, mergeResults, parsePrefix, setIcon, topModal,
+	MarkdownView, Menu, Notice, Platform, TFile, clampHeight, contextPanel, formatHotkey, groupResults, isPluginPrefix, mergeResults, parsePrefix, setIcon, topModal,
 } from '@quire/api';
 
 import { noteActions } from './actions';
@@ -518,8 +518,8 @@ export class Docket {
 
 	/** Show the panel (empty input) or search the providers for the prefix. */
 	async update(): Promise<void> {
-		const q = parsePrefix(this.inputEl.value);
-		this.prefixEl.setText(this.only ?? PREFIX_LABEL[q.prefix] ?? '');
+		const q = parsePrefix(this.inputEl.value, this.pluginPrefixes());
+		this.prefixEl.setText(this.only ?? PREFIX_LABEL[q.prefix] ?? this.providerFor(q.prefix)?.title ?? '');
 		this.prefixEl.toggleClass('is-filtered', q.prefix !== '' || !!this.only);
 		if (this.actions) { this.renderActions(); return; }
 		if (this.custom) {
@@ -569,6 +569,20 @@ export class Docket {
 		this.renderResults(groups, q.prefix);
 	}
 
+	/** Prefixes plugins' search providers answer ("~"), besides the Docket's own. */
+	private pluginPrefixes(): string[] {
+		return [...this.app.docket.providers.values()].flatMap((p) => p.prefixes.filter(isPluginPrefix));
+	}
+
+	/** The plugin provider answering a prefix of its own, for its label and what to say with nothing found. */
+	private providerFor(prefix: string) {
+		return isPluginPrefix(prefix) ? [...this.app.docket.providers.values()].find((p) => p.prefixes.includes(prefix)) : undefined;
+	}
+
+	private emptyText(prefix: string): string {
+		return EMPTY[prefix] ?? this.providerFor(prefix)?.empty ?? 'No matches.';
+	}
+
 	private renderResults(groups: ReturnType<typeof groupResults>, prefix: string): void {
 		this.panelEl.setAttribute('hidden', '');
 		this.resultsEl.removeAttribute('hidden');
@@ -584,16 +598,36 @@ export class Docket {
 			const shown = g.items.filter((r) => !r.id.startsWith('docket:more:')).length;
 			if (g.total > shown) head.createSpan({ cls: 'docket-group-more', text: `${shown} of ${g.total}` });
 			for (const r of g.items) {
-				const el = this.renderOption(group, i++, r.title, r.detail, r.icon, r.hint, r.detailRanges);
+				const el = this.renderOption(group, i++, r.title, r.tree ? undefined : r.detail, r.icon, r.hint, r.detailRanges);
+				if (r.tree) this.renderTree(el, r.tree);
 				if (r.id.startsWith('docket:more:')) el.addClass('mod-more');
 				if (r.reorder) this.reorderable(el, r);
 			}
 		}
-		if (!this.items.length) this.resultsEl.createDiv({ cls: 'docket-empty', text: EMPTY[prefix] ?? 'No matches.' });
+		if (!this.items.length) this.resultsEl.createDiv({ cls: 'docket-empty', text: this.emptyText(prefix) });
 		this.resultsEl.scrollTop = 0;
 		this.select(0, false); // the first row is in view: no need to make the browser lay out to scroll
 		const n = this.items.length;
-		this.liveEl.setText(n ? `${n} result${n === 1 ? '' : 's'}` : EMPTY[prefix] ?? 'No matches.');
+		this.liveEl.setText(n ? `${n} result${n === 1 ? '' : 's'}` : this.emptyText(prefix));
+	}
+
+	/** A result's outline lines under its title, each indented by its depth, the matching line marked. */
+	private renderTree(opt: HTMLElement, lines: NonNullable<SearchResult['tree']>): void {
+		opt.addClass('mod-tree');
+		const box = opt.querySelector('.docket-option-text')!.createDiv({ cls: 'docket-option-tree' });
+		for (const l of lines.slice(0, 40)) {
+			const el = box.createDiv({ cls: `docket-tree-line${l.match ? ' is-match' : ''}` });
+			el.style.setProperty('--depth', String(Math.max(0, Math.min(l.depth, 12))));
+			let at = 0;
+			for (const [a, b] of [...(l.ranges ?? [])].sort((x, y) => x[0] - y[0])) {
+				if (a < at || b > l.text.length) continue;
+				el.appendText(l.text.slice(at, a));
+				el.createEl('mark', { text: l.text.slice(a, b) });
+				at = b;
+			}
+			el.appendText(l.text.slice(at));
+		}
+		if (lines.length > 40) box.createDiv({ cls: 'docket-tree-line is-more', text: `${lines.length - 40} more lines` });
 	}
 
 	private renderOption(parent: HTMLElement, i: number, title: string, detail?: string, icon?: string, hint?: string, ranges?: [number, number][]): HTMLElement {

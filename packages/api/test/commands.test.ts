@@ -157,6 +157,10 @@ import { caseNameAt, clampHeight, contextPanel, groupResults, inFootnote, parseP
 describe('docket logic', () => {
 	it('reads prefixes', () => {
 		expect(parsePrefix('> new note')).toEqual({ prefix: '>', text: 'new note' });
+		// A plugin's own prefix counts only when a provider answers it; letters, digits and the Docket's own are not plugins'.
+		expect(parsePrefix('~duty breach', ['~'])).toEqual({ prefix: '~', text: 'duty breach' });
+		expect(parsePrefix('~duty', [])).toEqual({ prefix: '', text: '~duty' });
+		expect(parsePrefix('xduty', ['x'])).toEqual({ prefix: '', text: 'xduty' });
 		expect(parsePrefix('mabo')).toEqual({ prefix: '', text: 'mabo' });
 		expect(parsePrefix('?')).toEqual({ prefix: '?', text: '' });
 	});

@@ -17,6 +17,11 @@ export interface SearchResult {
 	detail?: string;
 	/** Parts of `detail` to highlight (the matched words in a line of text). */
 	detailRanges?: [number, number][];
+	/**
+	 * Lines shown under the title in place of `detail`, each indented by its `depth`: a match with the outline
+	 * around it. The row grows to fit them. `match` marks the line found; `ranges` highlight within a line.
+	 */
+	tree?: SearchResultLine[];
 	icon?: string;
 	/** Higher is better; providers score their own results. */
 	score?: number;
@@ -34,12 +39,14 @@ export interface SearchResult {
 	reorder?: { group: string; index: number; move(to: number): unknown };
 }
 
+export interface SearchResultLine { text: string; depth: number; match?: boolean; ranges?: [number, number][] }
+
 export interface SearchQuery {
 	/** The text after any prefix. */
 	text: string;
 	/** Only this group is wanted ("show all"): providers may return more of it. */
 	only?: string;
-	/** "", ">", "@", "#", "/" or "?". */
+	/** "", ">", "@", "#", "/", "?", "+", or a plugin's own prefix. */
 	prefix: string;
 }
 
@@ -48,8 +55,13 @@ export type SearchResults = SearchResult[] | { results: SearchResult[]; totals?:
 export interface SearchProvider {
 	id: string;
 	title: string;
-	/** Prefixes it answers ("" is the unprefixed search). */
+	/**
+	 * Prefixes it answers ("" is the unprefixed search). A plugin may add its own: one character that is not a
+	 * letter, digit or one of the Docket's ("~"); it is then listed in the cheat sheet (`?`) under its title.
+	 */
 	prefixes: string[];
+	/** What the Docket says when this provider's prefix has nothing yet, or no matches ("Type words to …"). */
+	empty?: string;
 	/**
 	 * Results for the query. A provider may return only its best results with `totals` saying how many
 	 * there are in each group, so "show all" can say "12 of 340" without building them all.
@@ -150,6 +162,9 @@ export class DocketRegistry extends Events {
 
 	/** Open the Docket on the panel `id` (a plugin's full id: "plugin-id:panel"). */
 	showPanel(id: string): void { this.trigger('show-panel', id); }
+
+	/** Open the Docket with `text` in its search ("~" for a plugin's own prefix, ready to type after). */
+	search(text: string): void { this.trigger('search', text); }
 
 	/** Draw the panel `id` again if it is the one shown (its data changed). */
 	refreshPanel(id: string): void { this.trigger('refresh-panel', id); }
