@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.22.0
 
 - **A narrow window, such as an iPhone, shows one pane at a time**: the note fills the screen, its tabs are behind
   *Open tabs* (the stacked-layers button at the top right: go to a tab, close one, or open a new one), and a swipe

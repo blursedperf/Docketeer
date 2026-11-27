@@ -68,7 +68,7 @@ node scripts/shots-diff.mjs <dir> --platform linux   # compare with test/visual/
 5. Tag `vX.Y.Z` (annotated, "Docketeer X.Y.Z: <summary>") and push `master` and the tag. The tag runs
    `.github/workflows/release.yml`: tests, installers for Linux (x64, arm64) and macOS, and the GitHub release.
 
-Latest release: **0.21.0** (the new name, Docketeer). Ask the owner before pushing tags or releasing.
+Latest release: **0.22.0** (Docketeer on the iPhone, from Xcode; long titles wrap). Ask the owner before pushing tags or releasing.
 
 ## Mobile port (iPhone and iPad)
 
@@ -89,7 +89,7 @@ State on 2026-11-27:
   iPhone screenshots: `npm run shots:ios -w @quire/ios`, baselines in `test/visual/ios/`). Its exit check is the
   owner using it daily on the iPhone for a week. **Face ID unlock is designed in `docs/docket/locking.md` and
   waits for the owner's sign-off: do not build it before then.**
-- `master` is at the 0.21.0 release; `ios-scaffold` has the work since. Fast-forward `master` when the owner asks.
+- `master` is at the 0.22.0 release, with `ios-scaffold` merged into it. Fast-forward `master` when the owner asks.
 - Debug builds take `-openExample` (opens the example homebase); temporary `console.warn` lines reach the system
   log through the console relay, which is how layout was measured on the simulators.
 - The native tasks need **macOS with Xcode**. On Linux, do the TypeScript tasks only and list what is left.
