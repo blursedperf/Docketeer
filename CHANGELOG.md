@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.24.0
 
 - **Whole-Tree Search, a third built-in plugin: type `~` in the Docket to search your outlines.** Each match shows the
   heading above it, its parent item and everything nested under it, with the words marked; Enter opens the note at
