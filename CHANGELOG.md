@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.23.0
 
 - **Save a homebase's panels as a template, and start new homebases from it**: *Save this homebase's panels as a
   template…* (in the Docket's commands, or at the end of *Arrange the Docket's panels*) keeps your own panels, their

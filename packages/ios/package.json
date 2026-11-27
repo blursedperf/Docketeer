@@ -1,6 +1,6 @@
 {
   "name": "@quire/ios",
-  "version": "0.22.1",
+  "version": "0.23.0",
   "private": true,
   "type": "module",
   "description": "Docketeer for iPhone and iPad: the web side of the native shell (docs/mobile/PLAN.md).",
