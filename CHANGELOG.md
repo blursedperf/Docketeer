@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.1
 
 - **Pomodoro Flashcards follows your density setting.** The study view and the New card dialog now use the app's
   sizes, so Compact, Comfortable and Spacious (Settings → Appearance) tighten or open up their padding, buttons and
