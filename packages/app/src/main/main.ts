@@ -290,8 +290,8 @@ function registerIpc() {
 		const r = await dialog.showOpenDialog(win!, { title: create ? 'Create a homebase in a folder' : 'Open a folder as a homebase', properties: ['openDirectory', 'createDirectory'] });
 		const p = r.filePaths[0];
 		if (r.canceled || !p) return false;
-		// A new homebase starts with the layout chosen (Generic writes its panels; Legal is the panels as they come).
-		if (create && layout === 'generic') await applyHomebaseLayout(p, 'generic');
+		// A new homebase starts with the layout chosen (Generic or a template writes its panels; Legal is the panels as they come).
+		if (create && (layout === 'generic' || (!!layout && typeof layout === 'object'))) await applyHomebaseLayout(p, layout as Parameters<typeof applyHomebaseLayout>[1]);
 		await openVaultAndReload(p);
 		return true;
 	});

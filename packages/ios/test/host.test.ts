@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { isConflict } from '@quire/api';
 import { createHost, fromBase64, hostError, NativeEvents, nativeFs, toBase64, type HostInfo } from '../web/host';
-import { genericPanels } from '../../app/src/renderer/docket/panels-model';
+import { genericPanels, parsePanelsConfig } from '../../app/src/renderer/docket/panels-model';
 
 const info: HostInfo = { platform: 'ios', appVersion: '0.20.0', formFactor: 'tablet', vault: { path: 'iCloud Drive/Law', name: 'Law' } };
 
@@ -126,10 +126,14 @@ describe('createHost', () => {
 		await host.app.chooseVault(false);
 		await host.app.chooseVault(true, 'legal');
 		await host.app.chooseVault(true, 'generic');
+		const panels = { panels: [{ id: 'week', title: 'My week', elements: [{ type: 'files', folder: 'Torts' }] }], order: [], hidden: ['core:cite'], junk: 1 };
+		await host.app.chooseVault(true, { panels: JSON.stringify(panels), folders: ['Torts', '../up', '.quire'] });
 		expect(calls.slice(1)).toEqual([
 			['app:openVault', ['iCloud Drive/Law']], ['app:forgetVault', ['iCloud Drive/Old']], ['app:openExample', []],
 			['app:chooseVault', [false, 'legal', null]], ['app:chooseVault', [true, 'legal', null]],
 			['app:chooseVault', [true, 'generic', JSON.stringify(genericPanels(), null, '\t')]],
+			// A template: its panels read again (only what Docketeer understands), and only safe folders.
+			['app:chooseVault', [true, 'template', JSON.stringify(parsePanelsConfig(JSON.stringify(panels)), null, '\t'), ['Torts']]],
 		]);
 		expect(await host.app.fonts!()).toEqual([]);
 	});

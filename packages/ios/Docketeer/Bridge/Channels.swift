@@ -154,8 +154,8 @@ final class Channels {
 
 	/**
 	 * Answer a channel that shows something first (Channels.later), on the main thread. app:chooseVault: the folder
-	 * picker; the folder becomes the open homebase, a new Generic one gets the panels the page sent (written only
-	 * if it has none), and the page reloads. Answers false if the picker was cancelled.
+	 * picker; the folder becomes the open homebase, a new Generic one or one from a template gets the panels the page
+	 * sent (written only if it has none) and a template's folders, and the page reloads. Answers false if the picker was cancelled.
 	 */
 	func answerLater(_ channel: String, _ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
 		switch channel {
@@ -221,6 +221,7 @@ final class Channels {
 	private func chooseLater(_ args: [Any], _ reply: @escaping (Result<Any, Error>) -> Void) {
 		let create = args.first as? Bool ?? false
 		let panels = args.count > 2 ? args[2] as? String : nil
+		let folders = (args.count > 3 ? args[3] as? [String] : nil).map(Self.safeFolders) ?? []
 		if let panels, panels.utf8.count > Self.maxPanelsJSON || (try? JSONSerialization.jsonObject(with: Data(panels.utf8))) == nil {
 			reply(.failure(BridgeError("The panels for the new homebase are not valid")))
 			return
@@ -232,6 +233,8 @@ final class Channels {
 				try self.homebases.add(folder: url)
 				if create, let panels, let fs = self.homebases.fs, !(try fs.exists(".quire/panels.json")) {
 					try fs.write(".quire/panels.json", Data(panels.utf8))
+					// A template's folders: made inside the homebase only (fs refuses any path outside it).
+					for folder in folders where !(try fs.exists(folder)) { try fs.mkdir(folder) }
 				}
 				reply(.success(true))
 				self.afterOpening()
@@ -239,6 +242,19 @@ final class Channels {
 				reply(.failure(error))
 			}
 		}
+	}
+
+	/** A template's folders that are safe to make: relative, no hidden, "." or ".." parts (as safeFolders on the page). */
+	static func safeFolders(_ list: [String]) -> [String] {
+		var out: [String] = []
+		for f in list.prefix(100) {
+			let p = f.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+			let parts = p.split(separator: "/", omittingEmptySubsequences: false)
+			guard !p.isEmpty, !f.hasPrefix("/"), p.count <= 500, !p.contains("\\"), !p.contains(":"),
+				parts.allSatisfy({ !$0.trimmingCharacters(in: .whitespaces).isEmpty && !$0.hasPrefix(".") }), !out.contains(p) else { continue }
+			out.append(p)
+		}
+		return out
 	}
 
 	/** The Files app's address for a folder on this device: shareddocuments:// and its path. */

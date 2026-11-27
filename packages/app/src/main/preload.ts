@@ -57,7 +57,7 @@ contextBridge.exposeInMainWorld('quire', {
 		getConfig: () => call('app:getConfig'),
 		setConfig: (patch: Record<string, unknown>) => call('app:setConfig', patch),
 		recentVaults: () => call('app:recent'),
-		chooseVault: (create?: boolean, layout?: 'legal' | 'generic') => call('app:chooseVault', !!create, layout ?? 'legal'),
+		chooseVault: (create?: boolean, layout?: 'legal' | 'generic' | { panels: string; folders?: string[] }) => call('app:chooseVault', !!create, layout ?? 'legal'),
 		openVault: (p: string) => call('app:openVault', p),
 		forgetVault: (p: string) => call('app:forgetVault', p),
 		openExample: () => call<string>('app:openExample'),

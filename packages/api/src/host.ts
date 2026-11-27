@@ -99,6 +99,9 @@ export interface PluginManifestData {
 /** What the app runs on: desktop (left out), an iPad, or an iPhone. The layout follows the window's width, not this. */
 export type FormFactor = 'desktop' | 'tablet' | 'phone';
 
+/** How a new homebase's Docket starts (see HostBridge.app.chooseVault). */
+export type NewHomebaseLayout = 'legal' | 'generic' | { panels: string; folders?: string[] };
+
 export interface HostBridge {
 	platform: string;
 	appVersion: string;
@@ -119,9 +122,10 @@ export interface HostBridge {
 		openExample?(): Promise<string>;
 		/**
 		 * Ask for a folder and open it as a homebase (reloads the window). Creating one, `layout` is how its Docket
-		 * starts: 'legal' (the panels as they come) or 'generic' (Files and Folders, Homebase, Layout).
+		 * starts: 'legal' (the panels as they come), 'generic' (Files and Folders, Homebase, Layout), or a saved
+		 * template: `panels`, the text of its `.quire/panels.json`, and `folders` to make (homebase paths).
 		 */
-		chooseVault(create?: boolean, layout?: 'legal' | 'generic'): Promise<boolean>;
+		chooseVault(create?: boolean, layout?: NewHomebaseLayout): Promise<boolean>;
 		openVault(path: string): Promise<boolean>;
 		showItemInFolder(path: string): Promise<void>;
 		/** Offer a homebase file to other apps: the share sheet (iPhone, iPad). Desktop leaves it out. */

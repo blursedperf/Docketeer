@@ -376,6 +376,25 @@ final class ChannelsTests: XCTestCase {
 		XCTAssertThrowsError(try result?.get())
 	}
 
+	func testANewHomebaseFromATemplateGetsItsPanelsAndOnlySafeFolders() throws {
+		let folder = root.appendingPathComponent("Picked/Semester")
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		let c = channels()
+		c.chooseFolder = { done in done(folder) }
+		let panels = #"{"panels":[],"order":[],"hidden":["core:cite"]}"#
+		var result: Result<Any, Error>?
+		c.answerLater("app:chooseVault", [true, "template", panels, ["Torts/Cases", "Contracts", "../Outside", "/abs", ".quire/x", "a/./b"]]) { result = $0 }
+		XCTAssertEqual(try result?.get() as? Bool, true)
+		XCTAssertEqual(try String(contentsOf: folder.appendingPathComponent(".quire/panels.json"), encoding: .utf8), panels)
+		var isDir: ObjCBool = false
+		XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("Torts/Cases").path, isDirectory: &isDir) && isDir.boolValue)
+		XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("Contracts").path))
+		XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("Picked/Outside").path))
+		XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent(".quire/x").path))
+		XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent("a").path))
+		XCTAssertEqual(Channels.safeFolders(["Torts", "Torts/", "a\\b", "C:x", " "]), ["Torts"])
+	}
+
 	func testThePageSaysWhenToCoverTheWindowInTheBackground() throws {
 		let c = channels()
 		XCTAssertFalse(c.coverInBackground)

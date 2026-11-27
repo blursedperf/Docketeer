@@ -33,8 +33,16 @@ Creating a homebase (on the welcome screen, or *Create a new homebase…*) asks 
 - **Legal**: the panels as Docketeer comes (Authorities, Outline, Units, Cite, Homebase, Layout).
 - **Generic**: three panels, *Files and Folders* (the whole homebase as a tree), Homebase and Layout. The others are
   hidden, not gone: *Arrange the Docket's panels* shows them again. This is written to `.quire/panels.json` in the
-  new homebase (a folder that already has one keeps it). A hidden panel keeps
-working where something opens it directly (the header's subject › topic opens Units even when Units is hidden).
+  new homebase (a folder that already has one keeps it).
+- **Your templates**: *Save this homebase's panels as a template…* (a command, and a row near the end of *Arrange
+  the Docket's panels*) keeps this homebase's `.quire/panels.json` under a name, in the app's settings
+  (`homebaseTemplates`), so every homebase can use it. Creating a homebase offers each template after Legal and
+  Generic; choosing one writes its panels into the new folder (again, not over a panels file already there) and makes
+  the folders its file trees and folder note lists show, so they are not empty. Only folders inside the homebase are
+  made, never hidden ones. *Remove a homebase template…* deletes one; homebases made from it are not changed.
+
+A hidden panel keeps working where something opens it directly (the header's subject › topic opens Units even when
+Units is hidden).
 
 ## The file
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Save a homebase's panels as a template, and start new homebases from it**: *Save this homebase's panels as a
+  template…* (in the Docket's commands, or at the end of *Arrange the Docket's panels*) keeps your own panels, their
+  order and which are hidden, under a name. *Create a new homebase…* and the welcome screen then offer it after Legal
+  and Generic, and the new homebase also gets the folders its panels show (a *Torts* file tree makes a *Torts*
+  folder). Saving under a name already used asks before replacing it; *Remove a homebase template…* takes one off the
+  list, and homebases made from it keep their panels. Templates are kept with the app's settings, not in a homebase.
+  For plugins: `host.app.chooseVault(true, layout)` also takes `{ panels, folders }` (`NewHomebaseLayout`).
 - **The status bar says “docketeer”, not “quire”**, at the bottom left when no note is open (the app's old name).
 
 ## v0.22.1

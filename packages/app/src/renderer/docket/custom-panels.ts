@@ -16,6 +16,7 @@ import {
 	type CustomPanel, type NoteRule, type PanelElement, type PanelsConfig, describeElement, elementHeading, moveItem, newPanelId, panelId, parsePanelsConfig,
 } from './panels-model';
 import { draggablePath } from './drag';
+import { promptSaveTemplate } from '../homebases';
 
 const ELEMENT_ICONS: Record<PanelElement['type'], string> = { commands: 'terminal', files: 'folder-tree', notes: 'list', section: 'panel-top' };
 
@@ -160,6 +161,7 @@ export function registerCustomPanels(app: App, docket: Docket): () => void {
 			return it;
 		});
 		items.push(item('arrange:new', 'Change', 'New panel…', 'plus', 'Build one from commands, file trees, note lists and sections', newPanel));
+		items.push(item('arrange:template', 'Change', "Save these panels as a template…", 'layout-list', 'Offered when you create a new homebase', () => promptSaveTemplate(app)));
 		if (config.order.length || config.hidden.length) items.push(item('arrange:reset', 'Change', 'Show every panel in its usual order', 'rotate-ccw', 'Your own panels stay', () => save({ ...config, order: [], hidden: [] }).then(arrange)));
 		docket.showList("Arrange the Docket's panels", items);
 	};

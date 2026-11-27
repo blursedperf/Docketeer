@@ -50,7 +50,7 @@ export { DocketRegistry, arrangePanels, type PanelArrangement, type DocketPanel,
 export { canShare, shareFile, exportedNotice } from './share';
 export { App, Commands, PluginManager, DEFAULT_CONFIG, formatHotkey, type AppConfig } from './app';
 export { SettingsModal } from './settings-modal';
-export { getHost, isConflict, type FormFactor, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostConflict, type HostPluginInfo, type PluginManifestData } from './host';
+export { getHost, isConflict, type FormFactor, type HostBridge, type HostFs, type HostStat, type HostEntry, type HostFsEvent, type HostConflict, type NewHomebaseLayout, type HostPluginInfo, type PluginManifestData } from './host';
 export { baseExtensions, quireHighlight, linkAt } from './cm-setup';
 export { addProperty, editFrontmatter } from './properties-editor';
 export { InputSuggest } from './input-suggest';

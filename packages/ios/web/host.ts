@@ -7,7 +7,7 @@
  * Bytes cross the bridge as base64. Large media never does: the page loads it from quire://app/vault/.
  */
 import type { HostBridge, HostConflict, HostFs, HostFsEvent, HostPluginInfo, HostStat } from '@quire/api';
-import { genericPanels } from '../../app/src/renderer/docket/panels-model';
+import { genericPanels, parsePanelsConfig, safeFolders } from '../../app/src/renderer/docket/panels-model';
 
 /** Ask the native shell: resolves with its answer, rejects with its error. */
 export type Native = (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -148,8 +148,15 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 			recentVaults: () => call('app:recent'),
 			forgetVault: (path) => call('app:forgetVault', path),
 			openExample: () => call('app:openExample'),
-			// Native shows the folder picker; a new Generic homebase gets its panels, written by native as on desktop.
-			chooseVault: (create, layout) => call('app:chooseVault', !!create, layout ?? 'legal', create && layout === 'generic' ? JSON.stringify(genericPanels(), null, '\t') : null),
+			// Native shows the folder picker; a new Generic homebase gets its panels, written by native as on desktop. A
+			// template sends its panels (read again, so only what Docketeer understands) and the folders to make.
+			chooseVault: (create, layout) => {
+				if (create && layout && typeof layout === 'object') {
+					return call('app:chooseVault', true, 'template', JSON.stringify(parsePanelsConfig(layout.panels), null, '\t'), safeFolders(layout.folders));
+				}
+				const l = typeof layout === 'string' ? layout : 'legal';
+				return call('app:chooseVault', !!create, l, create && l === 'generic' ? JSON.stringify(genericPanels(), null, '\t') : null);
+			},
 			openVault: (path) => call('app:openVault', path),
 			showItemInFolder: (path) => call('app:showItemInFolder', path),
 			shareFile: (path) => call('app:shareFile', path),

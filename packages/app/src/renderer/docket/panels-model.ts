@@ -158,3 +158,78 @@ export function genericPanels(): PanelsConfig {
 		hidden: ['core:authorities', 'core:outline', 'core:units', 'core:cite'],
 	};
 }
+
+// -------------------------------------------------------------------------------------------------
+// Homebase templates: a homebase's panels, saved by name to start new homebases with
+
+/**
+ * A panel setup saved from a homebase ("Save this homebase's panels as a template…"), offered after Legal and Generic
+ * when a homebase is created. Kept in the app's settings (`homebaseTemplates`), not in any homebase.
+ */
+export interface HomebaseTemplate { name: string; panels: PanelsConfig }
+
+/** The most templates kept, and the longest name. */
+export const MAX_TEMPLATES = 50;
+const MAX_NAME = 80;
+/** The most folders a template makes in a new homebase. */
+const MAX_FOLDERS = 100;
+
+/** Read the setting. Anything not understood is left out; names are unique (case ignored), the first kept. */
+export function parseTemplates(v: unknown): HomebaseTemplate[] {
+	const out: HomebaseTemplate[] = [];
+	for (const t of Array.isArray(v) ? v : []) {
+		if (!t || typeof t !== 'object') continue;
+		const r = t as Record<string, unknown>;
+		const name = str(r.name) ? r.name.trim().slice(0, MAX_NAME) : '';
+		if (!name || out.some((o) => o.name.toLowerCase() === name.toLowerCase())) continue;
+		out.push({ name, panels: parsePanelsConfig(JSON.stringify(r.panels ?? {})) });
+		if (out.length >= MAX_TEMPLATES) break;
+	}
+	return out;
+}
+
+/** The list with `t` in it: replacing one of the same name (case ignored) where it was, or added at the end. */
+export function withTemplate(list: HomebaseTemplate[], t: HomebaseTemplate): HomebaseTemplate[] {
+	const i = list.findIndex((o) => o.name.toLowerCase() === t.name.toLowerCase());
+	return i < 0 ? [...list, t] : list.map((o, j) => (j === i ? t : o));
+}
+
+/**
+ * Folders, as homebase paths, that are safe to make in a new homebase: relative, no "." or ".." parts, nothing hidden
+ * (".quire"), no backslashes or drive letters. Others are left out.
+ */
+export function safeFolders(v: unknown): string[] {
+	const out: string[] = [];
+	for (const f of Array.isArray(v) ? v : []) {
+		if (!str(f)) continue;
+		const p = f.replace(/^\/+|\/+$/g, '');
+		if (!p || p.length > 500 || /[\\:\0]/.test(p) || f.startsWith('/')) continue;
+		if (p.split('/').some((s) => !s.trim() || s.startsWith('.'))) continue;
+		if (!out.includes(p)) out.push(p);
+		if (out.length >= MAX_FOLDERS) break;
+	}
+	return out;
+}
+
+/** The folders a setup's panels show (file trees, notes in a folder): made in a new homebase so they are not empty. */
+export function templateFolders(cfg: PanelsConfig): string[] {
+	const folders: string[] = [];
+	for (const p of cfg.panels) {
+		for (const e of p.elements) {
+			if (e.type === 'files' && e.folder) folders.push(e.folder);
+			if (e.type === 'notes' && e.rule.kind === 'folder' && e.rule.folder) folders.push(e.rule.folder);
+		}
+	}
+	return safeFolders(folders);
+}
+
+/** One line about a template, for the list it is chosen from ("Your panels: My week, Torts · 2 hidden · makes 1 folder"). */
+export function describeTemplate(t: HomebaseTemplate): string {
+	const parts: string[] = [];
+	const own = t.panels.panels.map((p) => p.title);
+	parts.push(own.length ? `Your panels: ${own.join(', ')}` : 'The built-in panels');
+	if (t.panels.hidden.length) parts.push(`${t.panels.hidden.length} hidden`);
+	const n = templateFolders(t.panels).length;
+	if (n) parts.push(`makes ${n} ${n === 1 ? 'folder' : 'folders'}`);
+	return parts.join(' · ');
+}

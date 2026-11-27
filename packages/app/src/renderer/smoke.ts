@@ -13,6 +13,7 @@ import { applyKeyboard } from './layout-mode';
 import { TabsModal } from './compact';
 import { AFTER_LIFT, HOLD, LongPress, holdOpensMenu } from './long-press';
 import { genericPanels } from './docket/panels-model';
+import { createFromTemplate, createHomebase, loadTemplates, removeTemplate, saveTemplate } from './homebases';
 import { openFileIn } from './docket/providers';
 
 const splitCells = (line: string) => line.trim().replace(/^\||\|$/g, '').split('|');
@@ -424,6 +425,38 @@ export async function runSmoke(app: App): Promise<void> {
 		const missing = want.filter((w) => !text().includes(w));
 		(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
 		return (shown && missing.length === 0) || `missing: ${missing.join(', ')}`;
+	});
+	await check("homebase templates: this homebase's panels saved by name, offered when creating one, with the folders they show", async () => {
+		const problems: string[] = [];
+		const file = '.quire/panels.json';
+		const before = (await vault.adapter.exists(file)) ? await vault.adapter.read(file) : null;
+		const settingBefore = (await app.host.app.getConfig()).homebaseTemplates;
+		try {
+			const panels = { panels: [{ id: 'semester', title: 'Semester', elements: [{ type: 'files', folder: 'Template smoke/Cases' }] }], order: ['custom:semester'], hidden: ['core:cite'] };
+			await vault.adapter.write(file, JSON.stringify(panels));
+			await saveTemplate(app, 'Smoke template');
+			await saveTemplate(app, 'smoke TEMPLATE'); // the same name: replaced, not added
+			const saved = (await loadTemplates(app.host)).filter((t) => t.name.toLowerCase() === 'smoke template');
+			if (saved.length !== 1 || JSON.stringify(saved[0]!.panels) !== JSON.stringify(panels)) problems.push(`saved: ${JSON.stringify(saved)}`);
+			// Creating a homebase lists it after Legal and Generic; choosing it sends its panels and folders (to a
+			// stand-in for the host, as the real one would show the folder picker).
+			createHomebase(app);
+			const text = () => document.querySelector('.docket')?.textContent ?? '';
+			if (!(await until(() => app.docketOpen && text().includes('smoke TEMPLATE'), 3000))) problems.push(`not listed: ${text().slice(0, 200)}`);
+			for (const w of ['Legal', 'Generic', 'Your panels: Semester · 1 hidden · makes 1 folder', 'Remove a template…']) if (!text().includes(w)) problems.push(`missing ${w}`);
+			const chosen: unknown[] = [];
+			const stand = { app: { chooseVault: async (...args: unknown[]) => { chosen.push(args); return false; } } } as unknown as Pick<HostBridge, 'app'>;
+			await createFromTemplate(stand, saved[0]!);
+			const [create, layout] = (chosen[0] as [boolean, { panels: string; folders: string[] }] | undefined) ?? [];
+			if (create !== true || !layout || JSON.parse(layout.panels).panels?.[0]?.id !== 'semester' || layout.folders.join() !== 'Template smoke/Cases') problems.push(`chose ${JSON.stringify(chosen)}`);
+			await removeTemplate(app, 'Smoke Template');
+			if ((await loadTemplates(app.host)).some((t) => t.name.toLowerCase() === 'smoke template')) problems.push('not removed');
+		} finally {
+			(app as unknown as { docketUI?: { close(hide?: boolean): void } }).docketUI?.close(true);
+			await app.host.app.setConfig({ homebaseTemplates: settingBefore ?? [] });
+			if (before === null) await vault.adapter.remove(file); else await vault.adapter.write(file, before);
+		}
+		return problems.length === 0 || problems.join('; ');
 	});
 	await check('live preview: citation brackets are not links, punctuation stays with its link, embeds take their line', async () => {
 		const problems: string[] = [];

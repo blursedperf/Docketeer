@@ -19,7 +19,8 @@ import { watchLayout } from './layout-mode';
 import { registerCore } from './core';
 import { registerBundledIconPacks } from './icon-packs';
 import { runBench, runShots, runSmoke } from './smoke';
-import { LAYOUTS } from './homebases';
+import { LAYOUTS, createFromTemplate, loadTemplates } from './homebases';
+import { describeTemplate } from './docket/panels-model';
 
 (globalThis as Record<string, unknown>).__quireModules = {
 	'@quire/api': api,
@@ -56,14 +57,19 @@ async function welcome() {
 	// Creating: first which panels it starts with, Legal (as Docketeer comes) or Generic.
 	const layouts = box.createDiv({ cls: 'welcome-layouts', attr: { hidden: '', role: 'group', 'aria-label': 'Panels for the new homebase' } });
 	layouts.createEl('p', { cls: 'welcome-layouts-title', text: 'Which panels should it start with?' });
-	for (const l of LAYOUTS) {
-		const card = layouts.createEl('button', { cls: 'welcome-layout', attr: { type: 'button', 'data-layout': l.id } });
-		setIcon(card.createDiv({ cls: 'welcome-layout-icon' }), l.icon);
+	const layoutCard = (attr: Record<string, string>, icon: string, name: string, detail: string, run: () => unknown) => {
+		const card = layouts.createEl('button', { cls: 'welcome-layout', attr: { type: 'button', ...attr } });
+		setIcon(card.createDiv({ cls: 'welcome-layout-icon' }), icon);
 		const text = card.createDiv({ cls: 'welcome-layout-text' });
-		text.createDiv({ cls: 'welcome-layout-name', text: l.title });
-		text.createDiv({ cls: 'welcome-layout-detail', text: l.detail });
-		card.addEventListener('click', () => { void host.app.chooseVault(true, l.id); });
-	}
+		text.createDiv({ cls: 'welcome-layout-name', text: name });
+		text.createDiv({ cls: 'welcome-layout-detail', text: detail });
+		card.addEventListener('click', () => { void run(); });
+	};
+	for (const l of LAYOUTS) layoutCard({ 'data-layout': l.id }, l.icon, l.title, l.detail, () => host.app.chooseVault(true, l.id));
+	// Templates saved from a homebase ("Save this homebase's panels as a template…").
+	void loadTemplates(host).then((templates) => {
+		for (const t of templates) layoutCard({ 'data-template': t.name }, 'layout-list', t.name, describeTemplate(t), () => createFromTemplate(host, t));
+	}).catch((e: unknown) => console.error('Could not read the homebase templates', e));
 	b2.addEventListener('click', () => {
 		layouts.toggleAttribute('hidden');
 		if (!layouts.hasAttribute('hidden')) layouts.querySelector<HTMLElement>('.welcome-layout')?.focus();
