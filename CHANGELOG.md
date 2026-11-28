@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.2
 
 - **A new app icon**: a white pen nib flying like a rocket, on a bright blue square, on the Mac, Linux, the iPhone and
   the website.
