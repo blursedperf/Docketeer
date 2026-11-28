@@ -27,7 +27,7 @@ export function parseChangelog(text: string): ChangelogSection[] {
 /** Compare two versions like "0.25.4" (a "-beta.1" suffix sorts before the plain version). */
 export function compareVersions(a: string, b: string): number {
 	const parse = (v: string) => {
-		const [main, pre = ''] = v.replace(/^v/, '').split('-', 2);
+		const [main = '', pre = ''] = v.replace(/^v/, '').split('-', 2);
 		return { nums: main.split('.').map((n) => Number.parseInt(n, 10) || 0), pre };
 	};
 	const x = parse(a);
