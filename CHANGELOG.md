@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.3
 
 - **AGLC4: the next element is suggested after every element, space or not.** The suggestions now open as soon as an
   element is finished, and again after the space you type next: after the case name, the year, the report series
