@@ -4728,7 +4728,8 @@ async function runPhoneShots(app: App): Promise<void> {
 	const { workspace, commands } = app;
 	const docket = (app as unknown as { docketUI: { open(o?: { panel?: string; query?: string }): void; close(hide?: boolean): void; dismissHint(): void } }).docketUI;
 	await until(() => app.spellchecker.ready, 15000);
-	await app.setConfig('theme', 'dark');
+	// Light mode, as the desktop screens.
+	await app.setConfig('theme', 'light');
 	commands.executeCommandById('aglc-citations:create-example-essay');
 	await until(() => workspace.getActiveFile()?.basename === 'AGLC4 example essay', 8000);
 	await sleep(800);
