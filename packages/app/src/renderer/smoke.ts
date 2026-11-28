@@ -2228,9 +2228,15 @@ export async function runShots(app: App): Promise<void> {
 		await sleep(250);
 		await shot('47-docket-study');
 		docket.close(true);
+		const before = app.workspace.activeLeaf;
 		await pf.studyDeck('ALL', 'due');
 		await sleep(400);
 		await shot('48-study-view');
+		// Close it again, so the screens after this one are as they were.
+		app.workspace.detachLeavesOfType('pomodoro-flashcards-study-view');
+		await sleep(80);
+		if (before?.view) app.workspace.setActiveLeaf(before, { focus: true });
+		await sleep(100);
 	}
 	type Panels = { showPanel(id: string): void; refreshPanel(i?: number): Promise<void> };
 	const dp = docket as unknown as Panels;
