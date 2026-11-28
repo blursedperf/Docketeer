@@ -1,6 +1,6 @@
 # AGLC4 Citations: user guide
 
-AGLC4 Citations helps you write footnoted legal work in Obsidian to the *Australian Guide to Legal Citation* (4th ed, 2018). It checks your citations as you write, suggests what comes next, keeps footnotes in order, and exports to Word with real footnotes. It works offline, uses no AI, and keeps a version history of your notes.
+AGLC4 Citations helps you write footnoted legal work in Docketeer to the *Australian Guide to Legal Citation* (4th ed, 2018). It checks your citations as you write, suggests what comes next, keeps footnotes in order, and exports to Word with real footnotes. It works offline, uses no AI, and keeps a version history of your notes.
 
 New to the plugin? Start with **[Getting started](getting-started.md)**: it takes five minutes, using an example essay the plugin creates for you.
 

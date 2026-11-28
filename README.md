@@ -5,13 +5,13 @@
 [Getting started](https://blursedperf.github.io/Docketeer/guide/getting-started) ·
 [Privacy](https://blursedperf.github.io/Docketeer/privacy)
 
-A Markdown notes app for law students, in the spirit of Obsidian, that runs **entirely offline**: notes are plain
+A Markdown notes app for law students that runs **entirely offline**: notes are plain
 `.md` files in a folder of your own (a **homebase**), and the app cannot reach the network. Every request is blocked
 by the app itself, whatever a plugin tries. Free for macOS and Linux.
 
-![Docketeer: an essay with AGLC4 footnotes, and its printed pages beside it](test/visual/linux/01-main-crisp-dark.png)
+![Docketeer: an essay with AGLC4 footnotes, and its printed pages beside it](test/visual/linux/01-main-crisp-light.png)
 
-I love Obsidian, but I'm always on my laptop, the sidebars take up too much room, and I wanted a keyboard-first app
+I'm always on my laptop, where sidebars take up too much room, and I wanted a keyboard-first notes app
 that lets me barely take my hands off the keyboard while creating and placing notes, editing and searching.
 Everything is reached through **the Docket**, a tray that drops from the top of the window (**⌘D** on macOS,
 **Super+D** on Linux): search across notes, commands, and panels for authorities, the outline, subjects and topics,
@@ -28,14 +28,14 @@ lists and sections. Notes tile into panes from the keyboard.
   [Guide](https://blursedperf.github.io/Docketeer/guide/locking)
 - **Homebases**: a *Legal* or *Generic* starting layout, or a template saved from one of your own.
 
-Four plugins ship built in, each a port of one of my Obsidian plugins:
+Four plugins ship built in:
 
-| Plugin | What it does | Port of |
-|---|---|---|
-| **AGLC4 Citations** (`plugins/aglc4`) | Footnotes to the *Australian Guide to Legal Citation*, checked as you write; Word, HTML and PDF export with a bibliography; version history | [obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0 |
-| **Task Docket** (`plugins/task-docket`) | Every task in the homebase in a Tasks panel in the Docket, by when it is due | [obsidian-task-docket](https://github.com/blursedperf/obsidian-task-docket) 1.1.0 |
-| **Whole-Tree Search** (`plugins/whole-tree-search`) | `~` in the Docket finds words in your outlines, each match with the heading above it, its parents and what is nested under it | [obsidian-whole-tree-search](https://github.com/blursedperf/obsidian-whole-tree-search) 1.2.3 |
-| **Pomodoro Flashcards** (`plugins/pomodoro-flashcards`) | Flashcards written in your notes and case briefs, studied with spaced repetition beside a focus timer, with a Study panel in the Docket | [obsidian-pomodoro-flashcards](https://github.com/blursedperf/obsidian-pomodoro-flashcards) 1.0.12 |
+| Plugin | What it does |
+|---|---|
+| **AGLC4 Citations** (`plugins/aglc4`) | Footnotes to the *Australian Guide to Legal Citation*, checked as you write; Word, HTML and PDF export with a bibliography; version history |
+| **Task Docket** (`plugins/task-docket`) | Every task in the homebase in a Tasks panel in the Docket, by when it is due |
+| **Whole-Tree Search** (`plugins/whole-tree-search`) | `~` in the Docket finds words in your outlines, each match with the heading above it, its parents and what is nested under it |
+| **Pomodoro Flashcards** (`plugins/pomodoro-flashcards`) | Flashcards written in your notes and case briefs, studied with spaced repetition beside a focus timer, with a Study panel in the Docket |
 
 To look around first, choose *Try the example homebase* on the welcome screen (or *Switch homebase* → *Open the
 example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Docketeer
@@ -121,7 +121,6 @@ export default class Hello extends Plugin {
 
 Bundle with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and `@lezer/*` external:
 the app supplies its own instances at run time through an import map. `plugins/aglc4/esbuild.config.mjs`
-is a working example. The API follows the shape of Obsidian's for the parts it covers, so most plugins
-port by changing `from 'obsidian'` to `from '@quire/api'`. Docketeer calls the folder of notes a *homebase*;
-the API keeps the name `app.vault` (with `app.homebase` as an alias) so existing plugins work unchanged. More on the
+is a working example. Docketeer calls the folder of notes a *homebase*; in the API it is `app.vault`, with
+`app.homebase` as an alias. More on the
 website: [Writing plugins](https://blursedperf.github.io/Docketeer/plugins).

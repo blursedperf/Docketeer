@@ -340,7 +340,7 @@ class DocxBuilder {
 			body.unshift(this.para({ heading: HeadingLevel.TITLE, children: [new TextRun(this.opts.title)] }));
 		}
 		return new Document({
-			creator: 'AGLC4 Citations for Obsidian',
+			creator: 'AGLC4 Citations for Docketeer',
 			title: this.opts.title,
 			styles: {
 				default: {

@@ -15,7 +15,7 @@ plugin) lists them all in one place, most urgent first.
 ```
 
 Due dates, times and priorities are read in either common format (the Tasks plugin's emoji, or Dataview's
-`[due:: ]` fields), so tasks written in Obsidian work as they are. `[x]` is done, `[-]` cancelled, `[/]` in progress.
+`[due:: ]` fields), so tasks written in other apps work as they are. `[x]` is done, `[-]` cancelled, `[/]` in progress.
 
 ### Dates as you type
 

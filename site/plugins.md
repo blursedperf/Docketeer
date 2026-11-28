@@ -1,8 +1,7 @@
 # Writing plugins
 
-Docketeer's plugin API has the same shape as Obsidian's for the parts it covers, so many Obsidian plugins port by
-changing one line, `from 'obsidian'` to `from '@quire/api'`. All four built-in plugins started as Obsidian plugins and
-were ported that way.
+Plugins add commands, views, Docket panels, searches, editor features and more. The four built-in plugins use the
+same API as any other, so they are complete examples of what a plugin can do.
 
 ## A plugin
 

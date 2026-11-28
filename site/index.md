@@ -97,7 +97,7 @@ points and everything nested under it: the whole branch, not a line out of conte
 ## Make it yours
 
 Sixteen colour palettes, light and dark, your own fonts, three densities, two icon sets, tiling panes and saved
-layouts for briefs, revision and exams. Most plugins written for Obsidian port by changing one line.
+layouts for briefs, revision and exams. Plugins can add their own commands, panels and searches.
 
 </div>
 <img :src="shot('02-palette-tokyo-night')" alt="Docketeer in the Tokyo Night palette">

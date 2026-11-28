@@ -294,7 +294,7 @@ class AppearanceTab extends SettingTab {
 		const c = app.config;
 		new Setting(el).setName('Window').setHeading();
 		const frame = new Setting(el).setName('Title bar')
-			.setDesc('Hidden: the window buttons sit in Docketeer\'s top bar, which moves the window, as in Obsidian. System: the title bar your system draws. Applies when Docketeer restarts.')
+			.setDesc('Hidden: the window buttons sit in Docketeer\'s top bar, which moves the window. System: the title bar your system draws. Applies when Docketeer restarts.')
 			.addDropdown((d) => d.addOptions({ hidden: 'Hidden', native: 'System' }).setValue(c.windowFrame ?? 'hidden')
 				.onChange((v) => { void app.setConfig('windowFrame', v as 'hidden' | 'native').then(() => this.display()); }));
 		if ((c.windowFrame !== 'native') !== !!app.host.app.frameless && !app.host.app.isSmoke && app.host.app.relaunch) {

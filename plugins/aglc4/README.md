@@ -39,13 +39,11 @@ Your writing never leaves your computer.
 
 See [Privacy](docs/privacy.md) for how this is checked, and how to verify that a release was built from this source.
 
-## About this port
+## In Docketeer
 
-This is the Docketeer build of [obsidian-aglc4](https://github.com/blursedperf/obsidian-aglc4) 1.16.0. The citation
-engine, footnotes, export, import, page layout, version history and prompts are the same code; only the
-glue imports from `@quire/api` instead of `obsidian`. It ships built in to Docketeer and is on in new vaults
-(turn it off under **Settings → Plugins**). The user guide in `docs/` was written for Obsidian; the
-commands and settings are the same in Docketeer.
+AGLC4 Citations (1.16.0) ships built in to Docketeer and is on in new homebases (turn it off under
+**Settings → Plugins**). Its commands are in the Docket (type `>` and part of the name), and its settings under
+**Settings → AGLC4 Citations**.
 
 ## Development
 

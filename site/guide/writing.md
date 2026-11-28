@@ -4,7 +4,7 @@ A note is a Markdown file. Docketeer shows it as you write it (**live preview**)
 links take shape as you type, and their marks come back on the line the cursor is on, so you always see what you
 are editing.
 
-![An essay in live preview, with its properties and the printed pages beside it](/screenshots/01-main-crisp-dark.png){.shot}
+![An essay in live preview, with its properties and the printed pages beside it](/screenshots/01-main-crisp-light.png){.shot}
 
 ## New notes
 

@@ -16,14 +16,14 @@
   *Ratio* asks "What is the ratio of *Donoghue v Stevenson*?" and so on (and which case established a ratio). The new
   **Study panel** in the Docket starts and pauses the focus timer, lists every deck with how many cards are due
   (Enter studies it; → to cram every card), and keeps your streak; the status bar shows the timer and what is due.
-  Cards in a locked note are never read: they go when it locks and come back when you unlock. A port of the Obsidian
-  plugin of the same name; in homebases made before this version it is turned on once.
+  Cards in a locked note are never read: they go when it locks and come back when you unlock. In
+  homebases made before this version it is turned on once.
 - **Fixed: closing and deleting a note at once no longer logs an error.** AGLC4 tidies a note's footnotes as you
   leave it, and tried to read one that had just been deleted.
-- For plugins: Obsidian's DOM helpers `el.doc`, `el.win`, `createSvg`, `activeDocument` and `activeWindow`; the
+- For plugins: the DOM helpers `el.doc`, `el.win`, `createSvg`, `activeDocument` and `activeWindow`; the
   declarative settings types `SettingDefinition`, `SettingDefinitionGroup` and `SettingDefinitionControl`
-  (`SettingDefinitionItem` is now generic over the settings key); `editorCallback` may take `view: MarkdownView`, as
-  in Obsidian. The icon names `layers`, `party-popper` and `plus-with-circle` draw in Phosphor.
+  (`SettingDefinitionItem` is now generic over the settings key); `editorCallback` may take `view: MarkdownView`. The
+  icon names `layers`, `party-popper` and `plus-with-circle` draw in Phosphor.
 
 ## v0.24.2
 
@@ -45,8 +45,8 @@
   that line (Ctrl+Enter to the right, Shift+Enter inserts a link). Words can be spread down one branch: `~causation
   breach` finds "breach" under a heading or item that says "causation". Only notes containing every word are read,
   so it stays quick in a big homebase, and locked notes are never searched. *Whole-tree search…* in the commands
-  opens it; *Settings → Whole-Tree Search* sets how many parent and nested levels show, excluded folders and more. A
-  port of the Obsidian plugin of the same name. In homebases made before this version it is turned on once.
+  opens it; *Settings → Whole-Tree Search* sets how many parent and nested levels show, excluded folders and more. In
+  homebases made before this version it is turned on once.
 - **Search: `-word` leaves notes out, and `"quoted words"` must appear as written.** A word with a minus in front was
   treated as one that must appear, the opposite of what it means, and quotes stopped the whole phrase being found.
   Now `negligence -contract` leaves out notes mentioning contracts, and `"duty of care"` finds only those words in
@@ -331,7 +331,7 @@
 - **Chambers Dark and Chambers Light**: muted, formal palettes. Warm charcoal or ivory paper, ink blue, oxblood, brass
   and sage, every pairing meeting WCAG AA.
 - **Title bar hidden by default**: the window buttons sit in Quire's top bar (the Docket bar), which moves the
-  window, as in Obsidian. *Appearance › Window › Title bar* switches back to the system's, with a Restart button.
+  window. *Appearance › Window › Title bar* switches back to the system's, with a Restart button.
 - **Dropdowns draw their own arrow**, in the theme's colour and set in from the right edge (the system arrow sat
   against it).
 
@@ -715,9 +715,8 @@ First release of Quire: Markdown notes in plain files, entirely offline, extensi
 - **Notes.** Vaults are ordinary folders. File explorer, tabs and splits, Markdown editor with
   `[[links]]`, footnotes and frontmatter, reading view, command palette, quick switcher, link updates on
   rename.
-- **Plugins.** An API in the shape of the Obsidian API subset plugins use, so plugins port by changing
-  their import to `@quire/api`. Vault plugins go in `<vault>/.quire/plugins/`.
-- **AGLC4 Citations** built in (port of obsidian-aglc4 1.16.0): live checking with fixes, next-element
+- **Plugins.** A plugin API (`@quire/api`) for commands, views, settings and editor extensions. Vault plugins go in `<vault>/.quire/plugins/`.
+- **AGLC4 Citations** built in (1.16.0): live checking with fixes, next-element
   suggestions, footnote pane, Word and HTML export with real footnotes, page preview, Word import,
   version history and paragraph guides.
 - **DoomEsque look**: doom-crisp dark and light palettes, modeline, Treemacs file tree, Org-style headings.

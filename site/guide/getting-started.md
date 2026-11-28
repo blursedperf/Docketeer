@@ -14,7 +14,7 @@ type `?` in it.
 A **homebase** is the folder your notes live in: plain Markdown (`.md`) files you can open in any other app, back up
 or sync however you like. The first time Docketeer opens, it asks for one:
 
-- **Open a folder as a homebase**: use notes you already have, such as an Obsidian vault.
+- **Open a folder as a homebase**: use a folder of Markdown notes you already have.
 - **Create a new homebase**: make an empty folder, starting with the panels you choose:
   - **Legal**: Subjects, Authorities, Outline, Cite, Homebase and Layout, for law notes with AGLC4 citations.
   - **Generic**: Files and Folders, Homebase and Layout; the others can be shown later.
@@ -81,7 +81,7 @@ Type **`/`** at the start of a line for blocks: headings, lists, tables, tasks, 
 - **Cite** with a footnote: **⌘⌥F** (Super+Alt+F on Linux) inserts one, and as you type a case name the AGLC4 plugin suggests the rest.
 - **Tag** with `#tag`, and add properties (subject, due date, deck …) at the top of the note.
 
-![An essay in live preview, with its properties at the top and the printed pages beside it](/screenshots/01-main-crisp-dark.png){.shot}
+![An essay in live preview, with its properties at the top and the printed pages beside it](/screenshots/01-main-crisp-light.png){.shot}
 
 ## 4. Arrange your screen
 

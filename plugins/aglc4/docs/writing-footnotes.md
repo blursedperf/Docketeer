@@ -1,6 +1,6 @@
 # Writing footnotes
 
-The plugin uses ordinary Obsidian footnotes, so your notes stay plain Markdown that any app can read. Italics are `*…*` (or `_…_`).
+The plugin uses ordinary Markdown footnotes, so your notes stay plain Markdown that any app can read. Italics are `*…*` (or `_…_`).
 
 ```markdown
 The High Court rejected terra nullius.[^1] It was applied again later.[^2]
@@ -40,7 +40,7 @@ Turn this off with **Return after a footnote**. Escape is left alone when Vim ke
 
 ## Footnote numbers
 
-Footnotes are numbered the way Obsidian numbers them: in the order their references appear in the text. `(n 3)` means the third footnote in the note. In the editor, labels like `[^3]` or `[^mabo]` are just names; the plugin relabels them 1, 2, 3 … to match ([keeping footnotes in order](#keeping-footnotes-in-order)).
+Footnotes are numbered the way Markdown numbers them: in the order their references appear in the text. `(n 3)` means the third footnote in the note. In the editor, labels like `[^3]` or `[^mabo]` are just names; the plugin relabels them 1, 2, 3 … to match ([keeping footnotes in order](#keeping-footnotes-in-order)).
 
 ## Keeping footnotes in order
 

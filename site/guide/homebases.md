@@ -6,7 +6,7 @@ A **homebase** is a folder of notes: ordinary `.md` files and their attachments,
 one for everything, or one per year or subject. Docketeer keeps its own settings for a homebase in a hidden `.quire`
 folder inside it, so a homebase can be copied, backed up or synced (iCloud, Syncthing, a USB stick) as one folder.
 
-An existing Obsidian vault opens as a homebase as it is.
+A folder of Markdown notes you already have opens as a homebase as it is.
 
 | | |
 |---|---|

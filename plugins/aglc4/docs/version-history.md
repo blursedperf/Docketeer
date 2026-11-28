@@ -41,6 +41,6 @@ Every version from the last day is kept, then one per hour for a month, then one
 
 The history is kept in your vault, in the hidden folder `.aglc-history` (change it with **History folder**). Each version is checked against a fingerprint when it is read, so a damaged version is refused rather than restored, and every file is written so that a crash part-way through cannot damage versions already saved.
 
-It is on the same disk as your notes, so it protects you from mistakes, bad edits and deleted notes, but not from losing the device. For that, back up or sync your vault folder (iCloud, Dropbox, OneDrive, Time Machine): the history is backed up with it. Obsidian Sync does not sync hidden folders, so with Obsidian Sync the history stays on each device.
+It is on the same disk as your notes, so it protects you from mistakes, bad edits and deleted notes, but not from losing the device. For that, back up or sync your vault folder (iCloud, Dropbox, OneDrive, Time Machine): the history is backed up with it.
 
 By default history is kept for every note. **Keep history of** can limit it to the notes the plugin works in ([notes](notes.md)). Turn it off with **Keep version history**.

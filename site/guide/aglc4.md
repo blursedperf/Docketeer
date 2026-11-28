@@ -78,5 +78,4 @@ style (headings, bibliography, prompts) in its properties.
 
 AGLC4 Citations has its own detailed guide: workflows from first draft to submission, every rule it checks, headings,
 the bibliography, settings and troubleshooting. It is in the
-[plugin's documentation](https://github.com/blursedperf/Docketeer/tree/master/plugins/aglc4/docs) (written for
-Obsidian, where the plugin started; the commands and settings are the same in Docketeer).
+[plugin's documentation](https://github.com/blursedperf/Docketeer/tree/master/plugins/aglc4/docs).

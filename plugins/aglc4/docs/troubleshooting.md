@@ -36,20 +36,16 @@ The plugin asks before replacing a Word file you changed, and keeps the replaced
 
 ## I deleted a note by mistake
 
-Run **Restore a deleted note from version history** ([version history](version-history.md)). Obsidian's own trash (**Settings → Files and links → Deleted files**) may also have it.
+Run **Restore a deleted note from version history** ([version history](version-history.md)).
 
 ## The plugin moved my footnotes
 
 With **Keep footnotes at the bottom** on, footnotes are moved to the bottom of a note when you leave it. Only the footnotes move; the plugin checks that nothing else would change before it rewrites a note. Turn the setting off, or turn the plugin off for notes that are not assignments ([notes](notes.md)).
 
-## Does it work on mobile?
+## Does it work with iCloud or Dropbox?
 
-The plugin is not desktop-only, so it runs in Obsidian on phones and tablets. On phones, footnotes are written in the note rather than in a pane. Most testing has been on desktop: please report anything that does not work on mobile.
-
-## Does it work with Obsidian Sync, iCloud or Dropbox?
-
-Yes. The version history is kept in a hidden folder of the vault: iCloud, Dropbox and OneDrive sync it with the vault, but Obsidian Sync skips hidden folders, so with Obsidian Sync each device keeps its own history ([version history](version-history.md)).
+Yes. The version history is kept in a hidden folder of the homebase, and iCloud, Dropbox, OneDrive and Syncthing sync it with the rest of the homebase ([version history](version-history.md)).
 
 ## Reporting a problem
 
-Open an issue at [github.com/blursedperf/obsidian-aglc4/issues](https://github.com/blursedperf/obsidian-aglc4/issues). For a checking problem, include the footnote text and what you expected. Don't include anything private.
+Open an issue at [github.com/blursedperf/Docketeer/issues](https://github.com/blursedperf/Docketeer/issues). For a checking problem, include the footnote text and what you expected. Don't include anything private.

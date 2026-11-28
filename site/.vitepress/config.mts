@@ -16,7 +16,7 @@ export default defineConfig({
 		['link', { rel: 'icon', type: 'image/png', href: '/Docketeer/favicon.png' }],
 		['meta', { property: 'og:title', content: 'Docketeer: offline notes for law students' }],
 		['meta', { property: 'og:description', content: 'Plain Markdown notes on your own computer, with AGLC4 citations, case briefs, flashcards and a keyboard-first Docket. Nothing goes online.' }],
-		['meta', { property: 'og:image', content: 'https://blursedperf.github.io/Docketeer/screenshots/01-main-crisp-dark.png' }],
+		['meta', { property: 'og:image', content: 'https://blursedperf.github.io/Docketeer/screenshots/01-main-crisp-light.png' }],
 	],
 	vite: {
 		define: { __VERSION__: JSON.stringify(version) },
