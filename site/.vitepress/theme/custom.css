@@ -1,0 +1,43 @@
+/* The app's blue (Crisp Dark's accent) as the site's brand colour. */
+:root {
+	--vp-c-brand-1: #2563eb;
+	--vp-c-brand-2: #3b82f6;
+	--vp-c-brand-3: #2563eb;
+	--vp-home-hero-name-color: transparent;
+	--vp-home-hero-name-background: linear-gradient(120deg, #60a5fa 20%, #a78bfa);
+}
+.dark {
+	--vp-c-brand-1: #60a5fa;
+	--vp-c-brand-2: #3b82f6;
+	--vp-c-brand-3: #2563eb;
+}
+
+/* Screenshots: a frame, so a dark screen stands out from a dark page. */
+.vp-doc img.shot {
+	border: 1px solid var(--vp-c-divider);
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+	margin: 16px 0;
+}
+
+/* The home page's showcase: a feature, its picture, side by side on a wide screen. */
+.showcase { max-width: 1152px; margin: 0 auto; padding: 0 24px 48px; }
+.showcase-row { display: grid; grid-template-columns: 1fr 1.6fr; gap: 32px; align-items: center; padding: 32px 0; border-top: 1px solid var(--vp-c-divider); }
+.showcase-row:nth-child(even) { grid-template-columns: 1.6fr 1fr; }
+.showcase-row:nth-child(even) .showcase-text { order: 2; }
+.showcase-text h2 { font-size: 24px; font-weight: 600; margin: 0 0 12px; border: none; padding: 0; }
+.showcase-text p { color: var(--vp-c-text-2); line-height: 1.7; margin: 0 0 8px; }
+.showcase img { width: 100%; border: 1px solid var(--vp-c-divider); border-radius: 8px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.18); }
+.showcase-cta { text-align: center; padding: 48px 24px; }
+.showcase-cta h2 { font-size: 28px; font-weight: 600; border: none; }
+.showcase-cta .dl-primary { justify-content: center; }
+@media (max-width: 768px) {
+	.showcase-row, .showcase-row:nth-child(even) { grid-template-columns: 1fr; }
+	.showcase-row:nth-child(even) .showcase-text { order: 0; }
+}
+
+/* Two screenshots side by side, to compare (palettes, densities). */
+.vp-doc .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.vp-doc .shots p { display: contents; }
+.vp-doc .shots img.shot { margin: 0; }
+@media (max-width: 640px) { .vp-doc .shots { grid-template-columns: 1fr; } }

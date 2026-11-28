@@ -1,0 +1,15 @@
+{
+  "name": "docketeer-site",
+  "private": true,
+  "description": "The Docketeer website: what it is, how to use it, and where to download it. Not part of the app.",
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/assets.mjs",
+    "dev": "npm run assets && vitepress dev",
+    "build": "npm run assets && vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
