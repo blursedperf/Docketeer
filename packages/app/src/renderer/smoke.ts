@@ -2084,9 +2084,12 @@ export async function runShots(app: App): Promise<void> {
 	if (pv) { workspace.moveLeafToPane(pv, 'right'); const essayLeaf = workspace.getLeavesOfType('markdown')[0]; if (essayLeaf) workspace.setActiveLeaf(essayLeaf, { focus: true }); }
 	await sleep(1200);
 	document.querySelectorAll('.notice').forEach((n) => n.detach());
-	await app.setConfig('theme', 'dark');
+	// Light mode throughout (these pictures are also the website's), except the dark palettes, shown in dark mode.
+	await app.setConfig('theme', 'light');
 	await shot('00-first-run-hint');
 	(app as unknown as { docketUI: { dismissHint(): void } }).docketUI.dismissHint();
+	await shot('01-main-crisp-light');
+	await app.setConfig('theme', 'dark');
 	await shot('01-main-crisp-dark');
 	for (const p of ['doom-one', 'dracula', 'tokyo-night', 'gruvbox', 'retro-terminal', 'cyberpunk']) {
 		await app.setConfig('darkPalette', p.replace(/^doom-/, ''));
@@ -2099,7 +2102,6 @@ export async function runShots(app: App): Promise<void> {
 		await shot(`03-palette-${p}`);
 	}
 	await app.setConfig('lightPalette', 'crisp-light');
-	await app.setConfig('theme', 'dark');
 	for (const d of ['compact', 'spacious'] as const) {
 		await app.setConfig('density', d);
 		await shot(`04-density-${d}`);
