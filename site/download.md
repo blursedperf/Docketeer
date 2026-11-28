@@ -16,14 +16,21 @@ please [report it on GitHub](https://github.com/blursedperf/Docketeer/issues).
 1. Download the `.dmg` for your Mac: **Apple Silicon** for a Mac with an M1 chip or later, **Intel** for older Macs.
    (Not sure? Apple menu → About This Mac: it says *Chip* for Apple Silicon and *Processor* for Intel.)
 2. Open the `.dmg` and drag **Docketeer** into **Applications**.
-3. Docketeer is not yet notarised by Apple, so macOS will refuse to open it the first time. Open **Terminal** and run
-   this once:
+3. Open Docketeer from Applications. Docketeer is not yet notarised by Apple, so the first time macOS says it
+   *could not verify Docketeer is free of malware*. Click **Done**, then:
+   1. Open **System Settings → Privacy & Security**.
+   2. Scroll down to **Security**: it says *"Docketeer" was blocked to protect your Mac*. Click **Open Anyway**.
+   3. Confirm with your password or Touch ID, then **Open Anyway** once more.
+
+   This is needed only once: after that, Docketeer opens like any other app.
+
+   ::: details Or, with Terminal
+   Run this once, then open Docketeer from Applications as usual:
 
    ```bash
    xattr -dr com.apple.quarantine /Applications/Docketeer.app
    ```
-
-   Then open Docketeer from Applications as usual.
+   :::
 
 ## Linux
 

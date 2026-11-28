@@ -52,8 +52,9 @@ and every shortcut).
 
 [Download](https://blursedperf.github.io/Docketeer/download) from the website, or from the [releases](../../releases):
 a `.dmg` for macOS (Apple Silicon or Intel), an AppImage for any Linux, a `.pacman` package for Arch/Omarchy or a
-`.deb` for Debian/Ubuntu. The macOS app is not notarised: after copying it to Applications, run
-`xattr -dr com.apple.quarantine /Applications/Docketeer.app` once. Windows is not built yet; iPhone and iPad are in
+`.deb` for Debian/Ubuntu. The macOS app is not notarised yet: the first time you open it, click **Done** on the
+warning, then **Open Anyway** in System Settings → Privacy & Security (or run
+`xattr -dr com.apple.quarantine /Applications/Docketeer.app` once). Windows is not built yet; iPhone and iPad are in
 testing.
 
 ## Run from source

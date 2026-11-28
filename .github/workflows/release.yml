@@ -109,8 +109,9 @@ jobs:
           | Arch / Omarchy | `Docketeer-*-linux-x64.pacman` / `…-aarch64.pacman`: `sudo pacman -U <file>` |
           | Debian / Ubuntu | `Docketeer-*-linux-amd64.deb` / `…-arm64.deb`: `sudo apt install ./<file>` |
 
-          **macOS:** the app is not notarised by Apple. After dragging Docketeer to Applications, run
-          `xattr -dr com.apple.quarantine /Applications/Docketeer.app` once (or right-click → Open).
+          **macOS:** the app is not notarised by Apple yet. The first time you open it, click **Done** on the warning,
+          then **Open Anyway** in System Settings → Privacy & Security (or run
+          `xattr -dr com.apple.quarantine /Applications/Docketeer.app` once).
 
           Verify a download with `SHA256SUMS.txt`.
           NOTES
