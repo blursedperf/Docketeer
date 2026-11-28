@@ -4,19 +4,22 @@
 import { computed, onMounted, ref } from 'vue';
 
 declare const __VERSION__: string;
+declare const __ASSET_NAME__: string;
 const v = __VERSION__;
+/** The installers' name for this version (Docketeer up to 0.25.4). */
+const n = __ASSET_NAME__;
 const base = `https://github.com/blursedperf/caselore/releases/download/v${v}`;
 
 interface Download { os: 'mac' | 'linux'; label: string; detail: string; file: string }
 const downloads: Download[] = [
-	{ os: 'mac', label: 'macOS (Apple Silicon)', detail: 'M1 or later · .dmg', file: `Caselore-${v}-mac-arm64.dmg` },
-	{ os: 'mac', label: 'macOS (Intel)', detail: 'Older Macs · .dmg', file: `Caselore-${v}-mac-x64.dmg` },
-	{ os: 'linux', label: 'Linux AppImage', detail: 'Any distribution · x86-64', file: `Caselore-${v}-linux-x86_64.AppImage` },
-	{ os: 'linux', label: 'Debian / Ubuntu', detail: '.deb · x86-64', file: `Caselore-${v}-linux-amd64.deb` },
-	{ os: 'linux', label: 'Arch / Omarchy', detail: '.pacman · x86-64', file: `Caselore-${v}-linux-x64.pacman` },
-	{ os: 'linux', label: 'Linux AppImage (ARM)', detail: 'arm64', file: `Caselore-${v}-linux-arm64.AppImage` },
-	{ os: 'linux', label: 'Debian / Ubuntu (ARM)', detail: '.deb · arm64', file: `Caselore-${v}-linux-arm64.deb` },
-	{ os: 'linux', label: 'Arch (ARM)', detail: '.pacman · arm64', file: `Caselore-${v}-linux-aarch64.pacman` },
+	{ os: 'mac', label: 'macOS (Apple Silicon)', detail: 'M1 or later · .dmg', file: `${n}-${v}-mac-arm64.dmg` },
+	{ os: 'mac', label: 'macOS (Intel)', detail: 'Older Macs · .dmg', file: `${n}-${v}-mac-x64.dmg` },
+	{ os: 'linux', label: 'Linux AppImage', detail: 'Any distribution · x86-64', file: `${n}-${v}-linux-x86_64.AppImage` },
+	{ os: 'linux', label: 'Debian / Ubuntu', detail: '.deb · x86-64', file: `${n}-${v}-linux-amd64.deb` },
+	{ os: 'linux', label: 'Arch / Omarchy', detail: '.pacman · x86-64', file: `${n}-${v}-linux-x64.pacman` },
+	{ os: 'linux', label: 'Linux AppImage (ARM)', detail: 'arm64', file: `${n}-${v}-linux-arm64.AppImage` },
+	{ os: 'linux', label: 'Debian / Ubuntu (ARM)', detail: '.deb · arm64', file: `${n}-${v}-linux-arm64.deb` },
+	{ os: 'linux', label: 'Arch (ARM)', detail: '.pacman · arm64', file: `${n}-${v}-linux-aarch64.pacman` },
 ];
 
 const os = ref<'mac' | 'linux' | 'other'>('other');

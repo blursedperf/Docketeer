@@ -34,7 +34,8 @@ please [report it on GitHub](https://github.com/blursedperf/caselore/issues).
 
 ## Linux
 
-Pick the package for your system. Each comes for ordinary PCs (x86-64) and for ARM (arm64).
+Pick the package for your system. Each comes for ordinary PCs (x86-64) and for ARM (arm64). Releases up to 0.25.4
+came out under the app's earlier name, so their files start `Docketeer-` instead of `Caselore-`.
 
 | System | Download | Install |
 |---|---|---|
