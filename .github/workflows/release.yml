@@ -96,6 +96,9 @@ jobs:
           awk -v tag="${GITHUB_REF_NAME}" '$0 == "## " tag {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
           cat >> notes.md <<'NOTES'
 
+          **Docketeer is in beta**: stable enough for daily use, with new features and fixes arriving often. Keep a
+          backup of your notes, as with any app, and please report problems in Issues.
+
           ## Downloads
 
           | System | File |

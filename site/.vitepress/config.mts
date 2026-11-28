@@ -27,7 +27,7 @@ export default defineConfig({
 			{ text: 'Guide', link: '/guide/getting-started' },
 			{ text: 'Privacy', link: '/privacy' },
 			{ text: 'Download', link: '/download' },
-			{ text: `v${version}`, items: [
+			{ text: `v${version} beta`, items: [
 				{ text: 'What’s new', link: `${repo}/blob/master/CHANGELOG.md` },
 				{ text: 'All releases', link: `${repo}/releases` },
 			] },

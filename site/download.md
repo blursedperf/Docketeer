@@ -3,6 +3,12 @@
 Docketeer is free, for macOS and Linux. It needs no account and never connects to the internet, so it works the
 same on a plane, in an exam room or at home.
 
+::: info Docketeer is in beta
+It is stable enough to use every day, and new features and fixes arrive often. Your notes are ordinary files in your
+own folder, so nothing is locked in, but keep a backup of them, as you would with any app. If something goes wrong,
+please [report it on GitHub](https://github.com/blursedperf/Docketeer/issues).
+:::
+
 <DownloadButtons />
 
 ## macOS

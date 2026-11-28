@@ -6,7 +6,7 @@ titleTemplate: Offline notes for law students
 hero:
   name: Docketeer
   text: Law notes that stay on your computer
-  tagline: Plain Markdown files, AGLC4 citations that check themselves, case briefs that turn into flashcards, and the Docket, a keyboard-first tray that reaches everything without the mouse. Nothing goes online.
+  tagline: Plain Markdown files, AGLC4 citations that check themselves, case briefs that turn into flashcards, and the Docket, a keyboard-first tray that reaches everything without the mouse. Nothing goes online. In beta, and stable enough for daily use.
   image:
     src: /logo.png
     alt: The Docketeer icon

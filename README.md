@@ -5,6 +5,9 @@
 [Getting started](https://blursedperf.github.io/Docketeer/guide/getting-started) ·
 [Privacy](https://blursedperf.github.io/Docketeer/privacy)
 
+> **Beta**: stable enough for daily use, with new features and fixes arriving often. Keep a backup of your notes, as
+> with any app, and please [report problems](../../issues).
+
 A Markdown notes app for law students that runs **entirely offline**: notes are plain
 `.md` files in a folder of your own (a **homebase**), and the app cannot reach the network. Every request is blocked
 by the app itself, whatever a plugin tries. Free for macOS and Linux.
