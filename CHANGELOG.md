@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Stacked tabs are now called looseleaf tabs**: *Toggle looseleaf tabs* in the commands, and *Looseleaf tabs* in a
+  tab's menu. Searching for "stack" still finds them, and panes set up before keep their tabs as they were.
+
 ## v0.25.3
 
 - **AGLC4: the next element is suggested after every element, space or not.** The suggestions now open as soon as an

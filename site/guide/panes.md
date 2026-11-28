@@ -22,10 +22,10 @@ in step as you type, each with its own cursor.
 With a mouse, drag a tab along its bar to reorder it, onto another pane to move it (its edges split it), or to an
 edge of the window.
 
-## Stacked tabs
+## Looseleaf tabs
 
-**Toggle stacked tabs** (or *Stack tabs* in a tab's menu) lays a pane's tabs side by side at a reading width,
-scrolling sideways. Tabs fold into spines with their titles at the edges; click one to bring it back.
+**Toggle looseleaf tabs** (or *Looseleaf tabs* in a tab's menu) lays a pane's tabs side by side like loose pages, at
+a reading width, scrolling sideways. Tabs fold into spines with their titles at the edges; click one to bring it back.
 
 ## Layouts
 

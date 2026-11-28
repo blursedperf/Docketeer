@@ -351,7 +351,7 @@ export class WorkspaceLeaf extends Events {
 						menu.addItem((i) => i.setTitle(`Move to the pane ${name}`).setIcon('move').onClick(() => { ws.moveLeafToPane(this, dir); }));
 					}
 				}
-				menu.addItem((i) => i.setTitle(tabs?.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => tabs?.setStacked(!tabs.stacked)));
+				menu.addItem((i) => i.setTitle(tabs?.stacked ? 'Turn off looseleaf tabs' : 'Looseleaf tabs').setIcon('layers').onClick(() => tabs?.setStacked(!tabs.stacked)));
 			}
 			menu.addSeparator();
 			this.view.onPaneMenu(menu, 'tab-header');
@@ -1012,7 +1012,7 @@ export class Workspace extends Events {
 			cmd('Split right', 'separator-vertical', 'app:split-right', { leaf });
 			cmd('Split down', 'separator-horizontal', 'app:split-down', { leaf });
 		}
-		menu.addItem((i) => i.setTitle(tabs.stacked ? 'Unstack tabs' : 'Stack tabs').setIcon('layers').onClick(() => tabs.setStacked(!tabs.stacked)));
+		menu.addItem((i) => i.setTitle(tabs.stacked ? 'Turn off looseleaf tabs' : 'Looseleaf tabs').setIcon('layers').onClick(() => tabs.setStacked(!tabs.stacked)));
 		const several = this.rootTabs().length > 1;
 		if (several) {
 			menu.addSeparator();

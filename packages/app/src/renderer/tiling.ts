@@ -61,7 +61,7 @@ export function registerTiling(app: App): { applyPreset(p: Preset): Promise<void
 		void (e.button === 3 ? (target as WorkspaceLeaf).goBack() : (target as WorkspaceLeaf).goForward());
 	});
 	add({
-		id: 'app:toggle-stacked-tabs', name: 'Toggle stacked tabs', icon: 'layers', aliases: ['Stack tabs', 'Sliding panes', 'Unstack tabs'],
+		id: 'app:toggle-stacked-tabs', name: 'Toggle looseleaf tabs', icon: 'layers', aliases: ['Looseleaf tabs', 'Stacked tabs', 'Stack tabs', 'Sliding panes', 'Unstack tabs'],
 		when: () => !!pane()?.parent, run: () => { const t = pane()?.parent; if (t) t.setStacked(!t.stacked); },
 	});
 	// More tiling, without keys of their own: give them one in Settings → Hotkeys.

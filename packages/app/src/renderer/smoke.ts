@@ -41,7 +41,7 @@ const WIDE_ONLY: [string, string][] = [
 	['custom panels:', 'panels are arranged and made on a wider window'],
 	['drag and drop:', 'panels are arranged on a wider window'],
 	['list fixes:', 'it closes a split'],
-	['Back and Forward in a pane', 'stacked tabs need several panes'],
+	['Back and Forward in a pane', 'looseleaf tabs need several panes'],
 	['layout: open panes listed', 'one pane at a time'],
 	['journey (keyboard only)', 'it works side by side'],
 	['tiling', 'one pane at a time'],
@@ -3407,7 +3407,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await vault.delete(note);
 		return problems.length === 0 || problems.join('; ');
 	});
-	await check('Back and Forward in a pane; the Docket opens notes in a new tab; stacked tabs', async () => {
+	await check('Back and Forward in a pane; the Docket opens notes in a new tab; looseleaf tabs', async () => {
 		const problems: string[] = [];
 		const a = await vault.create('Nav A.md', 'First note\nline two\nline three');
 		const b = await vault.create('Nav B.md', 'Second note');
@@ -3440,7 +3440,7 @@ async function docketChecks(app: App, check: CheckFn): Promise<void> {
 		await openFileIn(app, b, 'current');
 		await sleep(100);
 		if (leaves() !== count || workspace.activeLeaf !== leaf) problems.push('an open note was opened again instead of brought forward');
-		// Stacked tabs: all side by side with spines; click one; off again.
+		// Looseleaf tabs: all side by side with spines; click one; off again.
 		const tabs = leaf.parent!;
 		await workspace.getLeaf('tab').openFile(a);
 		workspace.setActiveLeaf(leaf, { focus: true });
@@ -4347,7 +4347,7 @@ async function tilingChecks(app: App, check: CheckFn): Promise<void> {
 		const bar = workspace.rootTabs()[0]!.headerEl;
 		const spacer = bar.querySelector<HTMLElement>('.workspace-tab-header-spacer') ?? bar;
 		rightClick(spacer);
-		for (const want of ['New tab', 'Split right', 'Stack tabs', 'Close the other panes', 'Close this pane']) if (!titles().includes(want)) problems.push(`tab bar menu lacks ${want}: ${titles().join('|')}`);
+		for (const want of ['New tab', 'Split right', 'Looseleaf tabs', 'Close the other panes', 'Close this pane']) if (!titles().includes(want)) problems.push(`tab bar menu lacks ${want}: ${titles().join('|')}`);
 		if (titles().includes('Pin')) problems.push('the tab bar showed a tab\'s menu');
 		await click('Close the other panes');
 		if (panes() !== 1) problems.push(`close other panes from the bar: ${panes()}`);
