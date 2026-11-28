@@ -14,6 +14,8 @@ export default defineConfig({
 	lastUpdated: true,
 	head: [
 		['link', { rel: 'icon', type: 'image/png', href: '/Docketeer/favicon.png' }],
+		// On an iPhone's home screen: the app's own full-bleed icon (iOS rounds it).
+		['link', { rel: 'apple-touch-icon', href: '/Docketeer/apple-touch-icon.png' }],
 		['meta', { property: 'og:title', content: 'Docketeer: offline notes for law students' }],
 		['meta', { property: 'og:description', content: 'Plain Markdown notes on your own computer, with AGLC4 citations, case briefs, flashcards and a keyboard-first Docket. Nothing goes online.' }],
 		['meta', { property: 'og:image', content: 'https://blursedperf.github.io/Docketeer/screenshots/01-main-crisp-light.png' }],
