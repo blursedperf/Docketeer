@@ -165,3 +165,37 @@ describe('does not hint inside ordinary prose', () => {
 		expect(nextRequired('The court declined to consider it, ')).toBeNull();
 	});
 });
+
+describe('the next element, after a space or not', () => {
+	const labels = (before: string) => suggestNext(before).filter((s) => s.replaceLength === 0).map((s) => s.label);
+
+	it('offers the same elements with or without the space after the last one', () => {
+		for (const at of ['*Donoghue v Stevenson*', '*Donoghue v Stevenson* [1932]', '*Mabo v Queensland [No 2]* (1992)', '*Love v Commonwealth* [2020]']) {
+			expect(labels(`${at} `)).toEqual(labels(at).filter((l) => l !== 'Treaty series' && l !== 'Opened for signature'));
+		}
+	});
+
+	it('drops the typed space from what it inserts', () => {
+		const after = suggestNext('*Donoghue v Stevenson* [1932] ').find((s) => s.label === 'Law report series' && s.replaceLength === 0);
+		expect(after?.replaceLength).toBe(0);
+		expect(after?.insert.startsWith(' ')).toBe(false);
+		const pin = suggestNext('*Mabo v Queensland [No 2]* (1992) 175 CLR 1, ').find((s) => s.label === 'Pinpoint' && s.replaceLength === 0);
+		expect(pin?.insert.startsWith(',')).toBe(false);
+	});
+
+	it('after a year in square brackets: a court (medium neutral citation), a report series or a volume', () => {
+		expect(labels('*Love v Commonwealth* [2020] ')).toEqual(expect.arrayContaining(['Court identifier', 'Law report series', 'Volume']));
+	});
+
+	it('after a year in round brackets: a volume and a report series, not a court', () => {
+		const l = labels('*Mabo v Queensland [No 2]* (1992) ');
+		expect(l).toEqual(expect.arrayContaining(['Volume', 'Law report series']));
+		expect(l).not.toContain('Court identifier');
+	});
+
+	it('after a report series or a court: the next number', () => {
+		expect(labels('*Donoghue v Stevenson* [1932] AC ')).toEqual(['Starting page']);
+		expect(labels('*Love v Commonwealth* [2020] HCA ')).toEqual(['Judgment number']);
+		expect(suggestNext('*Donoghue v Stevenson* [1932] AC ').find((s) => s.replaceLength === 0)?.after).toBe('series');
+	});
+});

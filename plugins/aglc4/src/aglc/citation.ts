@@ -312,6 +312,8 @@ export interface Suggestion {
 	required: boolean;
 	/** Number of characters before the cursor that the suggestion replaces (a partly typed element). */
 	replaceLength: number;
+	/** The element typed last, which this follows (eg "series"). */
+	after?: string;
 }
 
 const FINISH: Suggestion = { label: 'End footnote', hint: 'Close the footnote with a full stop (AGLC4 r 1.1.4)', source: '', insert: '.', required: false, replaceLength: 0 };
@@ -332,6 +334,10 @@ export function startSuggestions(hasSignal: boolean): Suggestion[] {
 /**
  * Suggest what comes next in the citation being typed. `before` is the footnote text up to the cursor.
  * Returns an empty list when the text does not look like a citation in progress.
+ *
+ * Every element's text starts with what separates it from the one before (" CLR", ", 30"). When the text ends in
+ * a separator already typed, after a complete element ("[1932] " or "175 CLR 1, "), the next elements are offered
+ * without it, so the popup shows the same suggestions after the space as before it.
  */
 export function suggestNext(before: string): Suggestion[] {
 	const lastSemi = before.lastIndexOf(';');
@@ -345,8 +351,30 @@ export function suggestNext(before: string): Suggestion[] {
 	}
 	// A citation ending in its closing full stop is finished, "Ibid." included; after it, a new sentence.
 	if (/[.]\s*$/.test(body)) return [];
+	const out = suggestFor(body, !!sig);
+	const sep = /(?:,\s*|\s+)$/.exec(body)?.[0];
+	if (sep) {
+		const base = body.slice(0, -sep.length);
+		if (base.trim().length > 0) {
+			// The separator as an element's text starts with it: ", " or " " (spaces typed twice count once).
+			const typed = sep.startsWith(',') ? (sep.length > 1 ? ', ' : ',') : ' ';
+			const seen = new Set(out.map((s) => `${s.insert}|${s.replaceLength}`));
+			for (const s of suggestFor(base, !!sig)) {
+				if (s.replaceLength !== 0 || !s.insert.startsWith(typed)) continue;
+				const insert = s.insert.slice(typed.length);
+				if (!insert || seen.has(`${insert}|0`)) continue;
+				seen.add(`${insert}|0`);
+				out.push({ ...s, insert });
+			}
+		}
+	}
+	// Required elements first, so the "next required element" leads.
+	return out.sort((a, b) => Number(b.required) - Number(a.required));
+}
 
-	const ranked = rankMatches(body, !!sig);
+/** The next elements for a citation body (no signal), from every kind of source it may be. */
+function suggestFor(body: string, hasSignal: boolean): Suggestion[] {
+	const ranked = rankMatches(body, hasSignal);
 	const viable = ranked.filter((r) => {
 		const remainder = body.slice(r.pos);
 		if (r.elements.length === 0) return false;
@@ -361,20 +389,29 @@ export function suggestNext(before: string): Suggestion[] {
 	// the kinds it identifies: "Ibid" is not also the author of an article.
 	const candidates = exact.length > 0 ? exact : pool.filter((r) => r.claimed || r.elements.length === top);
 	const claimed = candidates.filter((r) => r.claimed);
-	const chosen = (claimed.length > 0 ? claimed : candidates).slice(0, 6);
+	let chosen = claimed.length > 0 ? claimed : candidates;
+	// A kind the text already breaks gives way to one it fits: "(1992)" is not a medium neutral citation, whose
+	// year is in square brackets, but "[1992]" may be one or a report organised by year.
+	const clean = chosen.filter((r) => !r.issues.some((i) => i.severity === 'error'));
+	if (clean.length > 0) chosen = clean;
+	chosen = chosen.slice(0, 6);
 
 	const out: Suggestion[] = [];
 	const seen = new Set<string>();
 	for (const r of chosen) {
 		const replaceLength = body.length - r.pos;
 		const lastId = r.elements[r.elements.length - 1]?.id;
-		for (let i = r.next; i < r.spec.elements.length; i++) {
+		// From the element after the last one typed: an optional element skipped so far (the volume after
+		// "(1992)") is still offered.
+		const lastIndex = Math.max(-1, ...r.elements.map((m) => r.spec.elements.findIndex((el) => el.id === m.id)));
+		const from = r.complete && replaceLength === 0 ? Math.max(r.next, lastIndex + 1) : Math.min(r.next, lastIndex + 1);
+		for (let i = from; i < r.spec.elements.length; i++) {
 			const el = r.spec.elements[i]!;
 			if (el.id === lastId && !el.repeat) continue;
 			const key = `${el.insert}|${replaceLength}`;
 			if (!seen.has(key)) {
 				seen.add(key);
-				out.push({ label: el.label, hint: el.hint, source: r.spec.label, insert: el.insert, required: !el.optional, replaceLength });
+				out.push({ label: el.label, hint: el.hint, source: r.spec.label, insert: el.insert, required: !el.optional, replaceLength, after: lastId });
 			}
 			if (!el.optional) break;
 		}
@@ -382,13 +419,12 @@ export function suggestNext(before: string): Suggestion[] {
 			for (const s of [FINISH, ANOTHER]) {
 				if (!seen.has(s.insert)) {
 					seen.add(s.insert);
-					out.push({ ...s, source: r.spec.label });
+					out.push({ ...s, source: r.spec.label, after: lastId });
 				}
 			}
 		}
 	}
-	// Required elements first, so the "next required element" leads.
-	return out.sort((a, b) => Number(b.required) - Number(a.required));
+	return out;
 }
 
 /** The single next required element for the citation being typed, for inline hints. */

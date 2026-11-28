@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **AGLC4: the next element is suggested after every element, space or not.** The suggestions now open as soon as an
+  element is finished, and again after the space you type next: after the case name, the year, the report series
+  (`AC `), a court (`HCA `) and the comma before a pinpoint. Before, they only appeared before the space, and never
+  after a series or a court.
+- **AGLC4: the right elements after the year.** After a year in square brackets (`[2020]`), the suggestions offer a
+  court identifier for a medium neutral citation as well as a report series and a volume; after a year in round
+  brackets (`(1992)`), the volume and the report series.
+
 ## v0.25.2
 
 - **A new app icon**: a white pen nib flying like a rocket, on a bright blue square, on the Mac, Linux, the iPhone and

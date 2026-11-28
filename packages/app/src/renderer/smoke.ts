@@ -962,6 +962,48 @@ export async function runSmoke(app: App): Promise<void> {
 		return problems.length === 0 || problems.join('; ');
 	});
 
+	await check('AGLC4: the next element pops up after each element, with or without the space, and offers what can follow', async () => {
+		const problems: string[] = [];
+		const note = await vault.create('Cite smoke.md', '---\naglc: true\n---\nA claim.[^1]\n\n[^1]: ');
+		const leaf = workspace.getLeaf(false);
+		await leaf.openFile(note);
+		const view = leaf.view as MarkdownView;
+		const cm = view.editor.cm;
+		cm.focus();
+		const shown = () => [...document.querySelectorAll<HTMLElement>('.suggestion-container .aglc-suggestion-label')].filter((e) => e.offsetParent).map((e) => e.textContent ?? '');
+		/** Type text a character at a time, as the keyboard does, and return what the popup offers after it. */
+		const type = async (text: string): Promise<string[]> => {
+			for (const ch of text) {
+				const at = cm.state.doc.length;
+				cm.dispatch({ changes: { from: at, insert: ch }, selection: { anchor: at + 1 }, userEvent: 'input.type' });
+			}
+			await sleep(60);
+			return shown();
+		};
+		// [want in the popup, or [] for no popup]
+		const steps: [string, string[]][] = [
+			['*Donoghue ', []],
+			['v Stevenson*', ['Year']],
+			[' ', ['Year']],
+			['[1932]', ['Court identifier', 'Law report series']],
+			[' ', ['Court identifier', 'Law report series']],
+			['AC ', ['Starting page']],
+			['562, ', ['Pinpoint']],
+		];
+		for (const [text, want] of steps) {
+			const got = await type(text);
+			const ok = want.length === 0 ? got.length === 0 : want.every((w) => got.includes(w));
+			if (!ok) problems.push(`after ${JSON.stringify(cm.state.doc.toString().split('[^1]: ')[1])}: ${got.join(', ') || 'no popup'}`);
+		}
+		document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: '' } });
+		await sleep(80);
+		await workspace.getLeaf(false).openFile(vault.getFileByPath('Welcome.md')!);
+		await sleep(80);
+		await vault.delete(vault.getFileByPath('Cite smoke.md')!);
+		return problems.length === 0 || problems.join('; ');
+	});
+
 	await check('templates: from the / menu (title, date, cursor, properties), saved from a selection, a new note from one', async () => {
 		const problems: string[] = [];
 		const template = await vault.create('Templates/Brief smoke.md', '---\ntype: brief\n---\n# {{title}}\n\nDate: {{date:YYYY}}\n\n## Facts\n\n{{cursor}}\n');

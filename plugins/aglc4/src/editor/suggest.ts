@@ -9,8 +9,16 @@ import type { EditorView } from '@codemirror/view';
 import { expandSnippet, footnoteAt } from './context';
 import { insertTemplate } from './snippet';
 
-/** The popup opens by itself at the end of an element: after closing punctuation or a number. */
-const TRIGGER_AFTER = /(?:[,*_)\]'’>]\s?|\d\s)$/;
+/**
+ * The popup opens by itself at the end of an element: after closing punctuation (and the space after it), after a
+ * number and a space, or after a word and a space when the word ended an element that more follows (a report
+ * series, a court), never inside a name or title.
+ */
+const TRIGGER_AFTER = /(?:[,*_)\]'’>]\s?|\d\s|\p{L}\s)$/u;
+const AFTER_WORD = /\p{L}\s$/u;
+/** Elements that end in a word and are followed by more of the citation. Not a journal: its name runs to several
+ * words, and the popup would open after each. */
+const WORD_ELEMENTS = new Set(['series', 'court']);
 
 /** Text of the footnote at the cursor, up to the cursor, or null outside footnotes. */
 export function footnoteTextBeforeCursor(editor: Editor): { before: string; cursor: EditorPosition } | null {
@@ -59,7 +67,9 @@ export class NextElementSuggest extends EditorSuggest<Suggestion> {
 		if (!TRIGGER_AFTER.test(line) && !/\]:\s?$/.test(line) && !/\^\[$/.test(line)) return null;
 		const ctx = footnoteTextBeforeCursor(editor);
 		if (!ctx) return null;
-		if (this.atBoundary(ctx.before).length === 0) return null;
+		const next = this.atBoundary(ctx.before);
+		if (next.length === 0) return null;
+		if (AFTER_WORD.test(line) && !next.some((s) => s.after && WORD_ELEMENTS.has(s.after))) return null;
 		return { start: cursor, end: cursor, query: ctx.before };
 	}
 

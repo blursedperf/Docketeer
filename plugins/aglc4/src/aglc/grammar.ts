@@ -549,7 +549,8 @@ const CASE_REPORTED: SourceSpec = {
 	kind: 'case-reported',
 	label: 'Case (reported)',
 	ref: 'r 2.2',
-	claimAfter: 'year',
+	// The series identifies a reported case: "[2020]" alone may also begin a medium neutral citation.
+	claimAfter: 'series',
 	example: '*Mabo v Queensland [No 2]* (1992) 175 CLR 1, 30',
 	start: '*${Party v Party}* (${Year}) ${Volume} ${CLR} ${1}',
 	elements: [
