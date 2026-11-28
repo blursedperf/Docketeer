@@ -17,6 +17,7 @@ import * as lezerMarkdown from '@lezer/markdown';
 import { App, applyHostPlatform, getHost, setIcon, setIconPack } from '@quire/api';
 import { watchLayout } from './layout-mode';
 import { registerCore } from './core';
+import { showLaunchNotes } from './whats-new';
 import { registerBundledIconPacks } from './icon-packs';
 import { runBench, runShots, runSmoke } from './smoke';
 import { LAYOUTS, createFromTemplate, loadTemplates } from './homebases';
@@ -146,6 +147,8 @@ async function start() {
 	}
 	else if (host.app.isBench) await runBench(app);
 	else if (host.app.isSmoke) await runSmoke(app);
+	// The first launch after the app was replaced by a newer (or older) copy.
+	else showLaunchNotes(app);
 }
 
 start().catch((e: unknown) => {

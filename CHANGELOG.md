@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Upgrading by hand is now safe and tells you what changed.** Download the new version and replace the old
+  one, as before. The first time the new version opens, it keeps a copy of your settings from before (the newest
+  five, in a *Backups* folder beside the settings) and shows *What's new* since the version you last used. Opening
+  an older copy after a newer one says so and leaves the newer version's settings as they are. *What's new* is
+  also under Settings → About, with a note on how to upgrade. All of it works offline: the changelog is part of
+  the app.
 - **Docketeer is now called Caselore**, because another app already uses the name Docketeer. The first time
   Caselore starts it brings across your settings (recent homebases, the last one open, app-wide hotkeys) and keeps
   using your "Docketeer example" folder. Your homebases and notes are untouched, and notes locked in Docketeer

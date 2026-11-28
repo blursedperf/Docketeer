@@ -113,6 +113,11 @@ jobs:
           then **Open Anyway** in System Settings → Privacy & Security (or run
           `xattr -dr com.apple.quarantine /Applications/Caselore.app` once).
 
+          **Upgrading:** download the new version and replace the old one (on a Mac, drag it into Applications and
+          choose **Replace**). Your notes stay in your homebases and your settings are kept. The first time the new
+          version opens, it keeps a copy of your settings from before and shows what changed. Caselore never
+          connects to the internet, so it won't tell you about new versions: check this page when you like.
+
           Verify a download with `SHA256SUMS.txt`.
           NOTES
           if [ "${{ github.event.repository.private }}" != "true" ]; then

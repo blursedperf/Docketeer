@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import { serveVaultFile, vaultType } from './vault-files';
 import { installExample } from './example';
 import { LEGACY_APP_NAMES, migrateUserData } from './user-data';
+import { checkLaunch, type LaunchCheck } from './upgrade';
 import { applyHomebaseLayout } from './homebase-layout';
 import { fontsOnce } from './fonts';
 
@@ -52,6 +53,8 @@ const configFile = () => path.join(app.getPath('userData'), 'quire.json');
 let config: MainConfig = { recent: [], last: null };
 /** The settings file as it was when a test run started: the run must leave it as it was. */
 let configAtStart: string | null = null;
+/** What this launch is (a new version, an older one…); null in test runs, which never touch the settings. */
+let launch: LaunchCheck | null = null;
 
 async function loadConfig() {
 	try { config = { recent: [], last: null, ...JSON.parse(await fsp.readFile(configFile(), 'utf8')) }; } catch { /* first run */ }
@@ -199,6 +202,7 @@ function registerIpc() {
 			isShots: SHOTS,
 			isBench: BENCH,
 			frameless: config.windowFrame !== 'native' && !SMOKE,
+			launch: launch && (launch.kind === 'upgrade' || launch.kind === 'downgrade') ? { kind: launch.kind, from: launch.from, backup: launch.backup } : null,
 		};
 	});
 	// The colours of the window buttons drawn over the top bar (Windows and Linux), following the theme.
@@ -649,7 +653,14 @@ app.whenReady().then(async () => {
 		await migrateUserData(LEGACY_APP_NAMES.map((n) => path.join(appData, n)), app.getPath('userData'))
 			.catch((e) => console.error('Settings from before the rename were not copied', e));
 	}
+	const hadSettings = existsSync(configFile());
 	await loadConfig();
+	// The first launch of a version replaced by hand: back up the settings and record the version (upgrade.ts).
+	if (!SMOKE) {
+		launch = await checkLaunch(app.getPath('userData'), config, app.getVersion(), hadSettings)
+			.catch((e) => { console.error('The version check at launch failed', e); return null; });
+		if (launch?.save) await saveConfig().catch((e) => console.error('Settings not saved', e));
+	}
 	// --homebase=<folder> opens a folder directly (--vault= is accepted too).
 	const arg = process.argv.find((a) => /^--(?:homebase|vault)=/.test(a))?.replace(/^--(?:homebase|vault)=/, '');
 	if (SMOKE) await setVault(arg ?? (await smokeVault()));

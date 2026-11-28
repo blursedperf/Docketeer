@@ -10,6 +10,7 @@ import {
 	SuggestModal, TFile, TFolder, canShare, shareFile, formatHotkey, fuzzyScore, getIconPacks, defaultDocketKey, physicalKey, setIcon, type Hotkey, type Modifier, Platform, Modal, SPELL_LANGUAGES, type Menu, type TableOp, tableHere, tableOp, addProperty, HoverPreview,
 } from '@quire/api';
 import { registerDocket } from './docket';
+import { WhatsNewModal } from './whats-new';
 import { isCompact, registerCompact } from './compact';
 import { registerKeyboardToolbar } from './keyboard-toolbar';
 import { registerLongPress } from './long-press';
@@ -496,9 +497,11 @@ class AboutTab extends SettingTab {
 	display(): void {
 		const el = this.containerEl;
 		new Setting(el).setName('Caselore').setHeading();
-		new Setting(el).setName('Version').setDesc(this.app.host.appVersion);
+		new Setting(el).setName('Version').setDesc(this.app.host.appVersion)
+			.addButton((b) => b.setButtonText("What's new").onClick(() => new WhatsNewModal(this.app).open()));
 		new Setting(el).setName('Homebase').setDesc(this.app.host.vault?.path ?? '');
 		new Setting(el).setName('Offline').setDesc('Caselore makes no network requests. Every request from the app or a plugin is blocked by the app itself, and there are no updates, accounts, telemetry or crash reports.');
+		if (!Platform.isMobileApp) new Setting(el).setName('Upgrading').setDesc('To upgrade, download the new version and replace this one (on a Mac, drag it into Applications and choose Replace). Your notes stay in your homebases and your settings are kept. The first time the new version opens, it keeps a copy of your settings from before and shows what changed.');
 		if (!Platform.isMobileApp) new Setting(el).setName('Developer tools').setDesc('F12 or Ctrl+Shift+I opens the developer tools, for plugin authors.');
 		new Setting(el).setName('Licences').setDesc('Caselore is MIT-licensed. It includes libraries, icons and spelling dictionaries under their own licences.')
 			.addButton((b) => b.setButtonText('Show licences').onClick(() => { void showNotices(this.app); }));

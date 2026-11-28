@@ -143,6 +143,12 @@ export interface HostBridge {
 		setTitleBarColors?(color: string, symbol: string): Promise<void>;
 		/** Restart Caselore. */
 		relaunch?(): Promise<void>;
+		/**
+		 * Set on the first launch of a version that replaced another by hand: `upgrade` (newer than the last one
+		 * run) or `downgrade` (older). `from` is the last version run, left out when it predates the record;
+		 * `backup` is the copy of the app-wide settings made before anything changed.
+		 */
+		launch?: { kind: 'upgrade' | 'downgrade'; from?: string; backup?: string };
 		/** Benchmark mode (--bench): time the Docket on the open homebase and report. */
 		isBench?: boolean;
 		capture?(name: string): Promise<string | null>;

@@ -4,6 +4,12 @@ declare module 'virtual:phosphor-icons' {
 	export default data;
 }
 
+declare module 'virtual:changelog' {
+	/** CHANGELOG.md, bundled at build time. */
+	const text: string;
+	export default text;
+}
+
 declare module 'pdfjs-dist/build/pdf.worker.mjs' {
 	/** pdf.js's parser, run on the page's own thread (see pdf/engine.ts). */
 	export const WorkerMessageHandler: unknown;

@@ -67,6 +67,15 @@ const phosphorIcons = {
 	},
 };
 
+/** CHANGELOG.md as text, bundled so "What's new" can be shown with no network (whats-new.ts). */
+const changelog = {
+	name: 'changelog',
+	setup(build) {
+		build.onResolve({ filter: /^virtual:changelog$/ }, () => ({ path: 'changelog', namespace: 'changelog' }));
+		build.onLoad({ filter: /.*/, namespace: 'changelog' }, async () => ({ contents: await readFile(join(here, '..', '..', 'CHANGELOG.md'), 'utf8'), loader: 'text' }));
+	},
+};
+
 /**
  * Build the app into `dist`. `target` is the browser the renderer runs in; `electron` adds the main process and
  * preload; `boot` is a module the page loads instead of renderer.js (it imports renderer.js itself).
@@ -82,7 +91,7 @@ export async function buildApp({ dist = join(here, 'dist'), target = 'chrome130'
 		await esbuild.build({ ...common, entryPoints: [join(here, 'src/main/main.ts')], outfile: join(dist, 'main.cjs'), platform: 'node', format: 'cjs', target: 'node22', external: ['electron'] });
 		await esbuild.build({ ...common, entryPoints: [join(here, 'src/main/preload.ts')], outfile: join(dist, 'preload.cjs'), platform: 'node', format: 'cjs', target: 'node22', external: ['electron'] });
 	}
-	await esbuild.build({ ...common, entryPoints: [join(here, 'src/renderer/main.ts')], outfile: join(rendererOut, 'renderer.js'), platform: 'browser', format: 'esm', target, plugins: [phosphorIcons] });
+	await esbuild.build({ ...common, entryPoints: [join(here, 'src/renderer/main.ts')], outfile: join(rendererOut, 'renderer.js'), platform: 'browser', format: 'esm', target, plugins: [phosphorIcons, changelog] });
 	// The host's boot script (iOS): installs window.quire, then loads the renderer.
 	if (boot) await esbuild.build({ ...common, entryPoints: [boot], outfile: join(rendererOut, 'boot.js'), platform: 'browser', format: 'esm', target });
 
