@@ -1,9 +1,10 @@
-// Renders the app icons from docs/design/app-icon-source.jpeg (2048 × 2048):
-//   swift scripts/app-icon.swift docs/design/app-icon-source.jpeg \
+// Renders the app icons from docs/design/app-icon-source.png (1024 × 1024, the blue nib-rocket):
+//   swift scripts/app-icon.swift docs/design/app-icon-source.png \
 //     packages/ios/Docketeer/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png packages/app/build/icon.png
 // The iOS icon is full-bleed and opaque (iOS rounds the corners; App Store icons have no alpha). The desktop icon
 // is an 896 px rounded square with a soft shadow on a 1024 px transparent canvas. An optional fourth argument
-// "x,y,size" sets the square crop of the source (top-left origin).
+// "x,y,size" sets the square crop of the source (top-left origin). The default is the blue square inside the
+// source's own rounded corners, so nothing of its black surround is left.
 import Foundation
 import CoreGraphics
 import ImageIO
@@ -11,8 +12,8 @@ import UniformTypeIdentifiers
 let a = CommandLine.arguments
 let src = CGImageSourceCreateWithURL(URL(fileURLWithPath: a[1]) as CFURL, nil)!
 let img = CGImageSourceCreateImageAtIndex(src, 0, nil)!
-// Square crop around the nib-rocket, tight enough that it reads at 16–32 px
-let n = a.count > 4 ? a[4].split(separator: ",").map { Double($0)! } : [398, 401, 1250]
+// Square crop inside the source's rounded square (41–982 px, corners about 209 px round)
+let n = a.count > 4 ? a[4].split(separator: ",").map { Double($0)! } : [111, 111, 801]
 let crop = img.cropping(to: CGRect(x: n[0], y: n[1], width: n[2], height: n[2]))!
 func write(_ ctx: CGContext, _ path: String) {
 	let dest = CGImageDestinationCreateWithURL(URL(fileURLWithPath: path) as CFURL, UTType.png.identifier as CFString, 1, nil)!

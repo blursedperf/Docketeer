@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **A new app icon**: a white pen nib flying like a rocket, on a bright blue square, on the Mac, Linux, the iPhone and
+  the website.
+
 ## v0.25.1
 
 - **Pomodoro Flashcards follows your density setting.** The study view and the New card dialog now use the app's

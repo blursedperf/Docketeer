@@ -212,7 +212,7 @@ the rename as the **first task of Phase 0**, in its own commits, before any iOS 
 
 **Icons:**
 
-- Both icons come from `docs/design/app-icon-source.jpeg` (the copper nib-rocket), rendered by
+- Both icons come from `docs/design/app-icon-source.png` (the blue nib-rocket), rendered by
   `scripts/app-icon.swift`: `packages/app/build/icon.png` (rounded, transparent corners) and the full-bleed,
   opaque 1024 px App Store icon in the Xcode asset catalogue (iOS applies its own mask).
 

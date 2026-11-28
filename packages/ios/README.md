@@ -31,11 +31,11 @@ npm run shots:ios -w @quire/ios     # macOS: the iPhone's screenshots, compared 
                                     #  Docketeer/build/shots --platform ios --update)
 ```
 
-The app icon is rendered from `docs/design/app-icon-source.jpeg`, with the desktop icon, by `scripts/app-icon.swift`:
+The app icon is rendered from `docs/design/app-icon-source.png`, with the desktop icon, by `scripts/app-icon.swift`:
 full-bleed and opaque here (iOS rounds the corners itself; App Store icons must have no alpha). From the repo root:
 
 ```bash
-swift scripts/app-icon.swift docs/design/app-icon-source.jpeg \
+swift scripts/app-icon.swift docs/design/app-icon-source.png \
   packages/ios/Docketeer/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png packages/app/build/icon.png
 ```
 
