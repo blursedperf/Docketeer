@@ -1,6 +1,6 @@
 # Flashcards and the focus timer
 
-**Pomodoro Flashcards**, built in to Docketeer, turns what you write into flashcards and schedules them with spaced
+**Pomodoro Flashcards**, built in to Caselore, turns what you write into flashcards and schedules them with spaced
 repetition, beside a Pomodoro focus timer. There is no separate card editor: your cards are lines in your notes.
 
 ![The study view: the focus timer above a card](/screenshots/48-study-view.png){.shot}

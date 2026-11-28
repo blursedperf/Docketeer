@@ -1,4 +1,4 @@
-# Docketeer
+# Caselore
 
 **[Website and guide](https://blursedperf.github.io/Docketeer/)** ·
 **[Download](https://blursedperf.github.io/Docketeer/download)** ·
@@ -12,7 +12,7 @@ A Markdown notes app for law students that runs **entirely offline**: notes are 
 `.md` files in a folder of your own (a **homebase**), and the app cannot reach the network. Every request is blocked
 by the app itself, whatever a plugin tries. Free for macOS and Linux.
 
-![Docketeer: an essay with AGLC4 footnotes, and its printed pages beside it](test/visual/linux/01-main-crisp-light.png)
+![Caselore: an essay with AGLC4 footnotes, and its printed pages beside it](test/visual/linux/01-main-crisp-light.png)
 
 I'm always on my laptop, where sidebars take up too much room, and I wanted a keyboard-first notes app
 that lets me barely take my hands off the keyboard while creating and placing notes, editing and searching.
@@ -41,7 +41,7 @@ Four plugins ship built in:
 | **Pomodoro Flashcards** (`plugins/pomodoro-flashcards`) | Flashcards written in your notes and case briefs, studied with spaced repetition beside a focus timer, with a Study panel in the Docket |
 
 To look around first, choose *Try the example homebase* on the welcome screen (or *Switch homebase* → *Open the
-example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Docketeer
+example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Caselore
 example" in your Documents. Its source is in [packages/app/example](packages/app/example).
 
 The [website](https://blursedperf.github.io/Docketeer/) has the full user guide. For the design: [PLAN.md](PLAN.md)
@@ -54,14 +54,14 @@ and every shortcut).
 a `.dmg` for macOS (Apple Silicon or Intel), an AppImage for any Linux, a `.pacman` package for Arch/Omarchy or a
 `.deb` for Debian/Ubuntu. The macOS app is not notarised yet: the first time you open it, click **Done** on the
 warning, then **Open Anyway** in System Settings → Privacy & Security (or run
-`xattr -dr com.apple.quarantine /Applications/Docketeer.app` once). Windows is not built yet; iPhone and iPad are in
+`xattr -dr com.apple.quarantine /Applications/Caselore.app` once). Windows is not built yet; iPhone and iPad are in
 testing.
 
 ## Run from source
 
 ```bash
 npm install
-npm start            # build and open Docketeer (choose a folder as a homebase)
+npm start            # build and open Caselore (choose a folder as a homebase)
 ```
 
 Pass `--homebase=/path/to/folder` after `npm start --` to open a folder directly.
@@ -125,6 +125,6 @@ export default class Hello extends Plugin {
 
 Bundle with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and `@lezer/*` external:
 the app supplies its own instances at run time through an import map. `plugins/aglc4/esbuild.config.mjs`
-is a working example. Docketeer calls the folder of notes a *homebase*; in the API it is `app.vault`, with
+is a working example. Caselore calls the folder of notes a *homebase*; in the API it is `app.vault`, with
 `app.homebase` as an alias. More on the
 website: [Writing plugins](https://blursedperf.github.io/Docketeer/plugins).

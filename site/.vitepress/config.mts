@@ -6,17 +6,17 @@ const version: string = JSON.parse(readFileSync(new URL('../../package.json', im
 const repo = 'https://github.com/blursedperf/Docketeer';
 
 export default defineConfig({
-	title: 'Docketeer',
+	title: 'Caselore',
 	description: 'Offline Markdown notes for law students: AGLC4 citations, case briefs, flashcards and a keyboard-first Docket. Free for macOS and Linux.',
 	lang: 'en-AU',
-	base: '/Docketeer/',
+	base: '/Caselore/',
 	cleanUrls: true,
 	lastUpdated: true,
 	head: [
-		['link', { rel: 'icon', type: 'image/png', href: '/Docketeer/favicon.png' }],
+		['link', { rel: 'icon', type: 'image/png', href: '/Caselore/favicon.png' }],
 		// On an iPhone's home screen: the app's own full-bleed icon (iOS rounds it).
-		['link', { rel: 'apple-touch-icon', href: '/Docketeer/apple-touch-icon.png' }],
-		['meta', { property: 'og:title', content: 'Docketeer: offline notes for law students' }],
+		['link', { rel: 'apple-touch-icon', href: '/Caselore/apple-touch-icon.png' }],
+		['meta', { property: 'og:title', content: 'Caselore: offline notes for law students' }],
 		['meta', { property: 'og:description', content: 'Plain Markdown notes on your own computer, with AGLC4 citations, case briefs, flashcards and a keyboard-first Docket. Nothing goes online.' }],
 		['meta', { property: 'og:image', content: 'https://blursedperf.github.io/Docketeer/screenshots/01-main-crisp-light.png' }],
 	],
@@ -44,7 +44,7 @@ export default defineConfig({
 				],
 			},
 			{
-				text: 'Using Docketeer',
+				text: 'Using Caselore',
 				items: [
 					{ text: 'The Docket', link: '/guide/docket' },
 					{ text: 'Writing notes', link: '/guide/writing' },
@@ -76,7 +76,7 @@ export default defineConfig({
 		search: { provider: 'local' },
 		editLink: { pattern: `${repo}/edit/master/site/:path`, text: 'Suggest a change to this page' },
 		footer: {
-			message: 'Docketeer runs entirely offline. This website is the only part of it on the internet.',
+			message: 'Caselore runs entirely offline. This website is the only part of it on the internet.',
 			copyright: 'Free and open source, under the MIT licence.',
 		},
 	},

@@ -1578,7 +1578,7 @@ export async function runSmoke(app: App): Promise<void> {
 		app.setting.close();
 		return (widths.length > 5 && widths.every((w) => w === widths[0])) || widths.join(',');
 	});
-	await check('the fonts shipped with Docketeer load, and are the defaults', async () => {
+	await check('the fonts shipped with Caselore load, and are the defaults', async () => {
 		const families = ['Inter', 'JetBrains Mono', 'Source Serif 4'];
 		for (const f of families) { await document.fonts.load(`16px "${f}"`, 'Mabo ā'); await document.fonts.load(`italic 16px "${f}"`, 'Mabo'); }
 		const loaded = families.map((f) => [...document.fonts].filter((x) => x.family.replace(/"/g, '') === f && x.status === 'loaded').length);
@@ -1587,7 +1587,7 @@ export async function runSmoke(app: App): Promise<void> {
 		return (loaded.every((n) => n >= 3) && /^\s*"Inter"/.test(ui) && /^\s*"JetBrains Mono"/.test(mono)) || `loaded=${loaded.join(',')} ui=${ui} mono=${mono}`;
 	});
 	await check('fonts are chosen from the installed fonts, with a sample', async () => {
-		if (Platform.isMobileApp) return { skip: 'iPhone and iPad offer only the fonts Docketeer ships' };
+		if (Platform.isMobileApp) return { skip: 'iPhone and iPad offer only the fonts Caselore ships' };
 		const fonts = ((await app.host.app.fonts?.()) ?? []).filter((f) => !['Inter', 'JetBrains Mono', 'Source Serif 4'].includes(f.family));
 		app.setting.openTabById('appearance');
 		await sleep(100);
@@ -2384,7 +2384,7 @@ export async function runShots(app: App): Promise<void> {
 		await sleep(300);
 		await shot('44-docket-tasks');
 		docket.close(true);
-		// The note exported to PDF, opened in Docketeer's PDF viewer.
+		// The note exported to PDF, opened in Caselore's PDF viewer.
 		app.commands.executeCommandById('app:export-pdf', { file: note });
 		if (await until(() => !!app.vault.getFileByPath('Properties and links.pdf'), 15000)) {
 			const pdfLeaf = workspace.getLeaf('tab');
@@ -4468,7 +4468,7 @@ async function lockingChecks(app: App, check: CheckFn): Promise<void> {
 		await sleep(300);
 		const plugin = app.plugins.getPlugin('aglc-citations') as unknown as { history?: { versions(p: string): Promise<unknown[]> } } | null;
 		const versions = plugin?.history ? (await plugin.history.versions(note.path)).length : -1;
-		return (disk.includes('This note is encrypted by Docketeer') && !disk.includes(SECRET) && readable && after.includes('quire-encrypted') && !after.includes('Added while unlocked') && versions === 0)
+		return (disk.includes('This note is encrypted by Caselore') && !disk.includes(SECRET) && readable && after.includes('quire-encrypted') && !after.includes('Added while unlocked') && versions === 0)
 			|| `sealed=${disk.includes('quire-encrypted')} plainOnDisk=${disk.includes(SECRET)} readable=${readable} afterSealed=${after.includes('quire-encrypted')} historyVersions=${versions}`;
 	});
 

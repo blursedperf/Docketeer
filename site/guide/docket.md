@@ -1,6 +1,6 @@
 # The Docket
 
-The Docket is the heart of Docketeer: one tray, dropped from the top of the window, that holds search, commands and
+The Docket is the heart of Caselore: one tray, dropped from the top of the window, that holds search, commands and
 every panel. There are no sidebars to manage. Press **⌘D**, do what you came for, press **Esc**, and you are back in
 your note with the cursor where you left it.
 

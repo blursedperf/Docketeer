@@ -1,9 +1,10 @@
-# Docketeer (formerly Quire): notes for coding agents
+# Caselore (formerly Docketeer, and Quire before that): notes for coding agents
 
 A local-first, offline Markdown notes app for law students: a folder of plain `.md` files (a *homebase*), a
 CodeMirror 6 editor with live preview, the **Docket** (a keyboard-first tray of search and panels), tiling panes,
 and a plugin API shaped like Obsidian's. GitHub: **blursedperf/Docketeer** (renamed from blursedperf/quire;
-GitHub redirects the old URL). Default branch: **`master`**. History is kept linear.
+GitHub redirects the old URL). The app was renamed Caselore on 2026-11-28; the repository keeps its name until
+the owner renames it on GitHub, so links to it still say Docketeer. Default branch: **`master`**. History is kept linear.
 
 Read `PLAN.md` for the design and its *Offline guarantees*; read **`docs/mobile/PLAN.md`** before any iOS work.
 
@@ -35,8 +36,8 @@ node scripts/shots-diff.mjs <dir> --platform linux   # compare with test/visual/
 ```
 
 - `npm test` and `npm run smoke` must both be green before any commit you call done.
-- **The smoke run shares the app's real settings file** (`~/.config/Docketeer/quire.json` on Linux,
-  `~/Library/Application Support/Docketeer/quire.json` on macOS). It is guarded: test runs never write it, and
+- **The smoke run shares the app's real settings file** (`~/.config/Caselore/quire.json` on Linux,
+  `~/Library/Application Support/Caselore/quire.json` on macOS). It is guarded: test runs never write it, and
   the run reports `settingsUntouched: false` if it changed. Never write that file from tests.
 - The smoke run has a 120-second guard (`packages/app/src/main/main.ts`); it takes about 60 s on a fast machine.
 - In smoke checks, closing a tab (`leaf.detach()`) is asynchronous: wait (`await sleep(80)`) before counting.
@@ -64,10 +65,10 @@ node scripts/shots-diff.mjs <dir> --platform linux   # compare with test/visual/
 3. Release commit "Release X.Y.Z: <summary>": bump `version` in `package.json`, `packages/api/package.json`,
    `packages/app/package.json`, `packages/ios/package.json`, `package-lock.json` (root and the three packages),
    `apiVersion` in `packages/api/src/index.ts` and both `MARKETING_VERSION`s in
-   `packages/ios/Docketeer/Docketeer.xcodeproj/project.pbxproj`; turn `## Unreleased` into `## vX.Y.Z`.
+   `packages/ios/Caselore/Caselore.xcodeproj/project.pbxproj`; turn `## Unreleased` into `## vX.Y.Z`.
 4. Fast-forward `master` to the branch. If `master` moved (the owner sometimes edits files on GitHub), rebase the
    branch onto it and `git push --force-with-lease` first.
-5. Tag `vX.Y.Z` (annotated, "Docketeer X.Y.Z: <summary>") and push `master` and the tag. The tag runs
+5. Tag `vX.Y.Z` (annotated, "Caselore X.Y.Z: <summary>") and push `master` and the tag. The tag runs
    `.github/workflows/release.yml`: tests, installers for Linux (x64, arm64) and macOS, and the GitHub release.
 
 Latest release: **0.25.4** (stacked tabs are now called looseleaf tabs). Ask the owner before pushing tags or releasing.
@@ -82,7 +83,7 @@ State on 2026-11-27:
 
 - **The owner's devices, in order: macOS, then iPhone; the iPad is a distant third** (`docs/mobile/decisions.md` §8).
   Phase 2 is now the iPhone, with full editing; Phase 3 is the iPad, later and trimmed.
-- **Phases 0 and 1 are done** on branch `ios-scaffold` (pushed): the Swift shell (`packages/ios/Docketeer/`), real
+- **Phases 0 and 1 are done** on branch `ios-scaffold` (pushed): the Swift shell (`packages/ios/Caselore/`), real
   homebases from the folder picker, iCloud (change watching, the conflict guard, downloads, conflict versions),
   streaming media, and the page's smoke checks in WebKit (`npm run test:xcode -w @quire/ios`, about 70 s).
   Phase 1's exit check (syncing with the Mac both ways, a forced conflict) is waiting for the owner, on the iPhone.

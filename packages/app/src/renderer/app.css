@@ -1,5 +1,5 @@
 /* ==========================================================================================
-   Docketeer — stylesheet
+   Caselore — stylesheet
    One layer, built on the tokens below (docs/design/polish-plan.md §2). Components use tokens
    only: spacing on a 4px grid, four UI text sizes, fixed row / control / band heights, three
    icon sizes. Colours come from the --doom-* palette tokens (packages/api/src/themes), which
@@ -30,7 +30,7 @@ body {
 	--line-height-tight: 1.35;
 
 	/* Font roles: chrome (tabs, tree, modeline, keys, paths) is monospace; prose is the UI font. */
-	/* Inter and JetBrains Mono ship with Docketeer (see build.mjs), so it looks the same on every computer. */
+	/* Inter and JetBrains Mono ship with Caselore (see build.mjs), so it looks the same on every computer. */
 	--font-interface: "Inter", system-ui, -apple-system, "Segoe UI", "Cantarell", "Noto Sans", sans-serif;
 	--font-monospace: "JetBrains Mono", "Iosevka", "Fira Code", "Source Code Pro", "Cascadia Code", ui-monospace, monospace;
 	--font-chrome: var(--font-monospace);

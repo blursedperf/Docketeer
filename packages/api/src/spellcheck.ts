@@ -13,8 +13,8 @@ import { Events } from './events';
 import { LEGAL_WORDS } from './legal-words';
 import { findAuthorities } from './authorities';
 
-/** Docketeer's own words and the names of keys, which notes about Docketeer use: never marked as misspelt. */
-export const APP_WORDS = ['Docketeer', 'homebase', 'homebases', 'Ctrl', 'Cmd', 'Esc', 'Alt'];
+/** Caselore's own words and the names of keys, which notes about Caselore use: never marked as misspelt. */
+export const APP_WORDS = ['Caselore', 'homebase', 'homebases', 'Ctrl', 'Cmd', 'Esc', 'Alt'];
 
 export const SPELL_LANGUAGES: Record<string, string> = {
 	'en-AU': 'English (Australia)',
@@ -138,7 +138,7 @@ export class Spellchecker extends Events {
 		this.refreshEditors();
 	}
 
-	/** Leave a word alone until Docketeer restarts. */
+	/** Leave a word alone until Caselore restarts. */
 	ignore(word: string): void {
 		this.ignored.add(word);
 		this.refreshEditors();

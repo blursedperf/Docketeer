@@ -41,20 +41,20 @@ setIconPack('phosphor');
 
 async function welcome() {
 	const host = getHost();
-	document.title = 'Docketeer';
+	document.title = 'Caselore';
 	const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 	document.body.addClass(dark ? 'theme-dark' : 'theme-light');
 	const root = document.body.createDiv({ cls: 'welcome' });
 	const box = root.createDiv({ cls: 'welcome-box' });
 	const logo = box.createDiv({ cls: 'welcome-logo' });
 	setIcon(logo, 'notebook-pen');
-	box.createEl('h1', { text: 'Docketeer' });
+	box.createEl('h1', { text: 'Caselore' });
 	box.createEl('p', { cls: 'welcome-tagline', text: 'Notes in plain Markdown files, on your computer. Nothing goes online.' });
 	const actions = box.createDiv({ cls: 'welcome-actions' });
 	const b1 = actions.createEl('button', { cls: 'mod-cta', text: 'Open a folder as a homebase' });
 	b1.addEventListener('click', () => { void host.app.chooseVault(false); });
 	const b2 = actions.createEl('button', { text: 'Create a new homebase' });
-	// Creating: first which panels it starts with, Legal (as Docketeer comes) or Generic.
+	// Creating: first which panels it starts with, Legal (as Caselore comes) or Generic.
 	const layouts = box.createDiv({ cls: 'welcome-layouts', attr: { hidden: '', role: 'group', 'aria-label': 'Panels for the new homebase' } });
 	layouts.createEl('p', { cls: 'welcome-layouts-title', text: 'Which panels should it start with?' });
 	const layoutCard = (attr: Record<string, string>, icon: string, name: string, detail: string, run: () => unknown) => {
@@ -76,7 +76,7 @@ async function welcome() {
 	});
 	if (host.app.openExample) {
 		const b3 = actions.createEl('button', { text: 'Try the example homebase' });
-		b3.setAttr('title', 'Sample law notes, copied into “Docketeer example” in your Documents');
+		b3.setAttr('title', 'Sample law notes, copied into “Caselore example” in your Documents');
 		b3.addEventListener('click', () => { void host.app.openExample!().catch((e: unknown) => { status.setText(`Could not open the example homebase: ${e instanceof Error ? e.message : String(e)}`); }); });
 	}
 	const status = box.createEl('p', { cls: 'welcome-status', attr: { role: 'status' } });
@@ -132,7 +132,7 @@ async function start() {
 		await welcome();
 		return;
 	}
-	document.title = `${host.vault.name} - Docketeer`;
+	document.title = `${host.vault.name} - Caselore`;
 	const app = new App(host, document.body);
 	(globalThis as Record<string, unknown>).app = app;
 	const core = registerCore(app);
@@ -149,9 +149,9 @@ async function start() {
 }
 
 start().catch((e: unknown) => {
-	console.error('Docketeer failed to start', e);
+	console.error('Caselore failed to start', e);
 	const el = document.body.createDiv({ cls: 'fatal-error' });
-	el.createEl('h2', { text: 'Docketeer failed to start' });
+	el.createEl('h2', { text: 'Caselore failed to start' });
 	el.createEl('pre', { text: e instanceof Error ? `${e.message}\n\n${e.stack ?? ''}` : String(e) });
 	if (getHost().app.isSmoke) getHost().app.smokeReport?.({ ok: false, error: String(e) });
 });

@@ -49,7 +49,7 @@ final class LockdownDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
 		} else {
 			let scheme = action.request.url?.scheme ?? "?"
 			refused.append(scheme)
-			NSLog("Docketeer refused a navigation (%@:)", scheme)
+			NSLog("Caselore refused a navigation (%@:)", scheme)
 			decisionHandler(.cancel)
 		}
 	}

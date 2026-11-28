@@ -88,9 +88,9 @@ export class TaskDocketSettingTab extends PluginSettingTab {
 		new Setting(el).setName("Task actions in the editor menu").setDesc("Right-click a checklist line to set its due date or priority.")
 			.addToggle((t) => t.setValue(s.editorMenu).onChange((v) => void this.set("editorMenu", v)));
 		new Setting(el).setName("Tasks panel").setHeading();
-		new Setting(el).setName("Default sort").setDesc("How tasks are ordered when Docketeer starts.")
+		new Setting(el).setName("Default sort").setDesc("How tasks are ordered when Caselore starts.")
 			.addDropdown((d) => d.addOptions(SORT_OPTIONS).setValue(s.defaultSort).onChange((v) => void this.set("defaultSort", v as SortMode)));
-		new Setting(el).setName("Default grouping").setDesc("How tasks are grouped when Docketeer starts.")
+		new Setting(el).setName("Default grouping").setDesc("How tasks are grouped when Caselore starts.")
 			.addDropdown((d) => d.addOptions(GROUP_OPTIONS).setValue(s.defaultGroup).onChange((v) => void this.set("defaultGroup", v as GroupMode)));
 		new Setting(el).setName("Show due counts in the status bar").setDesc("Overdue and due-today counts at the bottom of the window. Click them to open the Tasks panel.")
 			.addToggle((t) => t.setValue(s.showStatusBar).onChange((v) => void this.set("showStatusBar", v)));

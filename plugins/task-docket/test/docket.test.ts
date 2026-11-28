@@ -210,7 +210,7 @@ const T = (raw: string, line = 0) => {
 
 console.log("All Task Docket tests passed!");
 
-// Docketeer's Tasks panel: a task's title without its Markdown or tags.
+// Caselore's Tasks panel: a task's title without its Markdown or tags.
 {
 	const { plainText } = require("../src/panel") as typeof import("../src/panel");
 	assert.strictEqual(plainText("Read *Donoghue v Stevenson* and [[Duty|the duty]] #torts"), "Read Donoghue v Stevenson and the duty");

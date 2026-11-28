@@ -501,7 +501,7 @@ const pair = "a :: b";
 	assert.equal(lines[9], "after &lt;video src=x>");
 }
 
-// Docketeer case briefs: the text under ## Facts, ## Held, ## Ratio becomes case cards, named by the # title.
+// Caselore case briefs: the text under ## Facts, ## Held, ## Ratio becomes case cards, named by the # title.
 {
 	const brief = [
 		"---", "type: case-brief", "---",

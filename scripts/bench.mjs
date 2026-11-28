@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Performance budgets with 10,000 notes: writes the generated homebase to a temporary folder, runs Docketeer
+ * Performance budgets with 10,000 notes: writes the generated homebase to a temporary folder, runs Caselore
  * on it offscreen (--bench) and prints the timings. Run after a build: npm run bench
  */
 import { spawnSync } from 'node:child_process';

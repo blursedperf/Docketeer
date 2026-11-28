@@ -12,16 +12,16 @@ type `?` in it.
 ## 1. Choose a homebase
 
 A **homebase** is the folder your notes live in: plain Markdown (`.md`) files you can open in any other app, back up
-or sync however you like. The first time Docketeer opens, it asks for one:
+or sync however you like. The first time Caselore opens, it asks for one:
 
 - **Open a folder as a homebase**: use a folder of Markdown notes you already have.
 - **Create a new homebase**: make an empty folder, starting with the panels you choose:
   - **Legal**: Subjects, Authorities, Outline, Cite, Homebase and Layout, for law notes with AGLC4 citations.
   - **Generic**: Files and Folders, Homebase and Layout; the others can be shown later.
 - **Try the example homebase**: sample law notes (an essay on native title, a case brief, a lecture recording and
-  a reading), copied into *Docketeer example* in your Documents. The best way to look around.
+  a reading), copied into *Caselore example* in your Documents. The best way to look around.
 
-![The hint shown when Docketeer first opens a homebase: Super+D for everything](/screenshots/00-first-run-hint.png){.shot}
+![The hint shown when Caselore first opens a homebase: Super+D for everything](/screenshots/00-first-run-hint.png){.shot}
 
 You can have as many homebases as you like, one per subject or one for everything. **⌘⇧O** switches between
 them, as does the homebase's name at the bottom left.
@@ -29,7 +29,7 @@ them, as does the homebase's name at the bottom left.
 ## 2. Open the Docket
 
 Press **⌘D**. The **Docket** drops from the top of the window with the cursor in its search box. Press **Esc** and
-it goes, leaving your cursor where it was. Almost everything in Docketeer is in here.
+it goes, leaving your cursor where it was. Almost everything in Caselore is in here.
 
 ![The Docket open over a note, searching for Mabo](/screenshots/23-docket-search.png){.shot}
 

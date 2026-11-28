@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Docketeer is now called Caselore**, because another app already uses the name Docketeer. The first time
+  Caselore starts it brings across your settings (recent homebases, the last one open, app-wide hotkeys) and keeps
+  using your "Docketeer example" folder. Your homebases and notes are untouched, and notes locked in Docketeer
+  open as before. Installers are now named `Caselore-…`; on Linux the package and command are `caselore`.
+  On macOS, Caselore is a new app: drag Docketeer from Applications to the Bin once Caselore has opened.
+  For plugins: nothing changes; the API is still `@quire/api`.
+
 ## v0.25.4
 
 - **Stacked tabs are now called looseleaf tabs**: *Toggle looseleaf tabs* in the commands, and *Looseleaf tabs* in a

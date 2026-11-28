@@ -2,7 +2,7 @@
 
 ## Install
 
-AGLC4 Citations comes with Docketeer and is on in every new homebase. It can be turned off and on under **Settings → Plugins**.
+AGLC4 Citations comes with Caselore and is on in every new homebase. It can be turned off and on under **Settings → Plugins**.
 
 ## Create the example essay
 

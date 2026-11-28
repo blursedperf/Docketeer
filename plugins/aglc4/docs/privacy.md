@@ -12,6 +12,6 @@ Your writing never leaves your computer.
 
 - **Offline audit.** Every build is checked by an offline audit (`scripts/offline-audit.mjs`) over the source code, the built plugin and its styles, including the libraries bundled into it (`docx` for Word files and `fflate` for zip files). The audit fails if any of them could make a network request, open a web page, run generated code, decode or encode base64, or inject raw HTML.
 - **Readable code.** The released `main.js` is not minified, so anyone can read exactly what it does.
-- **Verifiable build.** Each Docketeer release carries a GitHub build attestation. To confirm that a downloaded installer was built from this repository's source by its release workflow, run `gh attestation verify <installer> -R blursedperf/Docketeer`.
+- **Verifiable build.** Each Caselore release carries a GitHub build attestation. To confirm that a downloaded installer was built from this repository's source by its release workflow, run `gh attestation verify <installer> -R blursedperf/Docketeer`.
 
 The developer tools in `scripts/` (such as the Word fidelity check, which drives a local browser) are not part of the plugin and are not in a release.

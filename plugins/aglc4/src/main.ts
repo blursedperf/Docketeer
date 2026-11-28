@@ -1046,10 +1046,10 @@ export default class Aglc4Plugin extends Plugin {
 				const r = exportHtml(markdown, { ...opts, title: opts.title ?? file.basename });
 				footnotes = r.footnotes;
 				data = r.html;
-				// A PDF: the same page, printed by Docketeer (on white A4 pages; nothing is fetched).
+				// A PDF: the same page, printed by Caselore (on white A4 pages; nothing is fetched).
 				if (format === 'pdf') {
 					const print = (this.app as unknown as { host?: { app?: { printToPdf?: (html: string) => Promise<ArrayBuffer> } } }).host?.app?.printToPdf;
-					if (!print) throw new Error('this version of Docketeer cannot print to PDF');
+					if (!print) throw new Error('this version of Caselore cannot print to PDF');
 					data = await print(r.html);
 				}
 			}

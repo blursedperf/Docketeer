@@ -1,6 +1,6 @@
 {
-  "appId": "io.github.blursedperf.docketeer",
-  "productName": "Docketeer",
+  "appId": "io.github.blursedperf.caselore",
+  "productName": "Caselore",
   "electronVersion": "45.4.1",
   "directories": {
     "output": "release",
@@ -21,13 +21,13 @@
       "deb"
     ],
     "category": "Office",
-    "executableName": "docketeer",
+    "executableName": "caselore",
     "icon": "build/icon.png",
     "synopsis": "Offline Markdown notes with plugins",
     "maintainer": "blursedperf",
     "desktop": {
       "entry": {
-        "StartupWMClass": "Docketeer",
+        "StartupWMClass": "Caselore",
         "Keywords": "notes;markdown;citations;aglc;"
       }
     }
@@ -55,7 +55,7 @@
     "hardenedRuntime": false
   },
   "dmg": {
-    "title": "Docketeer ${version}"
+    "title": "Caselore ${version}"
   },
   "publish": null,
   "pacman": {
@@ -68,7 +68,7 @@
       "libnotify",
       "xdg-utils"
     ],
-    "packageName": "docketeer",
+    "packageName": "caselore",
     "fpm": [
       "--replaces",
       "quire",
@@ -86,7 +86,7 @@
       "libnotify4",
       "xdg-utils"
     ],
-    "packageName": "docketeer",
+    "packageName": "caselore",
     "fpm": [
       "--replaces",
       "quire",

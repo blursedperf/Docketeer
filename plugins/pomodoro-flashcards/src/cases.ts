@@ -243,7 +243,7 @@ export function buildCaseCards(record: CaseRecord, reverse: boolean): CaseCard[]
 	return cards;
 }
 
-/** The headings of a Docketeer case brief (its Outline panel adds them); Obiter makes no card. */
+/** The headings of a Caselore case brief (its Outline panel adds them); Obiter makes no card. */
 const BRIEF_HEADINGS = ["facts", "issues", "held", "ratio", "obiter"];
 
 export interface BriefSections {
@@ -257,7 +257,7 @@ export interface BriefSections {
 }
 
 /**
- * A case brief as Docketeer writes it: a field under each heading (`## Facts`, `## Issues`, `## Held`, `## Ratio`),
+ * A case brief as Caselore writes it: a field under each heading (`## Facts`, `## Issues`, `## Held`, `## Ratio`),
  * its text running to the next heading of the same level or higher. Headings inside code blocks are skipped.
  */
 export function briefSections(lines: string[], start = 0): BriefSections {
@@ -293,7 +293,7 @@ export function briefSections(lines: string[], start = 0): BriefSections {
 	return out;
 }
 
-/** Whether a note is a case brief, by Docketeer's rule: `type: case-brief`, a case-brief tag, or three brief headings. */
+/** Whether a note is a case brief, by Caselore's rule: `type: case-brief`, a case-brief tag, or three brief headings. */
 export function isCaseBrief(frontmatter: Record<string, string | string[]>, sections: BriefSections): boolean {
 	const type = String(frontmatter.type ?? "").toLowerCase();
 	return type === "case-brief" || type === "case brief" || frontmatterHasTag(frontmatter, "case-brief") || sections.headings >= 3;

@@ -178,7 +178,7 @@ export class FileInfoView extends FileView {
 		const box = this.contentEl.createDiv({ cls: 'empty-state-container' });
 		box.createDiv({ cls: 'empty-state-title', text: file.name });
 		box.createDiv({ text: `${(file.stat.size / 1024).toFixed(1)} KB · changed ${new Date(file.stat.mtime).toLocaleString()}` });
-		box.createDiv({ cls: 'u-muted', text: 'Docketeer cannot show this kind of file.' });
+		box.createDiv({ cls: 'u-muted', text: 'Caselore cannot show this kind of file.' });
 		const b = box.createEl('button', { text: 'Show in system file manager' });
 		b.addEventListener('click', () => { void this.app.host.app.showItemInFolder(file.path); });
 	}

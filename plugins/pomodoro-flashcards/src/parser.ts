@@ -165,7 +165,7 @@ export function parseMarkdownCards(
 	const caseTag = settings.caseTag || "#case-law";
 	const isCaseTagLine = (t: string) => t.toLowerCase() === "#" + bareTag(caseTag);
 	const frontmatter = settings.caseCards ? parseFrontmatter(lines).data : {};
-	// Docketeer's case briefs are case notes too: their fields are the text under ## Facts, ## Held, ## Ratio ...
+	// Caselore's case briefs are case notes too: their fields are the text under ## Facts, ## Held, ## Ratio ...
 	const brief = settings.caseCards ? briefSections(lines, contentStartLine) : null;
 	const isBrief = !!brief && isCaseBrief(frontmatter, brief);
 	const isCaseNote =

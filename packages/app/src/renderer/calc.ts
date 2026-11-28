@@ -40,7 +40,7 @@ function tokenize(src: string): Tok[] | null {
 	return out;
 }
 
-/** The value of `src`, or null when it is not arithmetic Docketeer can work out. */
+/** The value of `src`, or null when it is not arithmetic Caselore can work out. */
 export function evaluate(src: string): number | null {
 	const toks = tokenize(src);
 	if (!toks || toks.length === 0) return null;

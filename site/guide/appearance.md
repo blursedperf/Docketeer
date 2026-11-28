@@ -1,6 +1,6 @@
 # Appearance
 
-Open Settings with the **gear** at the bottom left, beside the homebase's name. Everything about how Docketeer looks
+Open Settings with the **gear** at the bottom left, beside the homebase's name. Everything about how Caselore looks
 is under **Appearance**.
 
 ![Settings, Appearance](/screenshots/10-settings-appearance.png){.shot}
@@ -22,14 +22,14 @@ computer uses.
 
 </div>
 
-**Accent colour** replaces the palette's accent (links, the active tab, buttons). Whatever you choose, Docketeer
+**Accent colour** replaces the palette's accent (links, the active tab, buttons). Whatever you choose, Caselore
 checks every pairing of text and background against the WCAG AA contrast standard and nudges any that fall short, so
 text stays readable.
 
 ## Fonts and size
 
 Choose the interface, text and monospace fonts from those installed on your computer, and the note text size.
-Docketeer comes with its own fonts, so it looks right without any.
+Caselore comes with its own fonts, so it looks right without any.
 
 ## Density
 
@@ -59,7 +59,7 @@ Themes and CSS snippets are files in your homebase:
 **Create theme** writes a starter `theme.css` with every colour explained, and selects it; after editing, press
 **Reload themes and snippets**. Snippets are small stylesheets you switch on and off one by one.
 
-Like the rest of Docketeer, themes stay offline: a theme or snippet that tries to load anything from outside the app
+Like the rest of Caselore, themes stay offline: a theme or snippet that tries to load anything from outside the app
 (a web font, `@import`, a remote picture) is refused, with the reason shown in Settings.
 
 The full list of colours and sizes a theme can change is in the

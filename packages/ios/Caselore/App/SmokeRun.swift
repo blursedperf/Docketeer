@@ -8,7 +8,7 @@ import Foundation
  * console errors and the navigations it refused.
  */
 final class SmokeRun {
-	/** The homebase: "Docketeer demo", as on desktop (main.ts → smokeVault). */
+	/** The homebase: "Caselore demo", as on desktop (main.ts → smokeVault). */
 	let homebase: URL
 	/** Where the run's files live; removed by cleanUp. */
 	let folder: URL
@@ -35,8 +35,8 @@ final class SmokeRun {
 	init(formFactor: String = "tablet") throws {
 		self.formFactor = formFactor
 		folder = FileManager.default.temporaryDirectory.appendingPathComponent("quire-smoke-\(UUID().uuidString)", isDirectory: true)
-		homebase = folder.appendingPathComponent("Docketeer demo", isDirectory: true)
-		suite = "docketeer-smoke-\(UUID().uuidString)"
+		homebase = folder.appendingPathComponent("Caselore demo", isDirectory: true)
+		suite = "caselore-smoke-\(UUID().uuidString)"
 		guard let d = UserDefaults(suiteName: suite) else { throw HomebaseError("No settings for the smoke run") }
 		defaults = d
 		let fm = FileManager.default

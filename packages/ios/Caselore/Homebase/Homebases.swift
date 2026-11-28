@@ -20,13 +20,13 @@ final class Homebases {
 		var folder: String?
 	}
 
-	static let exampleName = "Docketeer example"
+	static let exampleName = "Caselore example"
 	static let exampleMarker = ".quire/example.json"
 	static let maxRecent = 12
 
 	private let defaults: UserDefaults
 	private let key: String
-	/** The app's Documents folder (where the example goes; Files shows it under "On My iPad › Docketeer"). */
+	/** The app's Documents folder (where the example goes; Files shows it under "On My iPad › Caselore"). */
 	let documents: URL
 	/** The example homebase in the app bundle. */
 	let exampleSource: URL
@@ -95,7 +95,7 @@ final class Homebases {
 		let location = Self.location(of: url, documents: documents, deviceStorage: deviceStorage)
 		let entry = Entry(location: location, name: url.lastPathComponent, time: Date().timeIntervalSince1970 * 1000, bookmark: bookmark)
 		save([entry] + entries().filter { $0.location != location })
-		guard open(location: location) else { throw HomebaseError("Docketeer could not open “\(url.lastPathComponent)”.") }
+		guard open(location: location) else { throw HomebaseError("Caselore could not open “\(url.lastPathComponent)”.") }
 		return location
 	}
 
@@ -118,10 +118,10 @@ final class Homebases {
 			break
 		}
 		guard let folder else { throw HomebaseError("Too many folders called “\(Self.exampleName)”") }
-		let location = "\(deviceStorage)/Docketeer/\(folder)"
+		let location = "\(deviceStorage)/Caselore/\(folder)"
 		let entry = Entry(location: location, name: folder, time: Date().timeIntervalSince1970 * 1000, bookmark: nil, example: true, folder: folder)
 		save([entry] + entries().filter { $0.location != location })
-		guard open(location: location) else { throw HomebaseError("Docketeer could not open the example homebase") }
+		guard open(location: location) else { throw HomebaseError("Caselore could not open the example homebase") }
 		return location
 	}
 
@@ -191,7 +191,7 @@ final class Homebases {
 	}
 
 	/**
-	 * Where a folder is, in the words Files uses: "iCloud Drive/Law/Torts", "On My iPad/Docketeer/…", or, for
+	 * Where a folder is, in the words Files uses: "iCloud Drive/Law/Torts", "On My iPad/Caselore/…", or, for
 	 * another provider, its last three folders.
 	 */
 	static func location(of url: URL, documents: URL, deviceStorage: String) -> String {
@@ -201,7 +201,7 @@ final class Homebases {
 		}
 		let docs = documents.standardizedFileURL.pathComponents
 		if parts.count > docs.count, Array(parts.prefix(docs.count)) == docs {
-			return ([deviceStorage, "Docketeer"] + parts[docs.count...]).joined(separator: "/")
+			return ([deviceStorage, "Caselore"] + parts[docs.count...]).joined(separator: "/")
 		}
 		if let i = parts.firstIndex(of: "File Provider Storage") {
 			return ([deviceStorage] + parts[(i + 1)...]).joined(separator: "/")

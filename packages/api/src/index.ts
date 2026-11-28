@@ -1,5 +1,5 @@
 /**
- * @quire/api — the plugin API of Docketeer.
+ * @quire/api — the plugin API of Caselore.
  *
  * Plugins import from here; at run time the import resolves to the app's own instance, so classes,
  * `instanceof` checks and CodeMirror state fields are shared with the app.

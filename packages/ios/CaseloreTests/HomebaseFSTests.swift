@@ -1,5 +1,5 @@
 import XCTest
-@testable import Docketeer
+@testable import Caselore
 
 /** The homebase on disk: path checks, hidden files, atomic writes, rename, copy, trash (decisions.md §5). */
 final class HomebaseFSTests: XCTestCase {
@@ -173,7 +173,7 @@ final class HomebaseFSTests: XCTestCase {
 		try fs.write("Pic.png", Data([3]))
 		try changeOnDisk("Torts/Negligence/Duty of care.md", "changed")
 		try fs.write("Torts/Negligence/Duty of care.md", Data("never read here".utf8))
-		XCTAssertEqual(try text("Torts/Negligence/Duty of care.md"), "never read here", "a file Docketeer never read is written as on desktop")
+		XCTAssertEqual(try text("Torts/Negligence/Duty of care.md"), "never read here", "a file Caselore never read is written as on desktop")
 	}
 
 	func testSettingsInQuireStayLastWriteWins() throws {
@@ -219,7 +219,7 @@ final class HomebaseFSTests: XCTestCase {
 		XCTAssertThrowsError(try fs.read("Torts/Brief.md")) { e in
 			XCTAssertTrue((e as? HomebaseError)?.message.contains("still downloading from iCloud") == true)
 		}
-		// iCloud brings it while Docketeer waits.
+		// iCloud brings it while Caselore waits.
 		fs.downloadWait = 5
 		DispatchQueue.global().asyncAfter(deadline: .now() + 0.3) {
 			try? "# Brief".write(to: self.root.appendingPathComponent("Torts/Brief.md"), atomically: true, encoding: .utf8)
@@ -299,7 +299,7 @@ final class HomebaseFSTests: XCTestCase {
 	}
 }
 
-/** Changes made outside Docketeer, found by rescanning (decisions.md §5). */
+/** Changes made outside Caselore, found by rescanning (decisions.md §5). */
 final class HomebaseWatcherTests: XCTestCase {
 	private var root: URL!
 	private var fs: HomebaseFS!
@@ -316,7 +316,7 @@ final class HomebaseWatcherTests: XCTestCase {
 		try? FileManager.default.removeItem(at: root)
 	}
 
-	func testARescanReportsWhatChangedOutsideDocketeer() throws {
+	func testARescanReportsWhatChangedOutsideCaselore() throws {
 		let got = Got()
 		let w = HomebaseWatcher(fs: fs) { got.events.append(contentsOf: $0) }
 		w.start()

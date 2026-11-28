@@ -26,7 +26,7 @@ The export is your note as written: problems are not fixed silently. If the note
 
 **Export to HTML with AGLC4 footnotes** writes a standalone web page, `Note name.html`, with the footnotes listed at the end and linked both ways.
 
-**Export to PDF with AGLC4 footnotes** (in Docketeer) prints that same page to `Note name.pdf`: the footnotes listed at the end, the bibliography if the note has one, numbered pages. Like the other exports it is written to the export folder (or beside the note), asks before replacing a PDF changed since it was exported, and keeps the file it replaces in the version history.
+**Export to PDF with AGLC4 footnotes** (in Caselore) prints that same page to `Note name.pdf`: the footnotes listed at the end, the bibliography if the note has one, numbered pages. Like the other exports it is written to the export folder (or beside the note), asks before replacing a PDF changed since it was exported, and keeps the file it replaces in the version history.
 
 ## Exporting again
 

@@ -59,7 +59,7 @@ declare global {
 	function createSpan(o?: DomElementInfo | string, callback?: Callback<HTMLSpanElement>): HTMLSpanElement;
 	function createFragment(callback?: Callback<DocumentFragment>): DocumentFragment;
 	function createSvg<K extends keyof SVGElementTagNameMap>(tag: K, o?: SvgElementInfo | string, callback?: Callback<SVGElementTagNameMap[K]>): SVGElementTagNameMap[K];
-	/** The document and window in front (Obsidian's names; Docketeer has one window). */
+	/** The document and window in front (Obsidian's names; Caselore has one window). */
 	var activeDocument: Document;
 	var activeWindow: Window;
 }

@@ -1,6 +1,6 @@
 import UIKit
 import XCTest
-@testable import Docketeer
+@testable import Caselore
 
 /**
  * The page's smoke checks (packages/app/src/renderer/smoke.ts) in WebKit, on the iOS host: a throwaway homebase
@@ -19,11 +19,11 @@ final class SmokeTests: XCTestCase {
 	}
 
 	/**
-	 * The iPhone's screenshots (runShots in smoke.ts), written to the folder DOCKETEER_SHOTS names; skipped without
+	 * The iPhone's screenshots (runShots in smoke.ts), written to the folder CASELORE_SHOTS names; skipped without
 	 * it. `npm run shots:ios -w @quire/ios` runs this alone and compares them with test/visual/ios/.
 	 */
 	func testPhoneScreenshots() throws {
-		guard let out = ProcessInfo.processInfo.environment["DOCKETEER_SHOTS"], !out.isEmpty else { throw XCTSkip("Screenshots run only with DOCKETEER_SHOTS (npm run shots:ios)") }
+		guard let out = ProcessInfo.processInfo.environment["CASELORE_SHOTS"], !out.isEmpty else { throw XCTSkip("Screenshots run only with CASELORE_SHOTS (npm run shots:ios)") }
 		let folder = URL(fileURLWithPath: out, isDirectory: true)
 		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 		for old in (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] where old.pathExtension == "png" { try? FileManager.default.removeItem(at: old) }

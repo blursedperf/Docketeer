@@ -1,6 +1,6 @@
 # Docket: Phase 0 inventory
 
-What Docketeer has today (0.4.0, commit `47e36a5`/`479e2cc`), and where each piece goes once the Docket and
+What Caselore has today (0.4.0, commit `47e36a5`/`479e2cc`), and where each piece goes once the Docket and
 tiled tabs replace the sidebars. Written for Checkpoint 0 of `docs/docket/PLAN.md`.
 
 ## 1. Stack
@@ -164,7 +164,7 @@ From the plan:
 3. Units and topics: **folders**, **frontmatter** (`unit:`, `topic:`), or **tags**? (Recommendation:
    folders for subjects/topics, since notes already live in folders and it maps cleanly to clients/matters
    later, with a frontmatter override.)
-4. Is the **"Classic sidebars"** fallback needed? (Only you use Docketeer so far.)
+4. Is the **"Classic sidebars"** fallback needed? (Only you use Caselore so far.)
 5. Which panels may plugins add, and may plugins search locked content once unlocked?
 
 Raised by the inventory:

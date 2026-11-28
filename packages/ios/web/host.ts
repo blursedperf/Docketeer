@@ -66,7 +66,7 @@ export function fromBase64(b64: string): Uint8Array {
 const toBuffer = (u8: Uint8Array): ArrayBuffer => u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
 
 /**
- * Native's errors arrive as text. One it codes (`conflict: …`, a file that changed on disk since Docketeer read it)
+ * Native's errors arrive as text. One it codes (`conflict: …`, a file that changed on disk since Caselore read it)
  * becomes an Error with that `code`, as the renderer expects (isConflict in @quire/api).
  */
 export function hostError(e: unknown): unknown {
@@ -149,7 +149,7 @@ export function createHost(native: Native, info: HostInfo, events: NativeEvents)
 			forgetVault: (path) => call('app:forgetVault', path),
 			openExample: () => call('app:openExample'),
 			// Native shows the folder picker; a new Generic homebase gets its panels, written by native as on desktop. A
-			// template sends its panels (read again, so only what Docketeer understands) and the folders to make.
+			// template sends its panels (read again, so only what Caselore understands) and the folders to make.
 			chooseVault: (create, layout) => {
 				if (create && layout && typeof layout === 'object') {
 					return call('app:chooseVault', true, 'template', JSON.stringify(parsePanelsConfig(layout.panels), null, '\t'), safeFolders(layout.folders));

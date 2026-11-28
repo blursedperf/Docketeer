@@ -1,6 +1,6 @@
 # AGLC4 citations
 
-Docketeer comes with **AGLC4 Citations**, which writes and checks footnotes to the *Australian Guide to Legal
+Caselore comes with **AGLC4 Citations**, which writes and checks footnotes to the *Australian Guide to Legal
 Citation* (4th ed). It is on in every new homebase (Settings → Plugins turns it off).
 
 ::: tip Try it in two minutes

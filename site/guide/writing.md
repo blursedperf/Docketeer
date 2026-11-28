@@ -1,6 +1,6 @@
 # Writing notes
 
-A note is a Markdown file. Docketeer shows it as you write it (**live preview**): headings, bold, lists, tables and
+A note is a Markdown file. Caselore shows it as you write it (**live preview**): headings, bold, lists, tables and
 links take shape as you type, and their marks come back on the line the cursor is on, so you always see what you
 are editing.
 

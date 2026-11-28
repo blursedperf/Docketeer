@@ -1,7 +1,7 @@
 # Locking notes
 
 Lock a note, or a whole subject or topic, and it is **encrypted on disk**. Anyone who opens the file in another app,
-or finds it in a backup or a synced folder, sees only *This note is encrypted by Docketeer*.
+or finds it in a backup or a synced folder, sees only *This note is encrypted by Caselore*.
 
 ![A locked note in Subjects](/screenshots/37-units-locked-note.png){.shot}
 
@@ -10,8 +10,8 @@ or finds it in a backup or a synced folder, sees only *This note is encrypted by
 Run **Set up locking** (or Settings → Security) once:
 
 1. Choose a **passphrase**. One passphrase unlocks every locked note in the homebase.
-2. Docketeer shows a **recovery key**, once. Print it or keep it somewhere safe: if you forget the passphrase, it is
-   the only way back in. Lose both and no one, including the makers of Docketeer, can read your locked notes.
+2. Caselore shows a **recovery key**, once. Print it or keep it somewhere safe: if you forget the passphrase, it is
+   the only way back in. Lose both and no one, including the makers of Caselore, can read your locked notes.
 
 ## Locking and unlocking
 
@@ -19,7 +19,7 @@ Run **Set up locking** (or Settings → Security) once:
   in a locked folder are locked too.
 - **⌘L**, or the lock in the status bar, locks everything now: open locked notes are saved and closed and nothing of
   them stays in memory.
-- Docketeer also locks after 15 idle minutes and when the computer sleeps or the screen locks (each can be turned
+- Caselore also locks after 15 idle minutes and when the computer sleeps or the screen locks (each can be turned
   off in Settings → Security), and is always locked when it starts.
 - Open a locked note to unlock: it asks for the passphrase.
 - **Remove the lock** (in the note's or folder's actions) decrypts it again.
@@ -33,5 +33,5 @@ search, Authorities, links, previews, flashcards, tasks or outlines.
   never written down anywhere.
 - **File and folder names are not encrypted**: give a sensitive note a neutral name if its name gives it away.
 - Attachments (pictures, PDFs) are not encrypted.
-- Copies made before a note was locked (in other backups or sync history) are outside Docketeer's reach.
+- Copies made before a note was locked (in other backups or sync history) are outside Caselore's reach.
 - Exporting a locked note warns you first, since the export is not encrypted.

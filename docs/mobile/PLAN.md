@@ -1,4 +1,4 @@
-# Docketeer for iPhone and iPad: implementation plan
+# Caselore for iPhone and iPad: implementation plan
 
 This plan is written for a coding agent such as Claude Code. Work through it in order and check off tasks
 (`- [x]`) in this file as you finish them.
@@ -11,7 +11,7 @@ This plan is written for a coding agent such as Claude Code. Work through it in 
 
 Both run the same code. The layout depends on the window's width, not on the device.
 
-**Not in scope:** Android, sync built into Docketeer, and plugins loaded from the homebase.
+**Not in scope:** Android, sync built into Caselore, and plugins loaded from the homebase.
 
 ---
 
@@ -19,10 +19,10 @@ Both run the same code. The layout depends on the window's width, not on the dev
 
 Read this section before every phase.
 
-1. **Offline is absolute.** Docketeer must never reach the network (see `PLAN.md` → *Offline guarantees*). Don't
+1. **Offline is absolute.** Caselore must never reach the network (see `PLAN.md` → *Offline guarantees*). Don't
    add any dependency, SDK, Swift package or Capacitor plugin that uses the network. Don't use `URLSession`,
    `NWConnection`, `URLRequest` or web sockets in Swift. Don't add analytics or crash reporting. iCloud Drive
-   and Syncthing move files at the OS level, outside Docketeer.
+   and Syncthing move files at the OS level, outside Caselore.
 2. **The desktop app must not change behaviour.** `npm test` and `npm run smoke` must stay green on Linux after
    every commit. Changes to `HostBridge` (`packages/api/src/host.ts`) are **additive and optional**, and you
    update the Electron host (`packages/app/src/main/preload.ts`, `main.ts`) in the same commit.
@@ -96,7 +96,7 @@ It would have:
 
 Capacitor serves its own scheme from its own handler, which makes `/vault/` and `/plugins/` awkward to serve.
 
-- **Default:** a thin native shell (`DocketeerShell`), written in Swift with SwiftUI or UIKit for the app shell.
+- **Default:** a thin native shell (`CaseloreShell`), written in Swift with SwiftUI or UIKit for the app shell.
 - **Alternative:** Capacitor, only if Phase 0 shows a concrete benefit.
 - Record the choice and the reason in `docs/mobile/decisions.md`.
 
@@ -105,19 +105,19 @@ Capacitor serves its own scheme from its own handler, which makes `/vault/` and 
 ```
 packages/ios/
   package.json            workspace "@quire/ios": scripts build, test (vitest for web/), build:xcode (macOS only)
-  build.mjs               runs packages/app's renderer build with an iOS target, copies output into Docketeer/Resources/app/
+  build.mjs               runs packages/app's renderer build with an iOS target, copies output into Caselore/Resources/app/
   web/
     boot.ts               entry: asks native for host info, installs window.quire, then import('/renderer.js')
     host.ts               HostBridge over webkit.messageHandlers.quire (request/reply), event subscriptions
     host.test.ts          unit tests with a fake native side
-  Docketeer/              Xcode project (universal iPhone + iPad)
+  Caselore/              Xcode project (universal iPhone + iPad)
     App/                  app lifecycle, scene, window, WKWebView setup
     Bridge/               message handler: dispatch by channel name, mirrors preload.ts
     Scheme/               QuireSchemeHandler: quire://app/* (bundle, plugins, vault with Range, CSP header)
     Homebase/             HomebaseFS (all HostFs calls), bookmarks, NSFileCoordinator, change watching, conflicts
     Lockdown/             WKContentRuleList, navigation and UI delegates
     Resources/app/        build output (git-ignored)
-  DocketeerTests/             XCTest: path safety, atomic writes, rename, tree, Range, conflicts
+  CaseloreTests/             XCTest: path safety, atomic writes, rename, tree, Range, conflicts
 ```
 
 Add `packages/ios` to the root `workspaces`. Root `npm test` must still pass on Linux, so iOS's own test
@@ -196,19 +196,20 @@ iOS apps always have network access, so enforcement is in layers:
 - No `NSAppTransportSecurity` exceptions.
 - The audit fails the build on network APIs in Swift (see Phase 1).
 
-### 2.8 The new name: Docketeer
+### 2.8 The new name: Caselore
 
-The app is being renamed from **Quire** to **Docketeer**, because another app already uses the name Quire. Do
-the rename as the **first task of Phase 0**, in its own commits, before any iOS work.
+The app was renamed from **Quire** to **Docketeer** as the first task of Phase 0, because another app already
+uses the name Quire, and then from **Docketeer** to **Caselore** (2026-11-28), because a Docker tool already uses
+the name Docketeer (`decisions.md` §12). The list below was written for the first rename; the second followed it.
 
 **Rename now (everything a user sees):**
 
 - `productName`, the window title, the welcome screen, About and notices;
 - `README.md`, `PLAN.md` and `docs/`;
 - `electron-builder.json` (product name, `appId`, artifact names) and the release names;
-- the example homebase folder ("Quire example" becomes "Docketeer example");
+- the example homebase folder ("Quire example" became "Docketeer example", now "Caselore example");
 - the iOS display name and bundle id;
-- `"name"` in the root `package.json` (`docketeer-workspace`).
+- `"name"` in the root `package.json` (`caselore-workspace`).
 
 **Icons:**
 
@@ -219,13 +220,14 @@ the rename as the **first task of Phase 0**, in its own commits, before any iOS 
 **Keep for now (internal names a user never sees):** `@quire/api`, the `quire://` scheme, `window.quire`
 and the `.quire/` folder in every homebase. Renaming `.quire/` would cut every existing homebase off from its
 settings, units, hotkeys and layout. Record this in `docs/mobile/decisions.md`. If the user later wants these
-renamed, that needs a migration: read `.quire/` when `.docketeer/` is missing and move it, and give plugins an
+renamed, that needs a migration: read `.quire/` when `.caselore/` is missing and move it, and give plugins an
 alias for `@quire/api`.
 
 **Migration that is needed now:** Electron names its user-data folder after the app. After the rename, the
 app-level config, recent homebases and the example homebase's location move to a new folder. On first launch,
-if the Docketeer user-data folder is empty and a Quire one exists, copy its config across. Add a test for this.
-Also check for the "Quire example" folder in Documents and keep using it if it exists.
+if the Caselore user-data folder is empty and a Docketeer or Quire one exists, copy its config across. Add a test
+for this. Also check for a "Docketeer example" or "Quire example" folder in Documents and keep using it if it
+exists.
 
 **Left to the user:** renaming the GitHub repository (GitHub redirects the old URL) and the old release
 artifacts.
@@ -239,7 +241,7 @@ the previous exit check has passed. Phases 0, 2 and 3 need a person to try the a
 
 ### Phase 0: Rename and spike (1 to 2 weeks)
 
-- [x] Rename to Docketeer and replace the icons (§2.8). `npm test` and `npm run smoke` must stay green, and
+- [x] Rename to Caselore and replace the icons (§2.8). `npm test` and `npm run smoke` must stay green, and
       the screenshot baselines are updated for the new name.
 
 The question this phase answers: does CodeMirror 6 live preview feel right on an iPhone keyboard and an iPad
@@ -249,7 +251,7 @@ with a Magic Keyboard?
       still green on Linux.
 - [x] `packages/ios/build.mjs`: run the existing renderer build with an iOS target. This means
       `target: 'safari17'` instead of `chrome130`, the iOS `index.html` with `/boot.js` (§2.3), and output
-      to `Docketeer/Resources/app/`. Refactor `packages/app/build.mjs` into a reusable function rather than
+      to `Caselore/Resources/app/`. Refactor `packages/app/build.mjs` into a reusable function rather than
       copying it.
 - [x] Swift shell: one scene, one `WKWebView`, and `QuireSchemeHandler` serving bundled files for
       `quire://app/*` with the CSP header on `index.html`. Start the page at `quire://app/index.html`.
@@ -310,7 +312,7 @@ that editing feels right, or decides what changes. Stop here and report.
 - [x] Per-device workspace file (§2.6), with a vitest test in `packages/api/test`. (`formFactor` is on
       `HostBridge` now; the `Platform` flags are the next task.)
 - [x] `Platform` and `formFactor` come from the host (§2.5), with a test.
-- [x] **XCTest suite** (`DocketeerTests/`) mirroring `packages/app/test/vault-files.test.ts`:
+- [x] **XCTest suite** (`CaseloreTests/`) mirroring `packages/app/test/vault-files.test.ts`:
       - path escapes, hidden files, atomic write, rename and copy;
       - Range responses;
       - conflict detection;
@@ -459,5 +461,6 @@ are listed below.
 - [ ] Several windows on iPad (one homebase per window), or later?
 - [x] Sync: the owner uses **iCloud Drive**, not Syncthing (2026-11-27). Phase 1 is tested with iCloud Drive;
       Syncthing's conflict files are still recognised, but no Syncthing client is tested.
-- [x] Bundle id **`io.github.blursedperf.docketeer`**, the same as the desktop app (2026-11-27). The App Store
+- [x] Bundle id **`io.github.blursedperf.caselore`**, the same as the desktop app (2026-11-27; renamed from
+      `…docketeer` with the app on 2026-11-28). The App Store
       name is still to settle in Phase 4.

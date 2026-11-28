@@ -4,7 +4,7 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
 
 ## What the user sees
 
-- **Set up locking** once: choose a passphrase. Docketeer shows a **recovery key** once, to print or store
+- **Set up locking** once: choose a passphrase. Caselore shows a **recovery key** once, to print or store
   safely. Forget the passphrase and lose the recovery key, and locked notes cannot be read by anyone.
 - **Lock a note or a folder** (a subject or topic): its notes are encrypted on disk. New notes made in a
   locked folder are encrypted too. **Remove the lock** decrypts them again.
@@ -13,7 +13,7 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
   appears anywhere: not in search, Authorities, links, mentions, previews, embeds, exports, the usage record
   or logs. Opening one asks for the passphrase.
 - **Auto-lock**: after a set idle time (15 minutes by default) and when the computer sleeps or the screen
-  locks, each can be turned off (Settings → Security). Docketeer is always locked after it closes: the key is
+  locks, each can be turned off (Settings → Security). Caselore is always locked after it closes: the key is
   never written to disk.
 
 ## How it works
@@ -32,7 +32,7 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
   ---
   quire-locked: 1
   ---
-  This note is encrypted by Docketeer. Open it in Docketeer to read it.
+  This note is encrypted by Caselore. Open it in Caselore to read it.
 
   <!-- quire-encrypted v1
   base64(iv ‖ ciphertext and tag)
@@ -51,8 +51,8 @@ Decided with the user on 2026-11-25. Notes and folders can be locked; locked not
 ## Not covered
 
 - File and folder names, attachments (pictures, PDFs) and the folder structure are not encrypted.
-- Someone who can run code as you while Docketeer is unlocked can read what Docketeer can.
-- Copies made before a note was locked (other backups, sync services) are outside Docketeer's reach.
+- Someone who can run code as you while Caselore is unlocked can read what Caselore can.
+- Copies made before a note was locked (other backups, sync services) are outside Caselore's reach.
 
 ## Face ID and Touch ID on iPhone and iPad (design: not built, waiting for sign-off)
 
@@ -61,14 +61,14 @@ off.** The passphrase stays the way in that always works; Face ID is a quicker w
 
 ### What the user sees
 
-- After unlocking with the passphrase on an iPhone or iPad, Docketeer offers once: **"Unlock with Face ID on
+- After unlocking with the passphrase on an iPhone or iPad, Caselore offers once: **"Unlock with Face ID on
   this iPhone?"** (Touch ID on a device that has it). It is also in Settings → Security, with **Forget Face ID
   on this device**.
 - Locked, the unlock prompt shows Face ID first; **Use passphrase** is always beside it. Cancelling Face ID
   leaves the passphrase field.
 - It is per device and per homebase: the Mac, another iPhone and other homebases are untouched. Nothing about it
   goes into the homebase or syncs.
-- Docketeer still locks on leaving (when that is on), after the idle time and on closing; Face ID only makes
+- Caselore still locks on leaving (when that is on), after the idle time and on closing; Face ID only makes
   unlocking again quicker.
 
 ### How it works
@@ -81,7 +81,7 @@ off.** The passphrase stays the way in that always works; Face ID is a quicker w
   - it is never in a backup and never leaves the device (iCloud Keychain included); turning off the device
     passcode deletes it;
   - **the device passcode does not open it** (no `.devicePasscode` / `.userPresence`): someone who knows the
-    phone's passcode cannot reach locked notes. The fallback button is Docketeer's own passphrase.
+    phone's passcode cannot reach locked notes. The fallback button is Caselore's own passphrase.
   The item's account is the homebase's place (its bookmark id), and its label says what it is, not which notes.
 - **Enrolling** happens straight after a passphrase unlock, the one moment the page holds the raw key (in
   `unlockWithPassphrase`, before it is imported as a non-extractable `CryptoKey` and wiped). The page passes the
@@ -97,7 +97,7 @@ off.** The passphrase stays the way in that always works; Face ID is a quicker w
   `lock:biometry` (what the device has: none, Face ID, Touch ID), `lock:biometryEnrol(raw)`,
   `lock:biometryUnlock()` → the raw key, or null when cancelled or gone, and `lock:biometryForget()`. Each acts
   on the open homebase only; the page never names another.
-- `NSFaceIDUsageDescription`: "Docketeer uses Face ID to unlock your locked notes."
+- `NSFaceIDUsageDescription`: "Caselore uses Face ID to unlock your locked notes."
 - Desktop is unchanged. (Touch ID on a Mac could use the same design later.)
 
 ### What it does not change, and what it adds
@@ -106,7 +106,7 @@ off.** The passphrase stays the way in that always works; Face ID is a quicker w
   device without Face ID, or on the Mac, works exactly as now.
 - **Added exposure**: the homebase key is in the device's Keychain, behind the Secure Enclave's biometric check,
   instead of only in memory while unlocked. Someone who can get past Face ID on this device (or run code as
-  Docketeer on a compromised device) can unlock. This is the same trade that banking and password apps make, and
+  Caselore on a compromised device) can unlock. This is the same trade that banking and password apps make, and
   it is opt-in.
 - The raw key crosses the bridge, inside the app's own process, at enrolling and at each Face ID unlock.
 

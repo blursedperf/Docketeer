@@ -3,12 +3,12 @@
   "version": "0.25.4",
   "private": true,
   "type": "module",
-  "description": "Docketeer for iPhone and iPad: the web side of the native shell (docs/mobile/PLAN.md).",
+  "description": "Caselore for iPhone and iPad: the web side of the native shell (docs/mobile/PLAN.md).",
   "scripts": {
     "build": "node build.mjs",
     "test": "vitest run && node build.mjs",
     "build:xcode": "node scripts/build-xcode.mjs",
     "test:xcode": "node scripts/build-xcode.mjs --test",
-    "shots:ios": "node scripts/build-xcode.mjs --shots && node ../../scripts/shots-diff.mjs Docketeer/build/shots --platform ios"
+    "shots:ios": "node scripts/build-xcode.mjs --shots && node ../../scripts/shots-diff.mjs Caselore/build/shots --platform ios"
   }
 }

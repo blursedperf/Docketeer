@@ -96,22 +96,22 @@ jobs:
           awk -v tag="${GITHUB_REF_NAME}" '$0 == "## " tag {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
           cat >> notes.md <<'NOTES'
 
-          **Docketeer is in beta**: stable enough for daily use, with new features and fixes arriving often. Keep a
+          **Caselore is in beta**: stable enough for daily use, with new features and fixes arriving often. Keep a
           backup of your notes, as with any app, and please report problems in Issues.
 
           ## Downloads
 
           | System | File |
           |---|---|
-          | macOS (Apple Silicon) | `Docketeer-*-mac-arm64.dmg` |
-          | macOS (Intel) | `Docketeer-*-mac-x64.dmg` |
-          | Linux, any distribution | `Docketeer-*-linux-x86_64.AppImage` / `…-arm64.AppImage` (make it executable, then run it) |
-          | Arch / Omarchy | `Docketeer-*-linux-x64.pacman` / `…-aarch64.pacman`: `sudo pacman -U <file>` |
-          | Debian / Ubuntu | `Docketeer-*-linux-amd64.deb` / `…-arm64.deb`: `sudo apt install ./<file>` |
+          | macOS (Apple Silicon) | `Caselore-*-mac-arm64.dmg` |
+          | macOS (Intel) | `Caselore-*-mac-x64.dmg` |
+          | Linux, any distribution | `Caselore-*-linux-x86_64.AppImage` / `…-arm64.AppImage` (make it executable, then run it) |
+          | Arch / Omarchy | `Caselore-*-linux-x64.pacman` / `…-aarch64.pacman`: `sudo pacman -U <file>` |
+          | Debian / Ubuntu | `Caselore-*-linux-amd64.deb` / `…-arm64.deb`: `sudo apt install ./<file>` |
 
           **macOS:** the app is not notarised by Apple yet. The first time you open it, click **Done** on the warning,
           then **Open Anyway** in System Settings → Privacy & Security (or run
-          `xattr -dr com.apple.quarantine /Applications/Docketeer.app` once).
+          `xattr -dr com.apple.quarantine /Applications/Caselore.app` once).
 
           Verify a download with `SHA256SUMS.txt`.
           NOTES
@@ -121,4 +121,4 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Docketeer ${GITHUB_REF_NAME#v}" --notes-file notes.md --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "Caselore ${GITHUB_REF_NAME#v}" --notes-file notes.md --verify-tag

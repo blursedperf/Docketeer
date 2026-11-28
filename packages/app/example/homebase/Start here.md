@@ -1,4 +1,4 @@
-This is an example homebase: a few weeks of notes for a law subject, to try Docketeer on. It is an ordinary folder of Markdown files, so change anything, or delete it when you are done. Your own homebases are not touched.
+This is an example homebase: a few weeks of notes for a law subject, to try Caselore on. It is an ordinary folder of Markdown files, so change anything, or delete it when you are done. Your own homebases are not touched.
 
 ## Find your way
 

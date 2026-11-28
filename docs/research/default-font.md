@@ -1,10 +1,10 @@
-# A default font for Docketeer
+# A default font for Caselore
 
 *Done in 0.16.0: recommendations 1–4 below.*
 
 ## Now
 
-Docketeer ships no fonts. Each setting falls back to what the computer has:
+Caselore ships no fonts. Each setting falls back to what the computer has:
 
 | Setting | Default stack | What students actually get |
 |---|---|---|
@@ -12,9 +12,9 @@ Docketeer ships no fonts. Each setting falls back to what the computer has:
 | Text (notes) | the interface font | the same |
 | Monospace (tabs, file tree, status bar, Docket, code) | `"JetBrains Mono", "Iosevka", "Fira Code", "Source Code Pro", "Cascadia Code", ui-monospace` | JetBrains Mono only if installed (rare): Cascadia Mono/Consolas on Windows, SF Mono/Menlo on macOS |
 
-The monospace font matters more than usual: Docketeer's chrome (tabs, the file tree, the status bar, the Docket bar and
+The monospace font matters more than usual: Caselore's chrome (tabs, the file tree, the status bar, the Docket bar and
 headings in dialogs) is set in it. The screenshots and the design assume JetBrains Mono, so on a typical Windows
-laptop Docketeer looks noticeably different from how it was designed, and the three systems all differ.
+laptop Caselore looks noticeably different from how it was designed, and the three systems all differ.
 
 ## Options
 
@@ -41,7 +41,7 @@ They load from `quire://app` (the CSP already allows `font-src 'self' quire://ap
 3. **Bundle Source Serif 4 as an option, not the default**, for note text: *Text font → Source Serif 4* gives a formal,
    printed-page look for writing essays, and pairs with the Chambers palettes. Sans stays the default because
    students skim notes more than they read them.
-4. In the font dropdowns, a **Bundled with Docketeer** group comes first, so these work on every computer even when the
+4. In the font dropdowns, a **Bundled with Caselore** group comes first, so these work on every computer even when the
    installed list is short.
 
 Exports (Word) are not affected. They keep naming the font the student or their faculty template sets, usually

@@ -34,7 +34,7 @@ Tried by the owner with a Logitech keyboard for iPad.
 - **Works as intended**: editing, and the shortcuts tried (⌘D for the Docket, ⌘2 for its panels, ⌘\ to
   split) reach the page; iPadOS does not take them.
 - **The keyboard has no Escape key.** For now: Settings → General → Keyboard → Hardware Keyboard → Modifier
-  Keys, Caps Lock → Escape. Docketeer should not need Escape alone: Phase 2 (now Phase 3) adds ⌘. as Escape (a `UIKeyCommand`
+  Keys, Caps Lock → Escape. Caselore should not need Escape alone: Phase 2 (now Phase 3) adds ⌘. as Escape (a `UIKeyCommand`
   forwarded to the page). The Docket key already closes the Docket.
 
 ## Verdict

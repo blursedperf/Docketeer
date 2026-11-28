@@ -279,11 +279,11 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 		};
 	}
 
-	/** Open a link from the editor: notes in Docketeer; web links are copied, as Docketeer stays offline. */
+	/** Open a link from the editor: notes in Caselore; web links are copied, as Caselore stays offline. */
 	private followLink(link: { type: 'wiki' | 'url'; target: string }, newLeaf: boolean): void {
 		if (link.type === 'url') {
 			this.app.host.clipboard.writeText(link.target);
-			new Notice('Docketeer is offline and does not open web links. The link was copied to the clipboard.');
+			new Notice('Caselore is offline and does not open web links. The link was copied to the clipboard.');
 			return;
 		}
 		void this.app.workspace.openLinkText(link.target, this.file?.path ?? '', newLeaf ? 'tab' : false);
@@ -562,7 +562,7 @@ export class MarkdownView extends FileView implements MarkdownFileInfo {
 			return;
 		}
 		this.app.host.clipboard.writeText(href);
-		new Notice('Docketeer is offline and does not open web links. The link was copied to the clipboard.');
+		new Notice('Caselore is offline and does not open web links. The link was copied to the clipboard.');
 	}
 
 	/**

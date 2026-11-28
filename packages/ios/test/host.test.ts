@@ -116,13 +116,13 @@ describe('createHost', () => {
 	it('asks native for recent homebases, and to open, forget and choose them', async () => {
 		const recent = [{ path: 'iCloud Drive/Law', name: 'Law', time: 1, current: true }];
 		const { native, calls } = fakeNative({
-			'app:recent': recent, 'app:openVault': true, 'app:forgetVault': undefined, 'app:openExample': 'On My iPad/Docketeer/Docketeer example', 'app:chooseVault': true,
+			'app:recent': recent, 'app:openVault': true, 'app:forgetVault': undefined, 'app:openExample': 'On My iPad/Caselore/Caselore example', 'app:chooseVault': true,
 		});
 		const host = createHost(native, info, new NativeEvents());
 		expect(await host.app.recentVaults()).toEqual(recent);
 		expect(await host.app.openVault('iCloud Drive/Law')).toBe(true);
 		await host.app.forgetVault!('iCloud Drive/Old');
-		expect(await host.app.openExample!()).toBe('On My iPad/Docketeer/Docketeer example');
+		expect(await host.app.openExample!()).toBe('On My iPad/Caselore/Caselore example');
 		await host.app.chooseVault(false);
 		await host.app.chooseVault(true, 'legal');
 		await host.app.chooseVault(true, 'generic');
@@ -132,7 +132,7 @@ describe('createHost', () => {
 			['app:openVault', ['iCloud Drive/Law']], ['app:forgetVault', ['iCloud Drive/Old']], ['app:openExample', []],
 			['app:chooseVault', [false, 'legal', null]], ['app:chooseVault', [true, 'legal', null]],
 			['app:chooseVault', [true, 'generic', JSON.stringify(genericPanels(), null, '\t')]],
-			// A template: its panels read again (only what Docketeer understands), and only safe folders.
+			// A template: its panels read again (only what Caselore understands), and only safe folders.
 			['app:chooseVault', [true, 'template', JSON.stringify(parsePanelsConfig(JSON.stringify(panels)), null, '\t'), ['Torts']]],
 		]);
 		expect(await host.app.fonts!()).toEqual([]);

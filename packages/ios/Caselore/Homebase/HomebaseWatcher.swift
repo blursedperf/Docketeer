@@ -1,7 +1,7 @@
 import Foundation
 
 /**
- * Finds changes to the open homebase made outside Docketeer (another device through iCloud, the Files app) and
+ * Finds changes to the open homebase made outside Caselore (another device through iCloud, the Files app) and
  * reports them as fs:events, the shape the desktop watcher sends: `[{ path, stat }]`, `stat` null when it went.
  *
  * Every signal leads to the same rescan, which compares each file's type, size and modification time with the

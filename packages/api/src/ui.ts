@@ -615,7 +615,7 @@ export abstract class PluginSettingTab extends SettingTab {
 
 /**
  * A settings page described as data (the declarative form, as Obsidian 1.13 has it): groups of settings, each with
- * a control bound to a settings key. Docketeer does not draw these itself: plugins also define `display()`, which is
+ * a control bound to a settings key. Caselore does not draw these itself: plugins also define `display()`, which is
  * used, and the settings search finds what `display()` draws.
  */
 /** A setting's control, bound to the settings key it reads and writes; `validate` answers a problem, or nothing. */

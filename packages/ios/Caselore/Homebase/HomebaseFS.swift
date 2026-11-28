@@ -36,7 +36,7 @@ final class HomebaseFS {
 	/** The root with symlinks resolved, for the containment check. */
 	let realRoot: String
 	private let fm = FileManager.default
-	/** For the conflict guard: the modification time Docketeer last read or wrote, by homebase path. */
+	/** For the conflict guard: the modification time Caselore last read or wrote, by homebase path. */
 	private var known: [String: Int] = [:]
 	private let knownLock = NSLock()
 	/** How long reading a file waits for iCloud to download it. */
@@ -176,14 +176,14 @@ final class HomebaseFS {
 		}
 	}
 
-	/** Refuse to replace a file that changed on disk since Docketeer last read or wrote it. */
+	/** Refuse to replace a file that changed on disk since Caselore last read or wrote it. */
 	private func check(_ rel: String, _ url: URL) throws {
 		guard Self.guarded(rel) else { return }
 		knownLock.lock()
 		let last = known[rel]
 		knownLock.unlock()
 		guard let last, let now = statOf(url), now.mtime != last else { return }
-		throw HomebaseError("“\(rel)” changed on disk since Docketeer read it", code: "conflict")
+		throw HomebaseError("“\(rel)” changed on disk since Caselore read it", code: "conflict")
 	}
 
 	// MARK: Coordination
@@ -537,7 +537,7 @@ final class HomebaseFS {
 	/** An iCloud version's bytes; a clear error when iCloud has not brought them to this device. */
 	private static func contents(of version: NSFileVersion) throws -> Data {
 		do { return try Data(contentsOf: version.url) } catch {
-			if !version.hasLocalContents { throw HomebaseError("That version has not downloaded to this device yet. Keep Docketeer open on Wi-Fi for a minute and try again") }
+			if !version.hasLocalContents { throw HomebaseError("That version has not downloaded to this device yet. Keep Caselore open on Wi-Fi for a minute and try again") }
 			throw error
 		}
 	}

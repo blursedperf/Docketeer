@@ -4,7 +4,7 @@ plugins/*/main.js
 *.map
 .DS_Store
 release/
-packages/ios/Docketeer/Resources/app/
-packages/ios/Docketeer/build/
-packages/ios/Docketeer/Docketeer.xcodeproj/xcuserdata/
-packages/ios/Docketeer/Docketeer.xcodeproj/project.xcworkspace/xcuserdata/
+packages/ios/Caselore/Resources/app/
+packages/ios/Caselore/build/
+packages/ios/Caselore/Caselore.xcodeproj/xcuserdata/
+packages/ios/Caselore/Caselore.xcodeproj/project.xcworkspace/xcuserdata/

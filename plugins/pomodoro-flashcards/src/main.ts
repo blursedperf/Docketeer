@@ -531,7 +531,7 @@ export default class PomodoroFlashcardsPlugin extends Plugin {
 			parts.push({ icon: "layers", text: `${this.dueCache.count} due` });
 		}
 
-		// Icons, as the rest of Docketeer's status bar has, rather than emoji.
+		// Icons, as the rest of Caselore's status bar has, rather than emoji.
 		this.statusBarEl.empty();
 		parts.forEach((p, i) => {
 			if (i) this.statusBarEl!.createSpan({ cls: "pomo-fc-statusbar-sep", text: "·" });

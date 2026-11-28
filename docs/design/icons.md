@@ -1,9 +1,9 @@
 # Icons: choosing a set that is not Obsidian's
 
-Obsidian draws its interface with [Lucide](https://lucide.dev). Docketeer used Lucide too, which made it look
+Obsidian draws its interface with [Lucide](https://lucide.dev). Caselore used Lucide too, which made it look
 like Obsidian at a glance. This compares the alternatives and records the choice.
 
-## What Docketeer needs
+## What Caselore needs
 
 - **34 icons** used by the app and the AGLC4 plugin (file, folder, search, history, book-open, settings,
   zoom, split, terminal, trash …).
@@ -16,7 +16,7 @@ like Obsidian at a glance. This compares the alternatives and records the choice
 
 All are on npm; each was downloaded and checked against the 34 icons ([sheet below](#comparison)).
 
-| Set | Licence | Icons | Covers Docketeer's 34 | Style | Notes |
+| Set | Licence | Icons | Covers Caselore's 34 | Style | Notes |
 |---|---|---|---|---|---|
 | **Lucide** (current) | ISC | 1,700+ | 34 | 2px round stroke, 24 grid | Obsidian's set. |
 | **Tabler** | MIT | 5,491 | 34 | 2px round stroke, 24 grid | Feather lineage like Lucide: changing to it changes almost nothing visible. |
@@ -37,7 +37,7 @@ All are on npm; each was downloaded and checked against the 34 icons ([sheet bel
 
 ## Comparison
 
-Each row draws the same 34 Docketeer icons (Lucide names on top):
+Each row draws the same 34 Caselore icons (Lucide names on top):
 
 ![Icon sets compared](icon-sets.png)
 

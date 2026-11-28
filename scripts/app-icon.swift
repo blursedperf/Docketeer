@@ -1,6 +1,6 @@
 // Renders the app icons from docs/design/app-icon-source.png (1024 × 1024, the blue nib-rocket):
 //   swift scripts/app-icon.swift docs/design/app-icon-source.png \
-//     packages/ios/Docketeer/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png packages/app/build/icon.png
+//     packages/ios/Caselore/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png packages/app/build/icon.png
 // The iOS icon is full-bleed and opaque (iOS rounds the corners; App Store icons have no alpha). The desktop icon
 // is an 896 px rounded square with a soft shadow on a 1024 px transparent canvas. An optional fourth argument
 // "x,y,size" sets the square crop of the source (top-left origin). The default is the blue square inside the

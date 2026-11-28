@@ -1,7 +1,7 @@
 # Searching your outlines
 
 Exam outlines are trees: a heading, a topic, its elements, the cases under each. An ordinary search finds the one
-line with your word and loses the branch it sits on. **Whole-Tree Search**, built in to Docketeer, keeps the branch.
+line with your word and loses the branch it sits on. **Whole-Tree Search**, built in to Caselore, keeps the branch.
 
 Type `~` in the Docket and a few words:
 

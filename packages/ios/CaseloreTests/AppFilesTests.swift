@@ -1,6 +1,6 @@
 import WebKit
 import XCTest
-@testable import Docketeer
+@testable import Caselore
 
 /** quire://app/: routes, path checks and headers (docs/mobile/decisions.md §3). */
 final class AppFilesTests: XCTestCase {
@@ -235,7 +235,7 @@ final class ChannelsTests: XCTestCase {
 			try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
 			try text.write(to: url, atomically: true, encoding: .utf8)
 		}
-		suite = "docketeer-tests-\(UUID().uuidString)"
+		suite = "caselore-tests-\(UUID().uuidString)"
 		defaults = UserDefaults(suiteName: suite)
 	}
 
@@ -302,7 +302,7 @@ final class ChannelsTests: XCTestCase {
 		_ = try c.answer("app:showItemInFolder", ["Welcome.md"])
 		_ = try c.answer("app:showItemInFolder", [""])
 		XCTAssertEqual(opened.map(\.scheme), ["shareddocuments", "shareddocuments"])
-		XCTAssertTrue(opened[0].path.hasSuffix("/Documents/Docketeer example"), opened[0].path)
+		XCTAssertTrue(opened[0].path.hasSuffix("/Documents/Caselore example"), opened[0].path)
 		XCTAssertEqual(opened[0].path, opened[1].path, "a note's folder")
 		XCTAssertThrowsError(try c.answer("app:showItemInFolder", ["../../.."]))
 		XCTAssertEqual(Channels.filesURL(for: URL(fileURLWithPath: "/var/mobile/My Notes"))?.absoluteString, "shareddocuments:///var/mobile/My%20Notes")
@@ -322,13 +322,13 @@ final class ChannelsTests: XCTestCase {
 		var reloaded = 0
 		c.reload = { reloaded += 1 }
 		XCTAssertThrowsError(try c.answer("fs:read", ["Welcome.md"]), "no homebase open")
-		XCTAssertEqual(try c.answer("app:openExample", []) as? String, "On My iPad/Docketeer/Docketeer example")
+		XCTAssertEqual(try c.answer("app:openExample", []) as? String, "On My iPad/Caselore/Caselore example")
 		let exp = expectation(description: "reload")
 		DispatchQueue.main.async { exp.fulfill() }
 		wait(for: [exp], timeout: 1)
 		XCTAssertEqual(reloaded, 1)
 		let info = try c.answer("host:info", []) as? [String: Any]
-		XCTAssertEqual((info?["vault"] as? [String: String])?["name"], "Docketeer example")
+		XCTAssertEqual((info?["vault"] as? [String: String])?["name"], "Caselore example")
 
 		XCTAssertEqual(try c.answer("fs:read", ["Welcome.md"]) as? String, "# Hi")
 		let st = try c.answer("fs:write", ["Notes/New.md", "new"]) as? [String: Any]
@@ -426,7 +426,7 @@ final class ChannelsTests: XCTestCase {
 		XCTAssertEqual(shared?.text, "# Essay")
 		XCTAssertFalse(shared!.url.path.hasPrefix(folder.path), "the homebase file itself was handed over")
 		XCTAssertFalse(FileManager.default.fileExists(atPath: shared!.url.path), "the copy stays after the sheet closed")
-		// Not Docketeer's own files, not a folder, nothing outside the homebase.
+		// Not Caselore's own files, not a folder, nothing outside the homebase.
 		for path in [".quire/panels.json", "Torts", "../../escape.md", "Missing.md"] {
 			result = nil
 			c.answerLater("app:shareFile", [path]) { result = $0 }
@@ -453,7 +453,7 @@ final class HomebasesTests: XCTestCase {
 			try FileManager.default.createDirectory(at: root.appendingPathComponent(dir), withIntermediateDirectories: true)
 		}
 		try "{}".write(to: root.appendingPathComponent("example/.quire/example.json"), atomically: true, encoding: .utf8)
-		suite = "docketeer-homebases-\(UUID().uuidString)"
+		suite = "caselore-homebases-\(UUID().uuidString)"
 		defaults = UserDefaults(suiteName: suite)
 	}
 
@@ -499,12 +499,12 @@ final class HomebasesTests: XCTestCase {
 
 	func testTheExampleIsCopiedOnceAndAnUnrelatedFolderIsLeftAlone() throws {
 		let hb = make()
-		try FileManager.default.createDirectory(at: root.appendingPathComponent("Documents/Docketeer example"), withIntermediateDirectories: true)
+		try FileManager.default.createDirectory(at: root.appendingPathComponent("Documents/Caselore example"), withIntermediateDirectories: true)
 		let location = try hb.openExample()
-		XCTAssertEqual(location, "On My iPhone/Docketeer/Docketeer example 2", "a folder of that name that is not the example is not used")
+		XCTAssertEqual(location, "On My iPhone/Caselore/Caselore example 2", "a folder of that name that is not the example is not used")
 		try hb.fs?.write("Mine.md", Data("mine".utf8))
 		XCTAssertEqual(try make().openExample(), location)
-		XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("Documents/Docketeer example 2/Mine.md").path))
+		XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("Documents/Caselore example 2/Mine.md").path))
 	}
 
 	func testTheListKeepsTwelve() throws {
@@ -522,7 +522,7 @@ final class HomebasesTests: XCTestCase {
 		let docs = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application/ABC/Documents")
 		let say = { (p: String) in Homebases.location(of: URL(fileURLWithPath: p), documents: docs, deviceStorage: "On My iPad") }
 		XCTAssertEqual(say("/private/var/mobile/Library/Mobile Documents/com~apple~CloudDocs/Law/Torts"), "iCloud Drive/Law/Torts")
-		XCTAssertEqual(say("/var/mobile/Containers/Data/Application/ABC/Documents/Docketeer example"), "On My iPad/Docketeer/Docketeer example")
+		XCTAssertEqual(say("/var/mobile/Containers/Data/Application/ABC/Documents/Caselore example"), "On My iPad/Caselore/Caselore example")
 		XCTAssertEqual(say("/private/var/mobile/Containers/Shared/AppGroup/X/File Provider Storage/Notes"), "On My iPad/Notes")
 		XCTAssertEqual(say("/Volumes/USB/Uni/Law/Notes"), "Uni/Law/Notes")
 	}

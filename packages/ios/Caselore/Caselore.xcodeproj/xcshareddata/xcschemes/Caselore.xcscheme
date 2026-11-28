@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0C4E7E30000000000000006"
-               BuildableName = "Docketeer.app"
-               BlueprintName = "Docketeer"
-               ReferencedContainer = "container:Docketeer.xcodeproj">
+               BuildableName = "Caselore.app"
+               BlueprintName = "Caselore"
+               ReferencedContainer = "container:Caselore.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0C4E7E30000000000000007"
-               BuildableName = "DocketeerTests.xctest"
-               BlueprintName = "DocketeerTests"
-               ReferencedContainer = "container:Docketeer.xcodeproj">
+               BuildableName = "CaseloreTests.xctest"
+               BlueprintName = "CaseloreTests"
+               ReferencedContainer = "container:Caselore.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0C4E7E30000000000000006"
-            BuildableName = "Docketeer.app"
-            BlueprintName = "Docketeer"
-            ReferencedContainer = "container:Docketeer.xcodeproj">
+            BuildableName = "Caselore.app"
+            BlueprintName = "Caselore"
+            ReferencedContainer = "container:Caselore.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>

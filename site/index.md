@@ -1,15 +1,15 @@
 ---
 layout: home
-title: Docketeer
+title: Caselore
 titleTemplate: Offline notes for law students
 
 hero:
-  name: Docketeer
+  name: Caselore
   text: Law notes that stay on your computer
   tagline: Plain Markdown files, AGLC4 citations that check themselves, case briefs that turn into flashcards, and the Docket, a keyboard-first tray that reaches everything without the mouse. Nothing goes online. In beta, and stable enough for daily use.
   image:
     src: /logo.png
-    alt: The Docketeer icon
+    alt: The Caselore icon
   actions:
     - theme: brand
       text: Download
@@ -30,7 +30,7 @@ features:
     details: Notes are ordinary Markdown files in a folder you choose. Open them in any editor, sync them however you like, keep them forever.
   - icon: 🔒
     title: Offline, absolutely
-    details: Docketeer cannot reach the internet. Every request is refused by the app itself, whatever a plugin tries. No account, no tracking, no cloud.
+    details: Caselore cannot reach the internet. Every request is refused by the app itself, whatever a plugin tries. No account, no tracking, no cloud.
 ---
 
 <script setup>
@@ -100,7 +100,7 @@ Sixteen colour palettes, light and dark, your own fonts, three densities, two ic
 layouts for briefs, revision and exams. Plugins can add their own commands, panels and searches.
 
 </div>
-<img :src="shot('02-palette-tokyo-night')" alt="Docketeer in the Tokyo Night palette">
+<img :src="shot('02-palette-tokyo-night')" alt="Caselore in the Tokyo Night palette">
 </div>
 
 <div class="showcase-cta">

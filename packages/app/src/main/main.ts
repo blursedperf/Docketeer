@@ -1,5 +1,5 @@
 /**
- * Docketeer main process: windows, homebase file access (refused outside the homebase), file watching, and the
+ * Caselore main process: windows, homebase file access (refused outside the homebase), file watching, and the
  * offline guarantees — every network request is cancelled, navigation and new windows are refused, and
  * no permission is ever granted.
  */
@@ -10,7 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { serveVaultFile, vaultType } from './vault-files';
 import { installExample } from './example';
-import { LEGACY_APP_NAME, migrateUserData } from './user-data';
+import { LEGACY_APP_NAMES, migrateUserData } from './user-data';
 import { applyHomebaseLayout } from './homebase-layout';
 import { fontsOnce } from './fonts';
 
@@ -206,7 +206,7 @@ function registerIpc() {
 		if (!win || process.platform === 'darwin' || config.windowFrame === 'native' || SMOKE) return;
 		try { win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbol, height: TITLE_BAR_HEIGHT - 1 }); } catch { /* no overlay */ }
 	});
-	// Restart Docketeer (for settings read when the window is made).
+	// Restart Caselore (for settings read when the window is made).
 	handle('app:relaunch', () => { if (SMOKE) return; app.relaunch(); app.exit(0); });
 	handle('fs:tree', async (rel: string) => tree(await resolvePath(rel)));
 	handle('fs:stat', async (rel: string) => statOf(await resolvePath(rel)));
@@ -486,7 +486,7 @@ function beforeQuit(contents: WebContents): Promise<void> {
 }
 
 function createWindow() {
-	// The title bar: hidden by default, the window buttons drawn over Docketeer's top bar (the Docket bar), as Obsidian
+	// The title bar: hidden by default, the window buttons drawn over Caselore's top bar (the Docket bar), as Obsidian
 	// does. "native" keeps the system's. Read when the window is made, so a change applies on restart.
 	const frameless = config.windowFrame !== 'native' && !SMOKE;
 	win = new BrowserWindow({
@@ -501,7 +501,7 @@ function createWindow() {
 		minWidth: 640,
 		minHeight: 400,
 		show: false,
-		title: 'Docketeer',
+		title: 'Caselore',
 		backgroundColor: '#1e1e1e',
 		autoHideMenuBar: true,
 		paintWhenInitiallyHidden: true,
@@ -624,7 +624,7 @@ async function captureFrame(): Promise<Electron.NativeImage> {
 
 async function smokeVault(): Promise<string> {
 	// A fixed homebase name, so screenshots are the same from run to run.
-	const dir = path.join(await fsp.mkdtemp(path.join(os.tmpdir(), 'quire-smoke-')), 'Docketeer demo');
+	const dir = path.join(await fsp.mkdtemp(path.join(os.tmpdir(), 'quire-smoke-')), 'Caselore demo');
 	await fsp.mkdir(dir);
 	await fsp.writeFile(path.join(dir, 'Welcome.md'), '# Welcome\n\nA note with a [[Second note]] link.[^1]\n\n[^1]: A footnote.\n');
 	await fsp.writeFile(path.join(dir, 'Second note.md'), '---\ntags: [test]\n---\n\n# Second\n\nBack to [[Welcome]].\n');
@@ -642,10 +642,12 @@ app.whenReady().then(async () => {
 	registerIpc();
 	csp = await fsp.readFile(path.join(RENDERER_DIR, 'csp.txt'), 'utf8').then((s) => s.trim());
 	if (SMOKE) configAtStart = await fsp.readFile(configFile(), 'utf8').catch(() => null);
-	// The first launch after the rename from Quire brings its settings across (never in a test run).
+	// The first launch after a rename (from Docketeer, or Quire before it) brings the settings across (never in a
+	// test run).
 	else {
-		await migrateUserData(path.join(app.getPath('appData'), LEGACY_APP_NAME), app.getPath('userData'))
-			.catch((e) => console.error('Settings from Quire were not copied', e));
+		const appData = app.getPath('appData');
+		await migrateUserData(LEGACY_APP_NAMES.map((n) => path.join(appData, n)), app.getPath('userData'))
+			.catch((e) => console.error('Settings from before the rename were not copied', e));
 	}
 	await loadConfig();
 	// --homebase=<folder> opens a folder directly (--vault= is accepted too).

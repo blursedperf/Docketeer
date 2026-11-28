@@ -47,5 +47,5 @@ results announced; panels are tabs. With "reduce motion" on, it appears without 
 
 - **`?`** in the Docket is the cheat sheet: the Docket's own keys, the prefixes, then every shortcut by section,
   generated from the keymap (so it shows your remapped keys). Typing narrows it; Enter runs the command.
-- The first time Docketeer opens, a hint under the Docket handle says where everything is. It goes for good when
+- The first time Caselore opens, a hint under the Docket handle says where everything is. It goes for good when
   dismissed or when the Docket is first opened.

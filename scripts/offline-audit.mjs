@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /*
- * Offline audit for Docketeer: fails if anything that ships could make a network request, run generated
+ * Offline audit for Caselore: fails if anything that ships could make a network request, run generated
  * code, or inject raw HTML. Same rules as the AGLC4 plugin's audit, applied to:
  *   - the app's source (packages/api/src, packages/app/src, packages/ios/web),
- *   - the iOS shell (Swift in packages/ios/Docketeer and DocketeerTests, its Info.plist and Xcode project),
+ *   - the iOS shell (Swift in packages/ios/Caselore and CaseloreTests, its Info.plist and Xcode project),
  *   - the built app (packages/app/dist: main, preload, renderer bundle, shims, CSS),
  *   - every plugin, through its own audit (plugins/<name>/scripts/offline-audit.mjs) or these rules.
  *
@@ -71,10 +71,10 @@ const CSS_RULES = [
 /** Deliberate uses: [file (relative), label, reason]. */
 const ALLOWED = [
 	['packages/api/src/app.ts', 'dynamic import()', 'loads a plugin\'s main.js from quire://app/plugins/ (local files only; the CSP allows scripts only from quire:)'],
-	['packages/ios/Docketeer/App/PageViewController.swift', 'URLRequest', 'iOS: the WebView opens the app\'s own page, quire://app/index.html (served from the bundle by QuireSchemeHandler)'],
-	['packages/ios/Docketeer/App/PageViewController.swift', 'opening a URL in another app', 'iOS: "Show in folder" opens the Files app at a folder on the device (shareddocuments://, checked before it opens); never a web address'],
-	['packages/ios/DocketeerTests/AppFilesTests.swift', 'URLRequest', 'iOS test: builds quire://app/ requests for a stand-in WebKit task, to test the scheme handler; nothing is sent'],
-	['packages/ios/DocketeerTests/AppFilesTests.swift', 'a web address', 'iOS test: checks that the scheme handler refuses an https: address'],
+	['packages/ios/Caselore/App/PageViewController.swift', 'URLRequest', 'iOS: the WebView opens the app\'s own page, quire://app/index.html (served from the bundle by QuireSchemeHandler)'],
+	['packages/ios/Caselore/App/PageViewController.swift', 'opening a URL in another app', 'iOS: "Show in folder" opens the Files app at a folder on the device (shareddocuments://, checked before it opens); never a web address'],
+	['packages/ios/CaseloreTests/AppFilesTests.swift', 'URLRequest', 'iOS test: builds quire://app/ requests for a stand-in WebKit task, to test the scheme handler; nothing is sent'],
+	['packages/ios/CaseloreTests/AppFilesTests.swift', 'a web address', 'iOS test: checks that the scheme handler refuses an https: address'],
 	['packages/ios/web/boot.ts', 'dynamic import()', 'iOS: loads the app\'s own renderer from quire://app/renderer.js once window.quire is in place (the CSP allows scripts only from quire:)'],
 	['packages/app/src/renderer/smoke.ts', 'fetch()', 'smoke test: checks that a request from the page is refused'],
 	['packages/app/src/main/main.ts', 'fetch()', 'smoke test: checks that a request from the main process is refused'],
@@ -152,10 +152,10 @@ for (const f of walk(join(ROOT, 'packages/app/src'), ['.css'])) check(f, readFil
 /** Swift packages the shell may use. Empty: none so far. */
 const SWIFT_PACKAGES = [];
 
-/** Audit an iOS shell: `pkg` holds the app folder `Docketeer/` and `DocketeerTests/`. Returns the Swift files seen. */
+/** Audit an iOS shell: `pkg` holds the app folder `Caselore/` and `CaseloreTests/`. Returns the Swift files seen. */
 function auditIos(pkg, sink = problems, allow = true) {
-	const appDir = join(pkg, 'Docketeer');
-	const swiftFiles = [...walk(appDir, ['.swift'], [], ['Resources', 'build']), ...walk(join(pkg, 'DocketeerTests'), ['.swift'])];
+	const appDir = join(pkg, 'Caselore');
+	const swiftFiles = [...walk(appDir, ['.swift'], [], ['Resources', 'build']), ...walk(join(pkg, 'CaseloreTests'), ['.swift'])];
 	for (const f of swiftFiles) check(f, stripComments(readFileSync(f, 'utf8')), SWIFT_RULES, sink, allow);
 	for (const f of walk(appDir, ['.plist'], [], ['Resources', 'build'])) {
 		if (/NSAppTransportSecurity|NSAllows\w*Loads|NSExceptionDomains/.test(readFileSync(f, 'utf8'))) sink.push(`${relative(ROOT, f)}: App Transport Security exceptions are not allowed`);

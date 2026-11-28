@@ -1,6 +1,6 @@
 # PDFs and lecture recordings
 
-Judgments, readings and lecture recordings live in your homebase beside your notes, and open in Docketeer itself.
+Judgments, readings and lecture recordings live in your homebase beside your notes, and open in Caselore itself.
 
 ## PDFs
 

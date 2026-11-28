@@ -1,10 +1,10 @@
-# AGLC4 Citations for Docketeer
+# AGLC4 Citations for Caselore
 
 [![Buy me a coffee](https://img.shields.io/badge/Buy_me_a_coffee-lawfair-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/lawfair)
 
 If it saves you some footnote pain, **[buy me a coffee](https://buymeacoffee.com/lawfair)**...or don't, no presh. If you'd rather chip in a third of a coffee every month, I'm on [Patreon](https://patreon.com/Blursedperf) too.
 
-Write footnoted legal work in Docketeer to the *Australian Guide to Legal Citation* (4th ed). The plugin:
+Write footnoted legal work in Caselore to the *Australian Guide to Legal Citation* (4th ed). The plugin:
 
 - **underlines incorrect or incomplete citations** as you write, explains the AGLC4 rule on hover and offers a one-click fix;
 - **inserts the AGLC4 form of any kind of source** you choose, from cases and Acts to government, law reform and Productivity Commission reports (interim, draft and final), with Tab between the parts to fill in, and **suggests the next required element** of the citation you are typing;
@@ -39,9 +39,9 @@ Your writing never leaves your computer.
 
 See [Privacy](docs/privacy.md) for how this is checked, and how to verify that a release was built from this source.
 
-## In Docketeer
+## In Caselore
 
-AGLC4 Citations (1.16.0) ships built in to Docketeer and is on in new homebases (turn it off under
+AGLC4 Citations (1.16.0) ships built in to Caselore and is on in new homebases (turn it off under
 **Settings → Plugins**). Its commands are in the Docket (type `>` and part of the name), and its settings under
 **Settings → AGLC4 Citations**.
 

@@ -1,7 +1,7 @@
 {
-  "name": "docketeer-site",
+  "name": "caselore-site",
   "private": true,
-  "description": "The Docketeer website: what it is, how to use it, and where to download it. Not part of the app.",
+  "description": "The Caselore website: what it is, how to use it, and where to download it. Not part of the app.",
   "type": "module",
   "scripts": {
     "assets": "node scripts/assets.mjs",

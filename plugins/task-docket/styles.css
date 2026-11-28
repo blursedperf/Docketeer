@@ -1,4 +1,4 @@
-/* Task Docket in Docketeer: the Tasks panel's rows (drawn by the Docket; these only add the tasks' own marks). */
+/* Task Docket in Caselore: the Tasks panel's rows (drawn by the Docket; these only add the tasks' own marks). */
 .task-docket-panel .task-docket-row.is-done .docket-option-title { color: var(--text-muted); text-decoration: line-through; }
 .task-docket-panel .task-docket-row.is-overdue .docket-badge { color: var(--text-error); border-color: currentColor; }
 .task-docket-panel .task-docket-row.is-overdue .docket-option-icon { color: var(--text-error); }

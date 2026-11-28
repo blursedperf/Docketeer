@@ -18,7 +18,7 @@ export async function applyHomebaseLayout(dir: string, layout: HomebaseLayout | 
 	const file = path.join(dir, '.quire', 'panels.json');
 	if (existsSync(file)) return false;
 	const template = typeof layout === 'object' ? layout : null;
-	// The page's panels are read again here, so only what Docketeer understands is written.
+	// The page's panels are read again here, so only what Caselore understands is written.
 	const panels = template ? parsePanelsConfig(typeof template.panels === 'string' ? template.panels : '') : genericPanels();
 	await fsp.mkdir(path.dirname(file), { recursive: true });
 	await fsp.writeFile(file, JSON.stringify(panels, null, '\t'));

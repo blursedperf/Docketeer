@@ -2,7 +2,7 @@
  * Legal terms general English dictionaries lack, accepted by the spellchecker when "Legal terms" is on:
  * Latin phrases (as single words, since words are checked one at a time), AGLC citation abbreviations,
  * jurisdiction and court abbreviations in mixed case (all-capitals words are not checked anyway), and
- * legal vocabulary. Docketeer's own list (MIT). Lower-case entries also accept a capitalised first letter.
+ * legal vocabulary. Caselore's own list (MIT). Lower-case entries also accept a capitalised first letter.
  */
 export const LEGAL_WORDS: string[] = [
 	// Latin and law French

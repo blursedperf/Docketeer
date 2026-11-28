@@ -1,12 +1,12 @@
-# Docketeer for iPhone and iPad: decisions
+# Caselore for iPhone and iPad: decisions
 
 Decisions made while working through [PLAN.md](PLAN.md), with the reason for each.
 
 ## 1. The rename keeps the internal names (Phase 0)
 
-Everything a user sees says Docketeer: the window title, the welcome screen, settings, notices, the docs, the
-installers (`Docketeer-<version>-…`, the `docketeer` package and executable, app id
-`io.github.blursedperf.docketeer`) and the example homebase ("Docketeer example").
+Everything a user sees says Caselore: the window title, the welcome screen, settings, notices, the docs, the
+installers (`Caselore-<version>-…`, the `caselore` package and executable, app id
+`io.github.blursedperf.caselore`) and the example homebase ("Caselore example").
 
 These keep the old name, because changing them would break what already exists:
 
@@ -16,19 +16,20 @@ These keep the old name, because changing them would break what already exists:
 - **The `quire://` scheme and `window.quire`.** Internal; nothing outside the app uses them.
 - **The locked-note format** (`quire-locked: 1`, `quire-encrypted v1`, the `quire-note-v1` associated data).
   Changing these would make notes locked before the rename unreadable. Only the readable sentence at the top
-  of a locked note now says Docketeer.
+  of a locked note now says Caselore.
 - **`quire.json`**, the app-wide settings file, and the `QUIRE_SMOKE_OUT` variable.
 
-Renaming these later needs a migration: read `.quire/` when `.docketeer/` is missing and move it, and give
+Renaming these later needs a migration: read `.quire/` when `.caselore/` is missing and move it, and give
 plugins an alias for `@quire/api`.
 
-**Moving across from Quire.** Electron names the user-data folder after the app, so it is now
-`Docketeer` (`~/.config/Docketeer`, `~/Library/Application Support/Docketeer`). On launch, when it has no
-`quire.json` and the old `Quire` folder has one, that file is copied across (`src/main/user-data.ts`). The old
-folder is left alone. Test runs skip this, so they never write the user's settings. A "Quire example" folder
-already in Documents keeps being opened as the example.
+**Moving across from the old names.** Electron names the user-data folder after the app, so it is now
+`Caselore` (`~/.config/Caselore`, `~/Library/Application Support/Caselore`). On launch, when it has no
+`quire.json` and an old `Docketeer` or `Quire` folder has one, that file is copied across, Docketeer's first
+(`src/main/user-data.ts`). The old folders are left alone. Test runs skip this, so they never write the user's
+settings. A "Docketeer example" or "Quire example" folder already in Documents keeps being opened as the
+example.
 
-**Packages.** The Arch and Debian packages are now `docketeer`, and declare that they replace and conflict with
+**Packages.** The Arch and Debian packages are now `caselore`, and declare that they replace and conflict with
 `quire`, so installing one removes the other. On macOS the new app has a new bundle id, so the old Quire.app
 stays until it is deleted.
 
@@ -109,9 +110,9 @@ and there is no third-party code for the offline audit to check.
 What else Phase 0 settled:
 
 - **The Xcode project uses synchronised folders** (Xcode 16 and later): `App/`, `Bridge/`, `Homebase/`,
-  `Lockdown/`, `Scheme/` and `DocketeerTests/` are included whole, so a new Swift file needs no change to
+  `Lockdown/`, `Scheme/` and `CaseloreTests/` are included whole, so a new Swift file needs no change to
   `project.pbxproj`. No project generator is needed.
-- **Bundle id `io.github.blursedperf.docketeer`**, the same as the desktop app id, until the owner chooses the
+- **Bundle id `io.github.blursedperf.caselore`**, the same as the desktop app id, until the owner chooses the
   App Store one (PLAN §6). **iOS 17** is the minimum, as assumed in PLAN §6.
 - **The offline audit covers Swift** now: network APIs, web addresses, opening URLs, ATS exceptions, Swift
   packages and dependency managers. Its fixtures come with the rest of the Phase 1 audit task.
@@ -119,7 +120,7 @@ What else Phase 0 settled:
   from the command line. Release builds leave it out.
 - **First runs, on the iOS 27.2 simulators (iPhone 17, iPad Pro 11-inch):** the app boots into the example
   homebase on both, with no console errors and no refused navigations. WebKit logs that it could not read
-  WebPrivacy's fingerprinting list; that is a list the system keeps, not a request from Docketeer.
+  WebPrivacy's fingerprinting list; that is a list the system keeps, not a request from Caselore.
 - **Phone layout:** the iPhone shows the desktop layout squeezed (two panes, the first-run hint running off the
   side). That is expected until the compact layout in Phase 3 (now Phase 2, §8).
 
@@ -157,7 +158,7 @@ Drive (PLAN §6).
 ### Reading and writing
 
 - Every read and write goes through `NSFileCoordinator`, so iCloud is not halfway through changing a file
-  while Docketeer reads or replaces it.
+  while Caselore reads or replaces it.
 - **Writes are atomic.** The new contents go to a temporary file beside the old one
   (`.<name>.<uuid>.quire-tmp`, hidden, so `tree()` and watching skip it), which then replaces the old file.
   Missing parent folders are created. If anything fails, the temporary file is removed.
@@ -201,7 +202,7 @@ root, Range answers, conflict detection, a bookmark round trip.
 
 **What the folder picker work settled (Phase 1):**
 
-- **`vault.path` is where the folder is, in words** ("iCloud Drive/Law/Torts", "On My iPad/Docketeer/Docketeer
+- **`vault.path` is where the folder is, in words** ("iCloud Drive/Law/Torts", "On My iPad/Caselore/Caselore
   example"), because the start screen and the switcher show it. It is also the key of the folder's bookmark, so
   the page still never sees a real path.
 - **A new Generic homebase's panels come from the page.** `genericPanels()` lives in the renderer, so the iOS
@@ -308,7 +309,7 @@ would then run without AGLC4 or Tasks until it was restarted.
 
 - **The same checks, on the iOS host.** `SmokeTests` (XCTest) opens a `PageViewController` in smoke mode in an
   iPad-sized window (1194 × 834, told it is a tablet) on a throwaway copy of the desktop smoke test's homebase
-  ("Docketeer demo") with throwaway settings (`SmokeRun`), so a run never touches the person's homebases, recent
+  ("Caselore demo") with throwaway settings (`SmokeRun`), so a run never touches the person's homebases, recent
   list or settings. It requires every check to pass, no console errors, no refused navigations, and no note text
   in any log.
 - **The split is by what a check needs.** A check that tests a host feature returns `{ skip: reason }` when the host
@@ -383,3 +384,24 @@ Left out of the compact layout as well as tiling (`COMPACT_HIDDEN` in `compact.t
 page preview. The Hotkeys page (`SettingTab.shown()`), Vim key bindings, the Docket's peek/pinned mode and, on a
 touch phone, hover preview are not shown while compact; the Window section and the developer-tools note are not
 shown on iPhone and iPad at all.
+
+## 12. Docketeer becomes Caselore (2026-11-28)
+
+The name Docketeer is already taken by a Docker tool, so the owner chose **Caselore**. Names checked first and
+turned down because they were taken: Obiter (an AGLC4 add-in for Word), Ibid (a Mac and iPhone workspace, and a
+citation manager), Docketry (legal document software), Casewright (litigation support), Docketbook (an
+Australian company with an app of that name), Folio and Marginalia (notes apps).
+
+- **Everything a user sees says Caselore**, as in §1: the window, the installers (`Caselore-<version>-…`, the
+  `caselore` package and executable), app id and bundle id `io.github.blursedperf.caselore`, the example
+  homebase ("Caselore example"), the iOS project (`packages/ios/Caselore/`, `Caselore.xcodeproj`,
+  `CaseloreTests/`) and the docs.
+- **The internal names in §1 still say quire**, for the same reasons.
+- **Settings and the example come across** from Docketeer (and from Quire), as described under §1.
+- **On iOS, the new bundle id makes it a new app**: a build installed before the rename stays on the device as
+  Docketeer, with its own list of homebases. The homebases themselves (folders in iCloud Drive or On My
+  iPhone) are untouched; choose them again in Caselore.
+- **The GitHub repository and the website address keep "Docketeer"** until the owner renames the repository on
+  GitHub (which redirects the old address). Links in the docs and the site point at the current address.
+- **Releases up to 0.25.4 are called Docketeer**; the first one called Caselore is the next.
+

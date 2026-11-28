@@ -1,6 +1,6 @@
 # Note-taking polish: what to fix and improve next
 
-Review of Docketeer 0.9.0, 2026-11-25. The [polish plan](../design/polish-plan.md) (grid, tokens, alignment) is
+Review of Caselore 0.9.0, 2026-11-25. The [polish plan](../design/polish-plan.md) (grid, tokens, alignment) is
 done; this looks at what is left once real notes are in it. Method: the 44 reference screenshots, plus captures of
 the example homebase (case brief, lecture note with a recording, reading beside a PDF, exam checklist) in edit and
 reading views, and a read of the code behind each finding.
@@ -14,7 +14,7 @@ keystrokes or less hunting while taking notes). Each says what was seen, where i
 |---|---|---|---|
 | B1 | Every bracketed citation part is drawn as a link: `[1932]` in *Donoghue v Stevenson* [1932] AC 562, pinpoints `[78]`, `[2002] HCA 14`. In law notes this is on almost every line. ![](img/case-brief-edit.png) | Lezer's Markdown parser reads `[1932]` as a shortcut reference link and tags it `t.link`; `cm-setup.ts` styles `t.link` as `.cm-link`. | Style a `Link` node as a link only when it has a URL or its label matches a reference definition in the note. Test with AGLC4 citations. |
 | B2 | A full stop after a link can wrap onto a line of its own ("Notes: Duty of care" / "."). ![](img/checklist-edit.png) | Probably `Decoration.replace({})` for the hidden `]]` in `live-preview.ts`: CodeMirror's widget buffers around replaced ranges leave a line-break opportunity. Not yet confirmed. | Reproduce in a smoke check (the punctuation's top equals the link's top); if confirmed, hide the marks with a zero-width mark decoration instead of a replacement. |
-| B3 | "café" is marked as misspelt. | The en-AU dictionary (SCOWL) has only "cafe"; Docketeer checks the word as written. | Accept a word whose accent-free form is correct (café, naïve, rôle, résumé). |
+| B3 | "café" is marked as misspelt. | The en-AU dictionary (SCOWL) has only "cafe"; Caselore checks the word as written. | Accept a word whose accent-free form is correct (café, naïve, rôle, résumé). |
 | B4 | Names are marked on every line: *Donoghue's*, *Atkin's*, *Thankerton*, *Buckmaster*, *Wyong*, even inside an italicised case name. | Proper names are not in any dictionary; case names in running text are not treated as citations. | Accept words that occur in the homebase's note names and in the authorities the AGLC4 plugin finds in the note; optionally skip Capitalised words mid-sentence (a setting). |
 | B5 | A large empty band above an embedded recording. ![](img/lecture-edit.png) | The `![[…]]` line's text is hidden but the line stays, then the block widget adds its own padding. | When the embed line is not being edited, replace the whole line with the player (a block replacement), not text-hiding plus a widget. |
 

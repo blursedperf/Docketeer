@@ -9,14 +9,14 @@ const base = `https://github.com/blursedperf/Docketeer/releases/download/v${v}`;
 
 interface Download { os: 'mac' | 'linux'; label: string; detail: string; file: string }
 const downloads: Download[] = [
-	{ os: 'mac', label: 'macOS (Apple Silicon)', detail: 'M1 or later · .dmg', file: `Docketeer-${v}-mac-arm64.dmg` },
-	{ os: 'mac', label: 'macOS (Intel)', detail: 'Older Macs · .dmg', file: `Docketeer-${v}-mac-x64.dmg` },
-	{ os: 'linux', label: 'Linux AppImage', detail: 'Any distribution · x86-64', file: `Docketeer-${v}-linux-x86_64.AppImage` },
-	{ os: 'linux', label: 'Debian / Ubuntu', detail: '.deb · x86-64', file: `Docketeer-${v}-linux-amd64.deb` },
-	{ os: 'linux', label: 'Arch / Omarchy', detail: '.pacman · x86-64', file: `Docketeer-${v}-linux-x64.pacman` },
-	{ os: 'linux', label: 'Linux AppImage (ARM)', detail: 'arm64', file: `Docketeer-${v}-linux-arm64.AppImage` },
-	{ os: 'linux', label: 'Debian / Ubuntu (ARM)', detail: '.deb · arm64', file: `Docketeer-${v}-linux-arm64.deb` },
-	{ os: 'linux', label: 'Arch (ARM)', detail: '.pacman · arm64', file: `Docketeer-${v}-linux-aarch64.pacman` },
+	{ os: 'mac', label: 'macOS (Apple Silicon)', detail: 'M1 or later · .dmg', file: `Caselore-${v}-mac-arm64.dmg` },
+	{ os: 'mac', label: 'macOS (Intel)', detail: 'Older Macs · .dmg', file: `Caselore-${v}-mac-x64.dmg` },
+	{ os: 'linux', label: 'Linux AppImage', detail: 'Any distribution · x86-64', file: `Caselore-${v}-linux-x86_64.AppImage` },
+	{ os: 'linux', label: 'Debian / Ubuntu', detail: '.deb · x86-64', file: `Caselore-${v}-linux-amd64.deb` },
+	{ os: 'linux', label: 'Arch / Omarchy', detail: '.pacman · x86-64', file: `Caselore-${v}-linux-x64.pacman` },
+	{ os: 'linux', label: 'Linux AppImage (ARM)', detail: 'arm64', file: `Caselore-${v}-linux-arm64.AppImage` },
+	{ os: 'linux', label: 'Debian / Ubuntu (ARM)', detail: '.deb · arm64', file: `Caselore-${v}-linux-arm64.deb` },
+	{ os: 'linux', label: 'Arch (ARM)', detail: '.pacman · arm64', file: `Caselore-${v}-linux-aarch64.pacman` },
 ];
 
 const os = ref<'mac' | 'linux' | 'other'>('other');
@@ -30,7 +30,7 @@ const rest = computed(() => downloads.filter((d) => !primary.value.includes(d)))
 
 <template>
 	<div class="dl">
-		<p v-if="os === 'other'" class="dl-note">Docketeer is for macOS and Linux. Windows and iPhone are not available yet.</p>
+		<p v-if="os === 'other'" class="dl-note">Caselore is for macOS and Linux. Windows and iPhone are not available yet.</p>
 		<div class="dl-primary">
 			<a v-for="d in primary" :key="d.file" class="dl-button" :href="`${base}/${d.file}`">
 				<span class="dl-label">Download for {{ d.label }}</span>

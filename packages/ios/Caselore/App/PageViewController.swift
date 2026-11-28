@@ -16,7 +16,7 @@ final class PageViewController: UIViewController {
 	private var picked: ((URL?) -> Void)?
 	/** Put over the page as the app leaves while locked notes are open (the app switcher's picture). */
 	private var cover: UIView?
-	/** Watches the open homebase for changes made outside Docketeer. */
+	/** Watches the open homebase for changes made outside Caselore. */
 	private var watcher: HomebaseWatcher?
 
 	static let startURL = URL(string: "quire://app/index.html")!
@@ -48,7 +48,7 @@ final class PageViewController: UIViewController {
 			DispatchQueue.main.async {
 				switch result {
 				case .success(let rules): self?.load(root: root, rules: rules)
-				case .failure(let error): self?.showFailure("Docketeer could not turn on its offline rules, so it did not start.\n\n\(error.localizedDescription)")
+				case .failure(let error): self?.showFailure("Caselore could not turn on its offline rules, so it did not start.\n\n\(error.localizedDescription)")
 				}
 			}
 		}
@@ -179,7 +179,7 @@ final class PageViewController: UIViewController {
 		c.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 		c.backgroundColor = .systemBackground
 		let label = UILabel()
-		label.text = "Docketeer"
+		label.text = "Caselore"
 		label.font = .preferredFont(forTextStyle: .title2)
 		label.textColor = .secondaryLabel
 		label.translatesAutoresizingMaskIntoConstraints = false

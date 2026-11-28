@@ -7,7 +7,7 @@ same API as any other, so they are complete examples of what a plugin can do.
 
 A plugin is a folder in `<homebase>/.quire/plugins/<id>/` with:
 
-- `manifest.json`: its id, name, version and the oldest Docketeer it needs (`minAppVersion`);
+- `manifest.json`: its id, name, version and the oldest Caselore it needs (`minAppVersion`);
 - `main.js`: an **ES module** whose default export extends `Plugin`;
 - `styles.css` (optional).
 
@@ -21,7 +21,7 @@ export default class Hello extends Plugin {
 }
 ```
 
-Bundle it with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and `@lezer/*` as external: Docketeer
+Bundle it with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and `@lezer/*` as external: Caselore
 supplies its own copies when the plugin runs. Turn it on under **Settings → Plugins**.
 
 ## What a plugin can do

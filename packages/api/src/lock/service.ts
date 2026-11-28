@@ -24,7 +24,7 @@ export interface VaultCrypt {
 export class LockService extends Events implements VaultCrypt {
 	private lockFile: LockFile | null = null;
 	private key: CryptoKey | null = null;
-	/** Notes found sealed on disk (or sealed by Docketeer). */
+	/** Notes found sealed on disk (or sealed by Caselore). */
 	private sealed = new Set<string>();
 	/** Asks the user to unlock (set by the app's interface); resolves true when unlocked. */
 	prompt: (() => Promise<boolean>) | null = null;
@@ -55,7 +55,7 @@ export class LockService extends Events implements VaultCrypt {
 	get isSetUp(): boolean { return this.lockFile !== null; }
 	get isUnlocked(): boolean { return this.key !== null; }
 	get lockedFolders(): string[] { return [...(this.lockFile?.folders ?? [])]; }
-	/** Notes sealed on disk that Docketeer knows of. */
+	/** Notes sealed on disk that Caselore knows of. */
 	get sealedNotes(): string[] { return [...this.sealed]; }
 
 	private inLockedFolder(path: string): boolean {

@@ -94,7 +94,7 @@ export class PdfView extends FileView {
 			if (token !== this.loadToken) return;
 			this.bodyEl.replaceChildren();
 			const password = (e as { name?: unknown } | null)?.name === 'PdfPasswordError';
-			this.bodyEl.createDiv({ cls: 'pdf-message', text: password ? 'This PDF is protected by a password. Docketeer cannot open protected PDFs yet.' : 'Docketeer could not read this PDF.' });
+			this.bodyEl.createDiv({ cls: 'pdf-message', text: password ? 'This PDF is protected by a password. Caselore cannot open protected PDFs yet.' : 'Caselore could not read this PDF.' });
 		}
 	}
 

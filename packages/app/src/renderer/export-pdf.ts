@@ -115,7 +115,7 @@ function freePath(app: App, path: string): string {
  */
 export async function exportHtmlToPdf(app: App, html: string, path: string): Promise<TFile | null> {
 	const print = app.host.app.printToPdf;
-	if (!print) { new Notice('This version of Docketeer cannot export to PDF.'); return null; }
+	if (!print) { new Notice('This version of Caselore cannot export to PDF.'); return null; }
 	const existing = app.vault.getAbstractFileByPath(path);
 	if (existing) {
 		const replace = await new Promise<boolean | null>((resolve) => {

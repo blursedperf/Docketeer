@@ -16,22 +16,22 @@
 			containerPortal = D0C4E7E30000000000000001 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D0C4E7E30000000000000006;
-			remoteInfo = Docketeer;
+			remoteInfo = Caselore;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D0C4E7E30000000000000004 /* Docketeer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Docketeer.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C4E7E30000000000000005 /* DocketeerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocketeerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C4E7E30000000000000004 /* Caselore.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Caselore.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C4E7E30000000000000005 /* CaseloreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CaseloreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C4E7E3000000000000001B /* app */ = {isa = PBXFileReference; lastKnownFileType = folder; name = app; path = Resources/app; sourceTree = "<group>"; };
 		D0C4E7E3000000000000001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		D0C4E7E3000000000000001A /* DocketeerTests */ = {
+		D0C4E7E3000000000000001A /* CaseloreTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			name = DocketeerTests;
-			path = ../DocketeerTests;
+			name = CaseloreTests;
+			path = ../CaseloreTests;
 			sourceTree = "<group>";
 		};
 		D0C4E7E3000000000000002E /* App */ = {
@@ -82,8 +82,8 @@
 		D0C4E7E30000000000000002 = {
 			isa = PBXGroup;
 			children = (
-				D0C4E7E30000000000000019 /* Docketeer */,
-				D0C4E7E3000000000000001A /* DocketeerTests */,
+				D0C4E7E30000000000000019 /* Caselore */,
+				D0C4E7E3000000000000001A /* CaseloreTests */,
 				D0C4E7E30000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -91,13 +91,13 @@
 		D0C4E7E30000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D0C4E7E30000000000000004 /* Docketeer.app */,
-				D0C4E7E30000000000000005 /* DocketeerTests.xctest */,
+				D0C4E7E30000000000000004 /* Caselore.app */,
+				D0C4E7E30000000000000005 /* CaseloreTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D0C4E7E30000000000000019 /* Docketeer */ = {
+		D0C4E7E30000000000000019 /* Caselore */ = {
 			isa = PBXGroup;
 			children = (
 				D0C4E7E3000000000000002E /* App */,
@@ -108,15 +108,15 @@
 				D0C4E7E3000000000000001B /* app */,
 				D0C4E7E3000000000000001D /* Info.plist */,
 			);
-			name = Docketeer;
+			name = Caselore;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D0C4E7E30000000000000006 /* Docketeer */ = {
+		D0C4E7E30000000000000006 /* Caselore */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D0C4E7E30000000000000011 /* Build configuration list for PBXNativeTarget "Docketeer" */;
+			buildConfigurationList = D0C4E7E30000000000000011 /* Build configuration list for PBXNativeTarget "Caselore" */;
 			buildPhases = (
 				D0C4E7E30000000000000008 /* Sources */,
 				D0C4E7E3000000000000000A /* Frameworks */,
@@ -133,14 +133,14 @@
 				D0C4E7E30000000000000031 /* Scheme */,
 				D0C4E7E30000000000000032 /* Homebase */,
 			);
-			name = Docketeer;
-			productName = Docketeer;
-			productReference = D0C4E7E30000000000000004 /* Docketeer.app */;
+			name = Caselore;
+			productName = Caselore;
+			productReference = D0C4E7E30000000000000004 /* Caselore.app */;
 			productType = "com.apple.product-type.application";
 		};
-		D0C4E7E30000000000000007 /* DocketeerTests */ = {
+		D0C4E7E30000000000000007 /* CaseloreTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D0C4E7E30000000000000014 /* Build configuration list for PBXNativeTarget "DocketeerTests" */;
+			buildConfigurationList = D0C4E7E30000000000000014 /* Build configuration list for PBXNativeTarget "CaseloreTests" */;
 			buildPhases = (
 				D0C4E7E3000000000000000B /* Sources */,
 				D0C4E7E3000000000000000C /* Frameworks */,
@@ -152,11 +152,11 @@
 				D0C4E7E30000000000000018 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				D0C4E7E3000000000000001A /* DocketeerTests */,
+				D0C4E7E3000000000000001A /* CaseloreTests */,
 			);
-			name = DocketeerTests;
-			productName = DocketeerTests;
-			productReference = D0C4E7E30000000000000005 /* DocketeerTests.xctest */;
+			name = CaseloreTests;
+			productName = CaseloreTests;
+			productReference = D0C4E7E30000000000000005 /* CaseloreTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -174,7 +174,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D0C4E7E3000000000000000E /* Build configuration list for PBXProject "Docketeer" */;
+			buildConfigurationList = D0C4E7E3000000000000000E /* Build configuration list for PBXProject "Caselore" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -187,8 +187,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D0C4E7E30000000000000006 /* Docketeer */,
-				D0C4E7E30000000000000007 /* DocketeerTests */,
+				D0C4E7E30000000000000006 /* Caselore */,
+				D0C4E7E30000000000000007 /* CaseloreTests */,
 			);
 		};
 /* End PBXProject section */
@@ -231,7 +231,7 @@
 /* Begin PBXTargetDependency section */
 		D0C4E7E30000000000000018 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D0C4E7E30000000000000006 /* Docketeer */;
+			target = D0C4E7E30000000000000006 /* Caselore */;
 			targetProxy = D0C4E7E30000000000000017 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -344,8 +344,8 @@
 				);
 				MARKETING_VERSION = 0.25.4;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.docketeer;
-				PRODUCT_NAME = Docketeer;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.caselore;
+				PRODUCT_NAME = Caselore;
 				SUPPORTS_MACCATALYST = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -364,8 +364,8 @@
 				);
 				MARKETING_VERSION = 0.25.4;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.docketeer;
-				PRODUCT_NAME = Docketeer;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.caselore;
+				PRODUCT_NAME = Caselore;
 				SUPPORTS_MACCATALYST = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -377,10 +377,10 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.docketeer.tests;
-				PRODUCT_NAME = DocketeerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.caselore.tests;
+				PRODUCT_NAME = CaseloreTests;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Docketeer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Docketeer";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Caselore.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Caselore";
 			};
 			name = Debug;
 		};
@@ -390,17 +390,17 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.docketeer.tests;
-				PRODUCT_NAME = DocketeerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.blursedperf.caselore.tests;
+				PRODUCT_NAME = CaseloreTests;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Docketeer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Docketeer";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Caselore.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Caselore";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D0C4E7E3000000000000000E /* Build configuration list for PBXProject "Docketeer" */ = {
+		D0C4E7E3000000000000000E /* Build configuration list for PBXProject "Caselore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0C4E7E3000000000000000F /* Debug */,
@@ -409,7 +409,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D0C4E7E30000000000000011 /* Build configuration list for PBXNativeTarget "Docketeer" */ = {
+		D0C4E7E30000000000000011 /* Build configuration list for PBXNativeTarget "Caselore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0C4E7E30000000000000012 /* Debug */,
@@ -418,7 +418,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D0C4E7E30000000000000014 /* Build configuration list for PBXNativeTarget "DocketeerTests" */ = {
+		D0C4E7E30000000000000014 /* Build configuration list for PBXNativeTarget "CaseloreTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0C4E7E30000000000000015 /* Debug */,

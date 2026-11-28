@@ -3,7 +3,7 @@
 ## Homebases
 
 A **homebase** is a folder of notes: ordinary `.md` files and their attachments, which any other app can open. Keep
-one for everything, or one per year or subject. Docketeer keeps its own settings for a homebase in a hidden `.quire`
+one for everything, or one per year or subject. Caselore keeps its own settings for a homebase in a hidden `.quire`
 folder inside it, so a homebase can be copied, backed up or synced (iCloud, Syncthing, a USB stick) as one folder.
 
 A folder of Markdown notes you already have opens as a homebase as it is.
@@ -24,7 +24,7 @@ A folder of Markdown notes you already have opens as a homebase as it is.
 
 ### The example homebase
 
-**Try the example homebase** copies sample law notes into *Docketeer example* in your Documents: a topic summary, a
+**Try the example homebase** copies sample law notes into *Caselore example* in your Documents: a topic summary, a
 case brief, a lecture note with a recording and timestamps, a reading with page links and quotes, and an exam
 checklist, in Torts and Contracts subjects. Change anything; opening it again opens your copy.
 

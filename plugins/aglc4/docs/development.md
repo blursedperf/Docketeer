@@ -8,7 +8,7 @@ npm test        # unit tests and the offline audit
 npm run lint
 ```
 
-To try a change, run `npm start` from the repository root: it builds the plugin with the app and opens Docketeer.
+To try a change, run `npm start` from the repository root: it builds the plugin with the app and opens Caselore.
 
 ## Tests
 
@@ -28,4 +28,4 @@ To try a change, run `npm start` from the repository root: it builds the plugin 
 
 ## The docs
 
-The user guide is the Markdown in `docs/`. GitHub shows it as it is; it can also be opened as a Docketeer homebase for editing. Keep it up to date in the same change as the feature it describes.
+The user guide is the Markdown in `docs/`. GitHub shows it as it is; it can also be opened as a Caselore homebase for editing. Keep it up to date in the same change as the feature it describes.

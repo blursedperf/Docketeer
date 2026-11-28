@@ -1,5 +1,5 @@
 /**
- * Whole-Tree Search for Docketeer: type ~ in the Docket to search outlines. Each match is shown with the heading
+ * Whole-Tree Search for Caselore: type ~ in the Docket to search outlines. Each match is shown with the heading
  * above it, its parent items and what is nested under it (tree.ts). Ported from the Obsidian plugin of the same
  * name: parser.ts is its outline logic as it was; the Docket replaces its search window.
  *

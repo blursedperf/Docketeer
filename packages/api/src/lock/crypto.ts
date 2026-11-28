@@ -128,7 +128,7 @@ export async function changePassphrase(lock: LockFile, oldPassphrase: string, ne
 
 const ENVELOPE_START = '<!-- quire-encrypted v1\n';
 const ENVELOPE_END = '\n-->';
-const HEADER = '---\nquire-locked: 1\n---\nThis note is encrypted by Docketeer. Open it in Docketeer to read it.\n\n';
+const HEADER = '---\nquire-locked: 1\n---\nThis note is encrypted by Caselore. Open it in Caselore to read it.\n\n';
 
 /** Whether a note's text on disk is sealed (cheap: looks at the start). */
 export function isSealed(text: string): boolean {
@@ -158,6 +158,6 @@ export async function open(key: CryptoKey, sealed: string): Promise<string> {
 		const plain = await subtle().decrypt({ name: 'AES-GCM', iv: both.slice(0, 12), additionalData: enc.encode('quire-note-v1') }, key, both.slice(12));
 		return dec.decode(plain);
 	} catch {
-		throw new SealError('This locked note cannot be opened with this homebase\'s key, or it was changed outside Docketeer.');
+		throw new SealError('This locked note cannot be opened with this homebase\'s key, or it was changed outside Caselore.');
 	}
 }

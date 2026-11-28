@@ -210,7 +210,7 @@ export class CustomCss extends Events {
 		this.refused.delete(`${kind}:${name}`);
 		if (problems.length) {
 			this.refused.set(`${kind}:${name}`, problems);
-			new Notice(`The ${kind} "${name}" was not loaded: it refers to something outside the app (${problems.join(', ')}), which Docketeer does not allow.`, 10000);
+			new Notice(`The ${kind} "${name}" was not loaded: it refers to something outside the app (${problems.join(', ')}), which Caselore does not allow.`, 10000);
 			return null;
 		}
 		return css;
@@ -280,7 +280,7 @@ export class CustomCss extends Events {
 }
 
 const THEME_TEMPLATE = `/*
- * A Docketeer theme. It is loaded after the app's stylesheet, so anything here wins.
+ * A Caselore theme. It is loaded after the app's stylesheet, so anything here wins.
  *
  * Quickest change: override the palette tokens for dark and/or light mode. Every colour in the app
  * comes from these (see packages/api/src/themes/palettes.ts for the full list):

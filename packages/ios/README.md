@@ -1,4 +1,4 @@
-# Docketeer for iPhone and iPad
+# Caselore for iPhone and iPad
 
 The iOS app is a thin native shell (Swift, one `WKWebView`) around the same renderer the desktop app uses. The
 plan and its progress are in [docs/mobile/PLAN.md](../../docs/mobile/PLAN.md); decisions are in
@@ -9,26 +9,26 @@ plan and its progress are in [docs/mobile/PLAN.md](../../docs/mobile/PLAN.md); d
 | `web/boot.ts` | The page's first script: installs `window.quire`, then loads `/renderer.js` |
 | `web/start.ts` | The boot order (host info, the homebase, the bridge, then the renderer) |
 | `web/host.ts` | `window.quire` over `webkit.messageHandlers.quire`, native events, base64 for bytes |
-| `build.mjs` | Builds the page into `Docketeer/Resources/app/` (git-ignored) for Safari 17 |
-| `Docketeer/Docketeer.xcodeproj` | The Xcode project (universal iPhone and iPad, iOS 17 and later; no Swift packages) |
-| `Docketeer/App/` | App and scene, `PageViewController` (the one `WKWebView`), the Debug-only console relay |
-| `Docketeer/Scheme/` | `AppFiles` (what each `quire://app/` URL answers) and `QuireSchemeHandler` |
-| `Docketeer/Bridge/` | `Channels` (the answer for each channel) and `Bridge` (the message handler, events to the page) |
-| `Docketeer/Homebase/` | `HomebaseFS` (the homebase on disk, every `fs:*` call) and `Homebases` (folder bookmarks, the recent list, the example) |
-| `Docketeer/Lockdown/` | The offline content rule list, and the navigation and UI delegate |
-| `DocketeerTests/` | XCTests: paths, routes and headers; channels; the homebase on disk; bookmarks and the recent list |
+| `build.mjs` | Builds the page into `Caselore/Resources/app/` (git-ignored) for Safari 17 |
+| `Caselore/Caselore.xcodeproj` | The Xcode project (universal iPhone and iPad, iOS 17 and later; no Swift packages) |
+| `Caselore/App/` | App and scene, `PageViewController` (the one `WKWebView`), the Debug-only console relay |
+| `Caselore/Scheme/` | `AppFiles` (what each `quire://app/` URL answers) and `QuireSchemeHandler` |
+| `Caselore/Bridge/` | `Channels` (the answer for each channel) and `Bridge` (the message handler, events to the page) |
+| `Caselore/Homebase/` | `HomebaseFS` (the homebase on disk, every `fs:*` call) and `Homebases` (folder bookmarks, the recent list, the example) |
+| `Caselore/Lockdown/` | The offline content rule list, and the navigation and UI delegate |
+| `CaseloreTests/` | XCTests: paths, routes and headers; channels; the homebase on disk; bookmarks and the recent list |
 
 ```bash
 npm run build                 # from the repository root: the plugins and the desktop app
-npm run build -w @quire/ios   # the iOS page, into packages/ios/Docketeer/Resources/app/
+npm run build -w @quire/ios   # the iOS page, into packages/ios/Caselore/Resources/app/
 npm test -w @quire/ios        # unit tests for web/, then the iOS build
-npm run build:xcode -w @quire/ios   # macOS: the page, then the app for the simulator (Docketeer/build/)
-npm run test:xcode -w @quire/ios    # macOS: the XCTests on a simulator (DOCKETEER_SIMULATOR, default "iPhone 17"),
+npm run build:xcode -w @quire/ios   # macOS: the page, then the app for the simulator (Caselore/build/)
+npm run test:xcode -w @quire/ios    # macOS: the XCTests on a simulator (CASELORE_SIMULATOR, default "iPhone 17"),
                                     # the page's smoke checks in WebKit among them, in an iPad-sized window and
                                     # an iPhone-sized one (about 3 min)
 npm run shots:ios -w @quire/ios     # macOS: the iPhone's screenshots, compared with test/visual/ios/
                                     # (after a change on purpose: node ../../scripts/shots-diff.mjs
-                                    #  Docketeer/build/shots --platform ios --update)
+                                    #  Caselore/build/shots --platform ios --update)
 ```
 
 The app icon is rendered from `docs/design/app-icon-source.png`, with the desktop icon, by `scripts/app-icon.swift`:
@@ -36,10 +36,10 @@ full-bleed and opaque here (iOS rounds the corners itself; App Store icons must 
 
 ```bash
 swift scripts/app-icon.swift docs/design/app-icon-source.png \
-  packages/ios/Docketeer/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png packages/app/build/icon.png
+  packages/ios/Caselore/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png packages/app/build/icon.png
 ```
 
-To try it, open `Docketeer/Docketeer.xcodeproj` in Xcode after `npm run build -w @quire/ios`, pick a simulator and
+To try it, open `Caselore/Caselore.xcodeproj` in Xcode after `npm run build -w @quire/ios`, pick a simulator and
 run. For a device, pick a signing team first. In Debug builds the page's console errors reach the system log as
 `[page] …`, and Safari's Web Inspector can attach (Develop menu).
 
