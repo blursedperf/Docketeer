@@ -3,13 +3,13 @@ import { defineConfig } from 'vitepress';
 
 /** The version the download links point at: the app's, as released from this commit. */
 const version: string = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version;
-const repo = 'https://github.com/blursedperf/Docketeer';
+const repo = 'https://github.com/blursedperf/caselore';
 
 export default defineConfig({
 	title: 'Caselore',
 	description: 'Offline Markdown notes for law students: AGLC4 citations, case briefs, flashcards and a keyboard-first Docket. Free for macOS and Linux.',
 	lang: 'en-AU',
-	base: '/Caselore/',
+	base: '/caselore/',
 	cleanUrls: true,
 	lastUpdated: true,
 	head: [
@@ -18,7 +18,7 @@ export default defineConfig({
 		['link', { rel: 'apple-touch-icon', href: '/Caselore/apple-touch-icon.png' }],
 		['meta', { property: 'og:title', content: 'Caselore: offline notes for law students' }],
 		['meta', { property: 'og:description', content: 'Plain Markdown notes on your own computer, with AGLC4 citations, case briefs, flashcards and a keyboard-first Docket. Nothing goes online.' }],
-		['meta', { property: 'og:image', content: 'https://blursedperf.github.io/Docketeer/screenshots/01-main-crisp-light.png' }],
+		['meta', { property: 'og:image', content: 'https://blursedperf.github.io/caselore/screenshots/01-main-crisp-light.png' }],
 	],
 	vite: {
 		define: { __VERSION__: JSON.stringify(version) },

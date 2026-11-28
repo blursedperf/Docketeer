@@ -103,4 +103,4 @@ set.
 - For law school: [AGLC4 citations](./aglc4), [flashcards](./study), [searching outlines](./outlines) and
   [tasks](./tasks).
 - [Keyboard shortcuts](./shortcuts), all on one page.
-- Questions or ideas: [open an issue on GitHub](https://github.com/blursedperf/Docketeer/issues).
+- Questions or ideas: [open an issue on GitHub](https://github.com/blursedperf/caselore/issues).

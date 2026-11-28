@@ -2,9 +2,8 @@
 
 A local-first, offline Markdown notes app for law students: a folder of plain `.md` files (a *homebase*), a
 CodeMirror 6 editor with live preview, the **Docket** (a keyboard-first tray of search and panels), tiling panes,
-and a plugin API shaped like Obsidian's. GitHub: **blursedperf/Docketeer** (renamed from blursedperf/quire;
-GitHub redirects the old URL). The app was renamed Caselore on 2026-11-28; the repository keeps its name until
-the owner renames it on GitHub, so links to it still say Docketeer. Default branch: **`master`**. History is kept linear.
+and a plugin API shaped like Obsidian's. GitHub: **blursedperf/caselore** (renamed from blursedperf/quire, then
+blursedperf/Docketeer; GitHub redirects the old URLs). Default branch: **`master`**. History is kept linear.
 
 Read `PLAN.md` for the design and its *Offline guarantees*; read **`docs/mobile/PLAN.md`** before any iOS work.
 
@@ -101,7 +100,7 @@ Setting up on a Mac:
 
 ```bash
 xcode-select --install            # if `xcodebuild -version` fails; also open Xcode once to install components
-gh repo clone blursedperf/Docketeer && cd Docketeer
+gh repo clone blursedperf/caselore && cd caselore
 git checkout ios-scaffold
 npm ci && npm test
 claude                            # Claude Code, started in the repo folder

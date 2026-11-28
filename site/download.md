@@ -6,7 +6,7 @@ same on a plane, in an exam room or at home.
 ::: info Caselore is in beta
 It is stable enough to use every day, and new features and fixes arrive often. Your notes are ordinary files in your
 own folder, so nothing is locked in, but keep a backup of them, as you would with any app. If something goes wrong,
-please [report it on GitHub](https://github.com/blursedperf/Docketeer/issues).
+please [report it on GitHub](https://github.com/blursedperf/caselore/issues).
 :::
 
 <DownloadButtons />
@@ -61,4 +61,4 @@ shasum -a 256 Caselore-*.dmg      # macOS; on Linux: sha256sum Caselore-*.AppIma
 
 Download the new version and install it over the old one. Your notes are in your own folder and your settings are
 kept: nothing is lost. Caselore does not check for updates by itself (that would mean going online), so watch the
-[releases page](https://github.com/blursedperf/Docketeer/releases) or this site for new versions.
+[releases page](https://github.com/blursedperf/caselore/releases) or this site for new versions.

@@ -43,8 +43,8 @@ says when that changes, so a plugin can avoid keeping a copy of what is in one.
 ## Learning more
 
 - The built-in plugins are complete examples:
-  [AGLC4](https://github.com/blursedperf/Docketeer/tree/master/plugins/aglc4),
-  [Task Docket](https://github.com/blursedperf/Docketeer/tree/master/plugins/task-docket),
-  [Whole-Tree Search](https://github.com/blursedperf/Docketeer/tree/master/plugins/whole-tree-search) and
-  [Pomodoro Flashcards](https://github.com/blursedperf/Docketeer/tree/master/plugins/pomodoro-flashcards).
-- The API itself: [`packages/api`](https://github.com/blursedperf/Docketeer/tree/master/packages/api).
+  [AGLC4](https://github.com/blursedperf/caselore/tree/master/plugins/aglc4),
+  [Task Docket](https://github.com/blursedperf/caselore/tree/master/plugins/task-docket),
+  [Whole-Tree Search](https://github.com/blursedperf/caselore/tree/master/plugins/whole-tree-search) and
+  [Pomodoro Flashcards](https://github.com/blursedperf/caselore/tree/master/plugins/pomodoro-flashcards).
+- The API itself: [`packages/api`](https://github.com/blursedperf/caselore/tree/master/packages/api).

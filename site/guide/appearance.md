@@ -63,4 +63,4 @@ Like the rest of Caselore, themes stay offline: a theme or snippet that tries to
 (a web font, `@import`, a remote picture) is refused, with the reason shown in Settings.
 
 The full list of colours and sizes a theme can change is in the
-[theming guide](https://github.com/blursedperf/Docketeer/blob/master/docs/theming.md).
+[theming guide](https://github.com/blursedperf/caselore/blob/master/docs/theming.md).

@@ -5,7 +5,7 @@ import { computed, onMounted, ref } from 'vue';
 
 declare const __VERSION__: string;
 const v = __VERSION__;
-const base = `https://github.com/blursedperf/Docketeer/releases/download/v${v}`;
+const base = `https://github.com/blursedperf/caselore/releases/download/v${v}`;
 
 interface Download { os: 'mac' | 'linux'; label: string; detail: string; file: string }
 const downloads: Download[] = [

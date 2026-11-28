@@ -401,7 +401,8 @@ Australian company with an app of that name), Folio and Marginalia (notes apps).
 - **On iOS, the new bundle id makes it a new app**: a build installed before the rename stays on the device as
   Docketeer, with its own list of homebases. The homebases themselves (folders in iCloud Drive or On My
   iPhone) are untouched; choose them again in Caselore.
-- **The GitHub repository and the website address keep "Docketeer"** until the owner renames the repository on
-  GitHub (which redirects the old address). Links in the docs and the site point at the current address.
+- **The GitHub repository is `blursedperf/caselore`** and the website is at `blursedperf.github.io/caselore/`
+  (renamed by the owner the same day; GitHub redirects the old repository address, but not the old website
+  address).
 - **Releases up to 0.25.4 are called Docketeer**; the first one called Caselore is the next.
 

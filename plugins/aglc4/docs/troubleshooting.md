@@ -48,4 +48,4 @@ Yes. The version history is kept in a hidden folder of the homebase, and iCloud,
 
 ## Reporting a problem
 
-Open an issue at [github.com/blursedperf/Docketeer/issues](https://github.com/blursedperf/Docketeer/issues). For a checking problem, include the footnote text and what you expected. Don't include anything private.
+Open an issue at [github.com/blursedperf/caselore/issues](https://github.com/blursedperf/caselore/issues). For a checking problem, include the footnote text and what you expected. Don't include anything private.

@@ -7,6 +7,7 @@
   using your "Docketeer example" folder. Your homebases and notes are untouched, and notes locked in Docketeer
   open as before. Installers are now named `Caselore-…`; on Linux the package and command are `caselore`.
   On macOS, Caselore is a new app: drag Docketeer from Applications to the Bin once Caselore has opened.
+  The project now lives at github.com/blursedperf/caselore, and the website at blursedperf.github.io/caselore.
   For plugins: nothing changes; the API is still `@quire/api`.
 
 ## v0.25.4

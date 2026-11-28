@@ -1,9 +1,9 @@
 # Caselore
 
-**[Website and guide](https://blursedperf.github.io/Docketeer/)** ·
-**[Download](https://blursedperf.github.io/Docketeer/download)** ·
-[Getting started](https://blursedperf.github.io/Docketeer/guide/getting-started) ·
-[Privacy](https://blursedperf.github.io/Docketeer/privacy)
+**[Website and guide](https://blursedperf.github.io/caselore/)** ·
+**[Download](https://blursedperf.github.io/caselore/download)** ·
+[Getting started](https://blursedperf.github.io/caselore/guide/getting-started) ·
+[Privacy](https://blursedperf.github.io/caselore/privacy)
 
 > **Beta**: stable enough for daily use, with new features and fixes arriving often. Keep a backup of your notes, as
 > with any app, and please [report problems](../../issues).
@@ -24,11 +24,11 @@ lists and sections. Notes tile into panes from the keyboard.
 ## What is in it
 
 - **The Docket**: search, commands and panels in one tray, with prefixes (`>` commands, `+` new note, `@`
-  authorities, `~` outlines, `?` every shortcut). [Guide](https://blursedperf.github.io/Docketeer/guide/docket)
+  authorities, `~` outlines, `?` every shortcut). [Guide](https://blursedperf.github.io/caselore/guide/docket)
 - **Writing**: live preview, a `/` menu with case brief and IRAC scaffolds, properties, templates, offline spelling
   with legal terms, PDFs with page quotes, lecture recordings with timestamps, export to PDF.
 - **Locking**: lock a note or a whole subject and it is encrypted on disk.
-  [Guide](https://blursedperf.github.io/Docketeer/guide/locking)
+  [Guide](https://blursedperf.github.io/caselore/guide/locking)
 - **Homebases**: a *Legal* or *Generic* starting layout, or a template saved from one of your own.
 
 Four plugins ship built in:
@@ -44,13 +44,13 @@ To look around first, choose *Try the example homebase* on the welcome screen (o
 example homebase*): sample law notes with a case brief, a lecture recording and a reading, copied into "Caselore
 example" in your Documents. Its source is in [packages/app/example](packages/app/example).
 
-The [website](https://blursedperf.github.io/Docketeer/) has the full user guide. For the design: [PLAN.md](PLAN.md)
+The [website](https://blursedperf.github.io/caselore/) has the full user guide. For the design: [PLAN.md](PLAN.md)
 (the architecture, the plugin API and the roadmap) and [docs/docket](docs/docket) (the Docket's design, its panels
 and every shortcut).
 
 ## Install
 
-[Download](https://blursedperf.github.io/Docketeer/download) from the website, or from the [releases](../../releases):
+[Download](https://blursedperf.github.io/caselore/download) from the website, or from the [releases](../../releases):
 a `.dmg` for macOS (Apple Silicon or Intel), an AppImage for any Linux, a `.pacman` package for Arch/Omarchy or a
 `.deb` for Debian/Ubuntu. The macOS app is not notarised yet: the first time you open it, click **Done** on the
 warning, then **Open Anyway** in System Settings → Privacy & Security (or run
@@ -105,7 +105,7 @@ workflow publishes it to GitHub Pages on every release tag, so its download link
 
 Settings → Appearance has 16 palettes (from DoomEsque), an accent colour, fonts, density and the icon
 set (Phosphor by default). Themes and CSS snippets are files in `<homebase>/.quire/`; see
-[docs/theming.md](docs/theming.md) and the [Appearance guide](https://blursedperf.github.io/Docketeer/guide/appearance). Design notes: [icon sets](docs/design/icons.md),
+[docs/theming.md](docs/theming.md) and the [Appearance guide](https://blursedperf.github.io/caselore/guide/appearance). Design notes: [icon sets](docs/design/icons.md),
 [polish plan](docs/design/polish-plan.md).
 
 ## Writing a plugin
@@ -127,4 +127,4 @@ Bundle with esbuild (`format: 'esm'`), marking `@quire/api`, `@codemirror/*` and
 the app supplies its own instances at run time through an import map. `plugins/aglc4/esbuild.config.mjs`
 is a working example. Caselore calls the folder of notes a *homebase*; in the API it is `app.vault`, with
 `app.homebase` as an alias. More on the
-website: [Writing plugins](https://blursedperf.github.io/Docketeer/plugins).
+website: [Writing plugins](https://blursedperf.github.io/caselore/plugins).
