@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.4
 
 - **Stacked tabs are now called looseleaf tabs**: *Toggle looseleaf tabs* in the commands, and *Looseleaf tabs* in a
   tab's menu. Searching for "stack" still finds them, and panes set up before keep their tabs as they were.

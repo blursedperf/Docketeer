@@ -70,7 +70,7 @@ node scripts/shots-diff.mjs <dir> --platform linux   # compare with test/visual/
 5. Tag `vX.Y.Z` (annotated, "Docketeer X.Y.Z: <summary>") and push `master` and the tag. The tag runs
    `.github/workflows/release.yml`: tests, installers for Linux (x64, arm64) and macOS, and the GitHub release.
 
-Latest release: **0.25.3** (AGLC4 suggests the next element after every element; the beta note). Ask the owner before pushing tags or releasing.
+Latest release: **0.25.4** (stacked tabs are now called looseleaf tabs). Ask the owner before pushing tags or releasing.
 
 ## Mobile port (iPhone and iPad)
 
