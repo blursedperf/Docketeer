@@ -34,7 +34,7 @@ The **Subjects** panel lists the folders you mark as **subjects** and **topics**
 folders, attachments and scratch notes stay out of the way. Mark a folder with **→** on it, here or in Homebase ›
 Files. Marks follow a folder that is renamed or moved, and the folders themselves are not changed.
 
-![The Subjects panel](/screenshots/31-docket-units.png){.shot}
+![The Subjects panel: the Torts subject, its Negligence topic and their notes](/screenshots/37-units-locked-note.png){.shot}
 
 In the panel:
 
